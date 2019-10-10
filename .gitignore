@@ -1,0 +1,41 @@
+# pycharm cache
+.idea/
+.vscode/
+Pipfile.lock
+
+# python related
+__pycache__/
+*.pyc
+
+# virtualenv related
+venv/
+
+# previous examples
+examples/prev/
+
+# pyenv file
+.python-version
+
+# jupyter related
+.ipynb_checkpoints/
+
+# package egg files
+.sc2marl.egg-info/
+
+# vs code related
+.DS_Store
+
+# output files
+outputs
+
+# model, result savefiles
+*.json
+*.png
+*.pt
+
+# log files
+*.log
+tests/memory_usage_log.txt
+
+# exp config
+.yaml
