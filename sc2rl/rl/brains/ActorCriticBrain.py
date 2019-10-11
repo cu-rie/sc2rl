@@ -1,13 +1,13 @@
 import torch
 from sc2rl.rl.brains.BrainBase import BrainBase
 
+
 class ActorCriticBrain(BrainBase):
     def __init__(self, actor, critic, target_net):
         super(ActorCriticBrain, self).__init__()
         self.actor = actor
         self.critic = critic
         self.target_net = target_net
-
 
     def compute_probs(self):
         pass
