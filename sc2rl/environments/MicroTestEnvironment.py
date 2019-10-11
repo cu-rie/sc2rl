@@ -1,9 +1,10 @@
 from time import sleep
-
 from sc2 import Race
 from sc2.player import Bot
 from sc2rl.environments.EnvironmentBase import SC2EnvironmentBase
 from sc2rl.environments.SC2BotAI import SimpleSC2BotAI
+
+from sc2rl.utils.state_to_graph_utils import state_proc_func
 
 
 class MicroTestEnvironment(SC2EnvironmentBase):
