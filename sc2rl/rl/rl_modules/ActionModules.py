@@ -64,7 +64,7 @@ class AttackModule(torch.nn.Module):
         enemy_node_features = edges.src['node_feature']  # Enemy units' feature
         ally_node_features = edges.dst['node_feature']  # Ally units' feature
         attack_argument_input = torch.cat((ally_node_features, enemy_node_features), dim=-1)
-        attack_argument = self.attack_argument_calculator.forward(attack_argument_input)
+        attack_argument = self.attack_argument_calculator(attack_argument_input)
         return {'attack_argument': attack_argument}
 
     @staticmethod

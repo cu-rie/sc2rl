@@ -26,11 +26,10 @@ class SC2BotAIBase(sc2.BotAI):
         raise NotImplementedError
 
 
-class DumbSC2BotAI(SC2BotAIBase):
+class SimpleSC2BotAI(SC2BotAIBase):
     """
         an dumb agent that do nothing
     """
 
-    async def on_step(self, s):
-        action_list = []
+    async def on_step(self, action_list=None):
         await self.do_actions(action_list)

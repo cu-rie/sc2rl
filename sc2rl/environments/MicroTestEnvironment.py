@@ -3,13 +3,13 @@ from time import sleep
 from sc2 import Race
 from sc2.player import Bot
 from sc2rl.environments.EnvironmentBase import SC2EnvironmentBase
-from sc2rl.environments.SC2BotAI import DumbSC2BotAI
+from sc2rl.environments.SC2BotAI import SimpleSC2BotAI
 
 
 class MicroTestEnvironment(SC2EnvironmentBase):
 
     def __init__(self, map_name, reward_func, state_proc_func, realtime=False):
-        allies = Bot(Race.Terran, DumbSC2BotAI())
+        allies = Bot(Race.Terran, SimpleSC2BotAI())
         super(MicroTestEnvironment, self).__init__(map_name=map_name,
                                                    allies=allies,
                                                    realtime=realtime)
@@ -31,9 +31,9 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         num_enemies = len(sc2_game_state.units.enemy)
         return num_allies == 0 or num_enemies == 0
 
-    def step(self, action_args):
+    def step(self, action):
         sc2_cur_state = self._observe()
-        sc2_next_state, _ = self._step(action_args=action_args)
+        sc2_next_state, _ = self._step(action_args=action)
 
         # additional routine for checking done!
         # Done checking behaviour of the variants of 'MicroTest' are different from the standard checking done routine.
@@ -68,15 +68,18 @@ if __name__ == "__main__":
         return 1
 
 
+    def _convert_nn_action_to_sc2_action(self, nn_action, graph):
+        pass
+
+
     map_name = "training_scenario_1"
     test_reward_func = reward_func
     test_sate_proc_func = state_proc_func
 
     env = MicroTestEnvironment(map_name, test_reward_func, test_sate_proc_func)
-    done_cnt = 0
-
     while True:
-        next_state, reward, done = env.step(action_args=1)
+        cur_state = env.observe()
+        next_state, reward, done = env.step(action=None)
         if done:
             done_cnt += 1
             if done_cnt >= 10:

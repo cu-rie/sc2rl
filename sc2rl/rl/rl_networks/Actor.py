@@ -57,14 +57,15 @@ class Actor(torch.nn.Module):
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation)
 
-    def forward(self, graph, node_feature, global_feature):
+    def forward(self, graph, node_feature, global_feature, attack_edge_key):
         """
         :param graph: (dgl.Graph or dgl.BatchedGraph)
         :param node_feature: (pytorch Tensor) [ (Batched) # Nodes x node_feature dim]
         :param global_feature: (pytorch Tensor) [# Graphs x global_feature dim]
+        :param attack_edge_key: (str)
         """
 
-        node_updated = self.relational_enc.forward(graph, node_feature)
+        node_updated = self.relational_enc(graph, node_feature)
 
         if type(graph) == dgl.BatchedDGLGraph:
             num_nodes = graph.batch_num_nodes
@@ -75,13 +76,13 @@ class Actor(torch.nn.Module):
 
         module_input = torch.cat((node_updated, global_updated), dim=-1)
 
-        move_argument = self.move_module.forward(graph, module_input)
-        hold_argument = self.hold_module.forward(graph, module_input)
-        attack_argument = self.attack_module.forward(graph, module_input)
+        move_argument = self.move_module(graph, module_input)
+        hold_argument = self.hold_module(graph, module_input)
+        attack_argument = self.attack_module(graph, module_input, attack_edge_key)
         return move_argument, hold_argument, attack_argument
 
-    def compute_probs(self, graph, node_feature, global_feature):
-        move_arg, hold_arg, attack_arg = self.forward(graph, node_feature, global_feature)
+    def compute_probs(self, graph, node_feature, global_feature, attack_edge_key='attack_in_range'):
+        move_arg, hold_arg, attack_arg = self.forward(graph, node_feature, global_feature, attack_edge_key)
         # Prepare un-normalized probabilities of attacks
         max_num_enemy = 0
         total_num_units = 0
@@ -116,26 +117,30 @@ class Actor(torch.nn.Module):
         return_dict['unit_entropy'] = unit_entropy
         return return_dict
 
-    def get_action(self, graph, node_feature, global_feature, index2units, ally_node_key='ally'):
+    def get_action(self, graph, node_feature, global_feature, unit_dict,
+                   ally_node_key='ally', attack_edge_key='attack_in_range'):
         """
         :param graph: (dgl.Graph or dgl.BatchedGraph)
         :param node_feature: (pytorch Tensor) [ (Batched) # Nodes x node_feature dim]
         :param global_feature: (pytorch Tensor) [# Graphs x global_feature dim]
         :param index2units: (list of index2unit dictionaries)
+        :param ally_node_key: (str)
+        :param attack_edge_key: (str)
         """
 
-        prob_dict = self.compute_probs(graph=graph, node_feature=node_feature, global_feature=global_feature)
+        prob_dict = self.compute_probs(graph=graph, node_feature=node_feature, global_feature=global_feature,
+                                       attack_edge_key=attack_edge_key)
         probs = prob_dict['probs']
 
         ally_indices = graph.get_ntype_id(ally_node_key)
         ally_probs = probs[ally_indices, :]
 
+        #
         if self.training:  # Sample from categorical dist
             dist = torch.distributions.Categorical(probs=ally_probs)
-            nn_args = dist.sample()  # tensor
+            nn_action = dist.sample()
 
         else:
-            nn_args = ally_probs.argmax(dim=1)  # greedy behavior which does not considers high level probs
+            nn_action = ally_probs.argmax(dim=1)
 
-        sc2_args = "not implemented yet"
-        return nn_args, sc2_args
+        return nn_action
