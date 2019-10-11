@@ -1,9 +1,10 @@
 from time import sleep
-
 from sc2 import Race
 from sc2.player import Bot
 from sc2rl.environments.EnvironmentBase import SC2EnvironmentBase
 from sc2rl.environments.SC2BotAI import DumbSC2BotAI
+
+from sc2rl.utils.state_to_graph_utils import state_proc_func
 
 
 class MicroTestEnvironment(SC2EnvironmentBase):
@@ -64,10 +65,6 @@ if __name__ == "__main__":
         return 1
 
 
-    def state_proc_func(s):
-        return 1
-
-
     map_name = "training_scenario_1"
     test_reward_func = reward_func
     test_sate_proc_func = state_proc_func
@@ -77,6 +74,8 @@ if __name__ == "__main__":
 
     while True:
         next_state, reward, done = env.step(action_args=1)
+        out = env.observe()
+
         if done:
             done_cnt += 1
             if done_cnt >= 10:
