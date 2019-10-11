@@ -5,6 +5,8 @@ from sc2rl.utils.graph_utils import get_batched_index
 from sc2rl.nn.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.rl_modules.ActionModules import MoveModule, HoldModule, AttackModule
 
+VERY_SMALL_NUMBER = 1e-10
+
 
 class Actor(torch.nn.Module):
 
@@ -55,41 +57,31 @@ class Actor(torch.nn.Module):
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation)
 
-    def forward(self, graph, attack_graph, node_feature, global_feature, ally_indices, device):
+    def forward(self, graph, node_feature, global_feature):
         """
         :param graph: (dgl.Graph or dgl.BatchedGraph)
-        :param attack_graph: (dgl.Graph or dgl.BatchedGraph)
         :param node_feature: (pytorch Tensor) [ (Batched) # Nodes x node_feature dim]
         :param global_feature: (pytorch Tensor) [# Graphs x global_feature dim]
-        :param ally_indices: (list of list-like) Each element contains index of allies in the graph
-        :param device: (str) where the computation happen.
         """
 
-        node_updated, global_updated = self.relational_enc.forward(graph, node_feature, global_feature, device)
+        node_updated = self.relational_enc.forward(graph, node_feature)
 
         if type(graph) == dgl.BatchedDGLGraph:
             num_nodes = graph.batch_num_nodes
             num_nodes = torch.tensor(num_nodes)
-            global_updated = torch.repeat_interleave(global_updated, num_nodes, dim=0)
-            batched_ally_indices = get_batched_index(graph, ally_indices)
-
+            global_updated = torch.repeat_interleave(global_feature, num_nodes, dim=0)
         else:
-            global_updated = global_updated.repeat((node_feature.shape[0], 1))
-            batched_ally_indices = ally_indices
+            global_updated = global_feature.repeat((node_feature.shape[0], 1))
 
-        move_node_feature = torch.cat((node_updated, global_updated), dim=-1)
-        hold_node_feature = torch.cat((node_updated, global_updated), dim=-1)
-        attack_node_feature = torch.cat((node_updated, global_updated), dim=-1)
+        module_input = torch.cat((node_updated, global_updated), dim=-1)
 
-        move_argument = self.move_module.forward(graph, move_node_feature, batched_ally_indices)
-        hold_argument = self.hold_module.forward(graph, hold_node_feature, batched_ally_indices)
-        attack_argument = self.attack_module.forward(attack_graph, attack_node_feature, ally_indices)
+        move_argument = self.move_module.forward(graph, module_input)
+        hold_argument = self.hold_module.forward(graph, module_input)
+        attack_argument = self.attack_module.forward(graph, module_input)
         return move_argument, hold_argument, attack_argument
 
-    def compute_probs(self, graph, attack_graph, node_feature, global_feature, ally_indices, device):
-        move_arg, hold_arg, attack_arg = self.forward(graph, attack_graph, node_feature, global_feature, ally_indices,
-                                                      device)
-
+    def compute_probs(self, graph, node_feature, global_feature):
+        move_arg, hold_arg, attack_arg = self.forward(graph, node_feature, global_feature)
         # Prepare un-normalized probabilities of attacks
         max_num_enemy = 0
         total_num_units = 0
@@ -115,32 +107,35 @@ class Actor(torch.nn.Module):
         unit_entropy = - torch.sum(log_ps * ps, dim=-1)  # per unit entropy
 
         log_p_move, log_p_hold, log_p_attack = torch.split(log_ps, [self.move_dim, 1, max_num_enemy], dim=1)
-        attack_indicies = attack_arg[1]
 
-        return log_p_move, log_p_hold, log_p_attack, attack_indicies, unit_entropy
+        return_dict = dict()
+        return_dict['probs'] = ps
+        return_dict['log_p_move'] = log_p_move
+        return_dict['log_p_hold'] = log_p_hold
+        return_dict['log_p_attack'] = log_p_attack
+        return_dict['unit_entropy'] = unit_entropy
+        return return_dict
 
-    def get_action(self, graph, attack_graph, node_feature, global_feature, ally_indices, device):
-        log_p_move, log_p_hold, log_p_attack, attack_indicies, _ = self.compute_probs(graph=graph,
-                                                                                      attack_graph=attack_graph,
-                                                                                      node_feature=node_feature,
-                                                                                      global_feature=global_feature,
-                                                                                      ally_indices=ally_indices,
-                                                                                      device=device)
-        log_probs = torch.cat((log_p_move, log_p_hold, log_p_attack), dim=1)
-        probs = torch.exp(log_probs)
+    def get_action(self, graph, node_feature, global_feature, index2units, ally_node_key='ally'):
+        """
+        :param graph: (dgl.Graph or dgl.BatchedGraph)
+        :param node_feature: (pytorch Tensor) [ (Batched) # Nodes x node_feature dim]
+        :param global_feature: (pytorch Tensor) [# Graphs x global_feature dim]
+        :param index2units: (list of index2unit dictionaries)
+        """
 
-        if type(graph) == dgl.BatchedDGLGraph:
-            ally_indices, num_targets = get_batched_index(graph, ally_indices, return_num_targets=True)
-        else:
-            num_targets = len(ally_indices)
+        prob_dict = self.compute_probs(graph=graph, node_feature=node_feature, global_feature=global_feature)
+        probs = prob_dict['probs']
+
+        ally_indices = graph.get_ntype_id(ally_node_key)
+        ally_probs = probs[ally_indices, :]
 
         if self.training:  # Sample from categorical dist
-            dist = torch.distributions.Categorical(probs=probs[ally_indices, :])
-            args = dist.sample()  # tensor
+            dist = torch.distributions.Categorical(probs=ally_probs)
+            nn_args = dist.sample()  # tensor
 
         else:
-            ally_probs = probs[ally_indices, :]
-            args = ally_probs.argmax(dim=1)  # greedy behavior which does not considers high level probs
+            nn_args = ally_probs.argmax(dim=1)  # greedy behavior which does not considers high level probs
 
-        args = torch.split(args, num_targets)  # list of tensors
-        return args, attack_indicies
+        sc2_args = "not implemented yet"
+        return nn_args, sc2_args

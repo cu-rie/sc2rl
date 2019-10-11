@@ -16,9 +16,9 @@ class MoveModule(torch.nn.Module):
                                             hidden_activation=hidden_activation,
                                             out_activation=out_activation)
 
-    def forward(self, graph, node_feature, batched_target_node_index):
+    def forward(self, graph, node_feature):
         graph.ndata['node_feature'] = node_feature
-        graph.apply_nodes(v=batched_target_node_index, func=self.apply_node_function)
+        graph.apply_nodes(func=self.apply_node_function)
         move_argument = graph.ndata.pop('move_argument')
         return move_argument
 
@@ -41,57 +41,36 @@ class AttackModule(torch.nn.Module):
                                               hidden_activation=hidden_activation,
                                               out_activation=out_activation)
 
-    def forward(self, attack_graph, node_feature, target_node_index):
+    def forward(self, graph, node_feature, attack_edge_key='attack_in_range'):
         """
-        :param attack_graph: (dgl.Graph or dgl.BatchedGraph) Attack graph is a graph that only contains edges for denoting attack relationship
+        :param graph: (dgl.Graph or dgl.BatchedGraph) Attack graph is a graph that only contains edges for denoting attack relationship
         :param node_feature: (pytorch Tensor) Node features of units.
-        :param target_node_index: (list-like or list of list-like) index of ally units for computing attack-compatibility.
+        :param attack_edge_key: key value for describing 'attack' edges
         :return: attack_argument, enemy_index
         """
-        attack_graph.ndata['node_feature'] = node_feature
+        graph.ndata['node_feature'] = node_feature
 
-        if type(attack_graph) == dgl.BatchedDGLGraph:  # Handling Batched graph
-            attack_graphs = dgl.unbatch(attack_graph)  # Unbatch batched graph
-            attack_argument = []
-            enemy_index = []
-            for attack_graph, _target_node_index in zip(attack_graphs, target_node_index):
-                attack_graph.pull(v=_target_node_index,
-                                  message_func=self.message_function,
-                                  reduce_func=self.reduce_function)
-                attack_argument.append(attack_graph.ndata.pop('attack_argument'))
-                _enemy_index = attack_graph.ndata.pop('enemy_index')
-                enemy_index.append(_enemy_index[_target_node_index][0])
+        for i in range(5):
+            print(" ########### Did you check the 'attack_edge_key'? ###########")
 
-        else:
-            attack_graph.pull(v=target_node_index,
-                              message_func=self.message_function,
-                              reduce_func=self.reduce_function)
+        graph.pull(message_func=self.message_function,
+                   reduce_func=self.reduce_function,
+                   etype=attack_edge_key)
 
-            attack_argument = [attack_graph.ndata.pop('attack_argument')]
-            enemy_index = [attack_graph.ndata.pop('enemy_index')[target_node_index[0], :]]
-
-        return attack_argument, enemy_index
+        attack_argument = graph.ndata.pop('attack_argument')
+        return attack_argument
 
     def message_function(self, edges):
         enemy_node_features = edges.src['node_feature']  # Enemy units' feature
         ally_node_features = edges.dst['node_feature']  # Ally units' feature
-
         attack_argument_input = torch.cat((ally_node_features, enemy_node_features), dim=-1)
         attack_argument = self.attack_argument_calculator.forward(attack_argument_input)
-
-        enemy_index = edges.src['node_indices']
-        return {'attack_argument': attack_argument, 'enemy_index': enemy_index}
+        return {'attack_argument': attack_argument}
 
     @staticmethod
     def reduce_function(nodes):
         attack_argument = nodes.mailbox['attack_argument']
-        enemy_index = nodes.mailbox['enemy_index']
-        if enemy_index.shape[0] == 1:
-            pass
-        else:
-            assert enemy_index.float().std(dim=0).sum() <= 0.0, "Each column should contain the same enemy indices"
-
-        return {'attack_argument': attack_argument.squeeze(dim=-1), 'enemy_index': enemy_index}
+        return {'attack_argument': attack_argument.squeeze(dim=-1)}
 
 
 class HoldModule(torch.nn.Module):
@@ -105,13 +84,12 @@ class HoldModule(torch.nn.Module):
                                             hidden_activation=hidden_activation,
                                             out_activation=out_activation)
 
-    def forward(self, graph, node_feature, batched_target_node_index):
+    def forward(self, graph, node_feature):
         graph.ndata['node_feature'] = node_feature
-        graph.apply_nodes(func=self.apply_function, v=batched_target_node_index)
+        graph.apply_nodes(func=self.apply_function)
         return graph.ndata.pop('hold_argument')
 
     def apply_function(self, nodes):
         node_features = nodes.data['node_feature']
         hold_argument = self.hold_argument_calculator.forward(node_features)
-
         return {'hold_argument': hold_argument}
