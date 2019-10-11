@@ -31,7 +31,7 @@ class RelationalNetwork(torch.nn.Module):
 
         self.layers = torch.nn.ModuleList(layers)
 
-    def forward(self, graph, node_feature, device):
+    def forward(self, graph, node_feature):
         for layer in self.layers:
-            node_feature = layer(graph, node_feature, device)
+            node_feature = layer(graph, node_feature)
         return node_feature

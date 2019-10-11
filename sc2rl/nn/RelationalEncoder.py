@@ -33,10 +33,9 @@ class RelationalEncoder(torch.nn.Module):
         self.addNorm2 = AddNormLayer(model_dim=model_dim,
                                      use_norm=use_norm)
 
-    def forward(self, graph, node_feature, device):
+    def forward(self, graph, node_feature):
         after_attn_node_feat = self.attention.forward(graph=graph,
-                                                      node_feature=node_feature,
-                                                      device=device)
+                                                      node_feature=node_feature)
         after_norm_node_feat = self.addNorm.forward(x=node_feature,
                                                     x_updated=after_attn_node_feat)
         after_ff_node_feat = self.feedforward.forward(graph=graph,

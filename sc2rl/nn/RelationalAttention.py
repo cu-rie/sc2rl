@@ -65,7 +65,7 @@ class RelationalAttentionLayer(torch.nn.Module):
             self.WV = torch.nn.ModuleDict(wv_dict)
             self.WO = torch.nn.Linear(o_input_dim, model_dim, bias=False)
 
-    def forward(self, graph, node_feature, device):
+    def forward(self, graph, node_feature):
         """
         :param graph: Structure only graph. Input graph has no node features
         :param node_feature: Tensor. Node features
@@ -73,11 +73,8 @@ class RelationalAttentionLayer(torch.nn.Module):
         :return: updated features
         """
         graph.ndata['node_feature'] = node_feature
-        message_func = partial(self.message_function, device=device)
-        reduce_func = partial(self.reduce_function, device=device)
-
-        graph.update_all(message_func=message_func,
-                         reduce_func=reduce_func,
+        graph.update_all(message_func=self.message_func,
+                         reduce_func=self.reduce_func,
                          apply_node_func=self.apply_node_function)
 
         # Delete intermediate feature to maintain structure only graph
@@ -86,7 +83,7 @@ class RelationalAttentionLayer(torch.nn.Module):
 
         return graph.ndata.pop('updated_node_feature')
 
-    def message_function(self, edges, device):
+    def message_function(self, edges):
         src_node_features = edges.src['node_feature']  # [Num. Edges x Model_dim]
 
         if self.use_hypernet:
@@ -122,7 +119,7 @@ class RelationalAttentionLayer(torch.nn.Module):
 
         return {'key': keys, 'value': values}
 
-    def reduce_function(self, nodes, device):
+    def reduce_function(self, nodes):
         node_features = nodes.data['node_feature']
         queries = self.WQ(node_features)  # [(Batched) Node x (Model_dim x #.head)]
 
