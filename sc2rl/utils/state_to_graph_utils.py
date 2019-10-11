@@ -148,4 +148,7 @@ def state_proc_func(state):
            enemies_food_cost]
     global_feature = torch.Tensor(data=_gf).view(1, -1)
 
-    return graph, tag2unit_dict, global_feature
+    meta_data = dict()
+    meta_data['tag2unit_dict'] = tag2unit_dict
+    meta_data['global_feature'] = global_feature
+    return graph, meta_data

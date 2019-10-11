@@ -117,7 +117,7 @@ class Actor(torch.nn.Module):
         return_dict['unit_entropy'] = unit_entropy
         return return_dict
 
-    def get_action(self, graph, node_feature, global_feature, unit_dict,
+    def get_action(self, graph, node_feature, global_feature,
                    ally_node_key='ally', attack_edge_key='attack_in_range'):
         """
         :param graph: (dgl.Graph or dgl.BatchedGraph)
