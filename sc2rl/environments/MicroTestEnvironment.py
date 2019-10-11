@@ -65,10 +65,6 @@ if __name__ == "__main__":
         return 1
 
 
-    def state_proc_func(s):
-        return 1
-
-
     def _convert_nn_action_to_sc2_action(self, nn_action, graph):
         pass
 
@@ -76,6 +72,7 @@ if __name__ == "__main__":
     map_name = "training_scenario_1"
     test_reward_func = reward_func
     test_sate_proc_func = state_proc_func
+    done_cnt = 0
 
     env = MicroTestEnvironment(map_name, test_reward_func, test_sate_proc_func)
     while True:
