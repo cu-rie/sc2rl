@@ -35,7 +35,7 @@ def get_one_hot_node_type(node_type: int):
     return ret
 
 
-def state_proc_func(state: GameState):
+def state_proc_func(state):
     ally_units = state.units.owned
     enemy_units = state.units.enemy
 

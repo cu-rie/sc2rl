@@ -33,7 +33,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         return num_allies == 0 or num_enemies == 0
 
     def step(self, action_args):
-        sc2_cur_state = self.observe()
+        sc2_cur_state = self._observe()
         sc2_next_state, _ = self._step(action_args=action_args)
 
         # additional routine for checking done!
