@@ -57,7 +57,7 @@ class Actor(torch.nn.Module):
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation)
 
-    def forward(self, graph, node_feature, global_feature, attack_edge_key):
+    def forward(self, graph, global_feature, attack_edge_key='attack_edge'):
         """
         :param graph: (dgl.Graph or dgl.BatchedGraph)
         :param node_feature: (pytorch Tensor) [ (Batched) # Nodes x node_feature dim]
@@ -65,7 +65,7 @@ class Actor(torch.nn.Module):
         :param attack_edge_key: (str)
         """
 
-        node_updated = self.relational_enc(graph, node_feature)
+        updated_node_dict = self.relational_enc(graph)
 
         if type(graph) == dgl.BatchedDGLGraph:
             num_nodes = graph.batch_num_nodes
@@ -81,8 +81,8 @@ class Actor(torch.nn.Module):
         attack_argument = self.attack_module(graph, module_input, attack_edge_key)
         return move_argument, hold_argument, attack_argument
 
-    def compute_probs(self, graph, node_feature, global_feature, attack_edge_key='attack_edge'):
-        move_arg, hold_arg, attack_arg = self.forward(graph, node_feature, global_feature, attack_edge_key)
+    def compute_probs(self, graph, attack_edge_key='attack_edge'):
+        move_arg, hold_arg, attack_arg = self.forward(graph, attack_edge_key)
         # Prepare un-normalized probabilities of attacks
         max_num_enemy = 0
         total_num_units = 0
@@ -117,8 +117,7 @@ class Actor(torch.nn.Module):
         return_dict['unit_entropy'] = unit_entropy
         return return_dict
 
-    def get_action(self, graph, node_feature, global_feature,
-                   ally_node_key='ally', attack_edge_key='attack_in_range'):
+    def get_action(self, graph, ally_node_key='ally', attack_edge_key='attack_in_range'):
         """
         :param graph: (dgl.Graph or dgl.BatchedGraph)
         :param node_feature: (pytorch Tensor) [ (Batched) # Nodes x node_feature dim]
@@ -128,8 +127,7 @@ class Actor(torch.nn.Module):
         :param attack_edge_key: (str)
         """
 
-        prob_dict = self.compute_probs(graph=graph, node_feature=node_feature, global_feature=global_feature,
-                                       attack_edge_key=attack_edge_key)
+        prob_dict = self.compute_probs(graph=graph, attack_edge_key=attack_edge_key)
         probs = prob_dict['probs']
 
         ally_indices = graph.get_ntype_id(ally_node_key)

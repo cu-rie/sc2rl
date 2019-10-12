@@ -31,7 +31,13 @@ class RelationalNetwork(torch.nn.Module):
 
         self.layers = torch.nn.ModuleList(layers)
 
-    def forward(self, graph, node_feature):
+    def forward(self, graph):
+
+        feature_dict = dict()
+        for ntype in graph.ntypes:
+            feature_dict[ntype] = graph.nodes[ntype].data.pop('node_feature')
+
         for layer in self.layers:
-            node_feature = layer(graph, node_feature)
-        return node_feature
+            node_feature_dict = layer(graph, feature_dict)
+
+        return node_feature_dict

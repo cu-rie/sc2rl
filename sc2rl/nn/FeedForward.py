@@ -17,7 +17,7 @@ class FeedForwardNeighbor(torch.nn.Module):
         input_dim = (neighbor_degree + 1) * model_dim
         self.node_updater = MLP(input_dim, model_dim, num_neurons=num_neurons)
 
-    def forward(self, graph, feature_dict):
+    def forward(self, graph, feature_dict, update_node_types=['ally']):
         """
         :param graph: Structure only graph. Input graph has no node features
         :param feature_dict:
@@ -27,18 +27,26 @@ class FeedForwardNeighbor(torch.nn.Module):
             graph.nodes[key].data['node_feature'] = val
 
         if self.neighbor_degree == 0:  # Update features with only own features
-            graph.apply_nodes(func=self.apply_node_function_no_neighbor)
+            for ntype in update_node_types:
+                graph.apply_nodes(func=self.apply_node_function_no_neighbor, ntype=ntype)
         else:  # Update features with own features and 1 hop neighbor features
-            graph.update_all(message_func=self.message_function,
-                             reduce_func=self.reduce_function,
-                             apply_node_func=self.apply_node_function_yes_neighbor)
+            for etype in graph.etypes:
+                graph.send_and_recv(graph[etype].edges(),
+                                    message_func=self.message_function,
+                                    reduce_func=self.reduce_function,
+                                    etype=etype)
 
-        # Delete intermediate feature to maintain structure only graph
-        _ = graph.ndata.pop('node_feature')
-        if self.neighbor_degree >= 1:
-            _ = graph.ndata.pop('aggregated_message')
+            for ntype in update_node_types:
+                graph.apply_nodes(func=self.apply_node_function_yes_neighbor, ntype=ntype)
 
-        return graph.ndata.pop('updated_node_feature')
+        ret_dict = dict()
+        for ntype in graph.ntypes:
+            ret_dict[ntype] = graph.nodes[ntype].data.pop('node_feature')
+
+        for ntype in update_node_types:
+            graph.nodes[ntype].data.pop('aggregated_message')
+
+        return ret_dict
 
     @staticmethod
     def message_function(edges):
@@ -50,7 +58,7 @@ class FeedForwardNeighbor(torch.nn.Module):
 
     def apply_node_function_yes_neighbor(self, nodes):
         _inp = torch.cat((nodes.data['aggregated_message'], nodes.data['node_feature']), dim=-1)
-        return {'updated_node_feature': self.node_updater(_inp)}
+        return {'node_feature': self.node_updater(_inp)}
 
     def apply_node_function_no_neighbor(self, nodes):
-        return {'updated_node_feature': self.node_updater(nodes.data['node_feature'])}
+        return {'node_feature': self.node_updater(nodes.data['node_feature'])}

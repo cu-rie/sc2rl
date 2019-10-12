@@ -23,7 +23,7 @@ if __name__ == "__main__":
         cur_state, meta_data = env.observe()
         global_feature = meta_data['global_feature']
 
-        action = actor.get_action(cur_state, torch.zeros(1), torch.zeros(1))
+        action = actor.get_action(cur_state)
         next_state, reward, done = env.step(action=None)
         if done:
             done_cnt += 1

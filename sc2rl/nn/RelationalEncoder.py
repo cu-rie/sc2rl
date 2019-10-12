@@ -38,9 +38,9 @@ class RelationalEncoder(torch.nn.Module):
                                                          feature_dict=feature_dict)
         after_norm_feature_dict = self.addNorm.forward(x_dict=feature_dict,
                                                        x_updated_dict=after_attn_feature_dict)
-        after_ff_node_feat = self.feedforward.forward(graph=graph,
-                                                      feature_dict=after_norm_feature_dict)
-        after_norm2_node_feat = self.addNorm2.forward(x_dict=after_norm_node_feat,
-                                                      x_updated_dict=after_ff_node_feat)
+        after_ff_node_feat_dict = self.feedforward.forward(graph=graph,
+                                                           feature_dict=after_norm_feature_dict)
+        after_norm2_node_feat_dict = self.addNorm2.forward(x_dict=after_norm_feature_dict,
+                                                           x_updated_dict=after_ff_node_feat_dict)
 
-        return after_norm2_node_feat
+        return after_norm2_node_feat_dict
