@@ -81,7 +81,7 @@ class Actor(torch.nn.Module):
         attack_argument = self.attack_module(graph, module_input, attack_edge_key)
         return move_argument, hold_argument, attack_argument
 
-    def compute_probs(self, graph, node_feature, global_feature, attack_edge_key='attack_in_range'):
+    def compute_probs(self, graph, node_feature, global_feature, attack_edge_key='attack_edge'):
         move_arg, hold_arg, attack_arg = self.forward(graph, node_feature, global_feature, attack_edge_key)
         # Prepare un-normalized probabilities of attacks
         max_num_enemy = 0

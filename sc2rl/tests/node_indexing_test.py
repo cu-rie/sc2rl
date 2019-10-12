@@ -18,11 +18,14 @@ if __name__ == "__main__":
     done_cnt = 0
 
     env = MicroTestEnvironment(map_name, test_reward_func, test_sate_proc_func)
-    actor = Actor(1, 20, 1, use_hypernet=False, num_relations=3)
+    actor = Actor(1, 20, 6, use_hypernet=False, num_relations=2)
     while True:
         cur_state, meta_data = env.observe()
-        node_feature = cur_state.ndata.pop('node_feature')
-        action = actor.get_action(cur_state, torch.zeros(1))
+        # allies_node_feature = cur_state.nodes['ally'].data.pop('node_feature')
+        # enemies_node_feature = cur_state.nodes['enemy'].data.pop('node_feature')
+        global_feature = meta_data['global_feature']
+
+        action = actor.get_action(cur_state, torch.zeros(1), torch.zeros(1))
         next_state, reward, done = env.step(action=None)
         if done:
             done_cnt += 1
