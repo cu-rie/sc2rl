@@ -65,14 +65,16 @@ class RelationalAttentionLayer(torch.nn.Module):
             self.WV = torch.nn.ModuleDict(wv_dict)
             self.WO = torch.nn.Linear(o_input_dim, model_dim, bias=False)
 
-    def forward(self, graph, node_feature, update_node_types=['ally'], skip_edge_types=['attack_edge']):
+    def forward(self, graph, feature_dict, update_node_types=['ally'], skip_edge_types=['attack_edge']):
         """
         :param graph: Structure only graph. Input graph has no node features
         :param node_feature: Tensor. Node features
         :param device: str. device flag
         :return: updated features
         """
-        # graph.ndata['node_feature'] = node_feature
+
+        for key, val in feature_dict.items():
+            graph.nodes[key].data['node_feature'] = val
 
         executable_edge_types = graph.etypes
         for remove_edge_type in skip_edge_types:
@@ -84,10 +86,15 @@ class RelationalAttentionLayer(torch.nn.Module):
             graph.send_and_recv(graph[etype].edges(), message_func=message_func, reduce_func=reduce_func, etype=etype)
 
         apply_func = partial(self.apply_node_function, num_etypes=len(executable_edge_types))
+
         for ntype in update_node_types:
             graph.apply_nodes(apply_func, ntype=ntype)
 
-        return graph
+        ret_dict = dict()
+        for ntype in graph.ntypes:
+            ret_dict[ntype] = graph.nodes[ntype].data.pop('node_feature')
+
+        return ret_dict
 
     def message_function(self, edges, etype_idx):
         src_node_features = edges.src['node_feature']  # [Num. Edges x Model_dim]
