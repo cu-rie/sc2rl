@@ -19,6 +19,7 @@ if __name__ == "__main__":
 
     env = MicroTestEnvironment(map_name, test_reward_func, test_sate_proc_func)
     actor = Actor(1, 20, 6, use_hypernet=False, num_relations=2)
+
     while True:
         cur_state, meta_data = env.observe()
         global_feature = meta_data['global_feature']
