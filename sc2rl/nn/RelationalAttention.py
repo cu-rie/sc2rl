@@ -65,7 +65,7 @@ class RelationalAttentionLayer(torch.nn.Module):
             self.WV = torch.nn.ModuleDict(wv_dict)
             self.WO = torch.nn.Linear(o_input_dim, model_dim, bias=False)
 
-    def forward(self, graph, node_feature, skip_edge_types=['attack_edge']):
+    def forward(self, graph, node_feature, update_node_types=['ally'], skip_edge_types=['attack_edge']):
         """
         :param graph: Structure only graph. Input graph has no node features
         :param node_feature: Tensor. Node features
@@ -80,18 +80,14 @@ class RelationalAttentionLayer(torch.nn.Module):
 
         for i, etype in enumerate(executable_edge_types):
             message_func = partial(self.message_function, etype_idx=i)
-            graph[etype].send(graph[etype].edges(), message_func=message_func, etype=etype)
+            reduce_func = partial(self.reduce_function, etype_idx=i)
+            graph.send_and_recv(graph[etype].edges(), message_func=message_func, reduce_func=reduce_func, etype=etype)
 
-        for ntype in graph.ntypes:
-            graph.recv(graph.nodes[ntype], reduce_func=self.reduce_function, etype='')
+        apply_func = partial(self.apply_node_function, num_etypes=len(executable_edge_types))
+        for ntype in update_node_types:
+            graph.apply_nodes(apply_func, ntype=ntype)
 
-        graph.recv()
-
-        # Delete intermediate feature to maintain structure only graph
-        _ = graph.ndata.pop('node_feature')
-        _ = graph.ndata.pop('z')
-
-        return graph.ndata.pop('updated_node_feature')
+        return graph
 
     def message_function(self, edges, etype_idx):
         src_node_features = edges.src['node_feature']  # [Num. Edges x Model_dim]
@@ -113,12 +109,27 @@ class RelationalAttentionLayer(torch.nn.Module):
 
         return {'key{}'.format(etype_idx): keys, 'value{}'.format(etype_idx): values}
 
-    def reduce_function(self, nodes):
+    def reduce_function(self, nodes, etype_idx):
+        key = nodes.mailbox['key{}'.format(etype_idx)]  # [(Batched) Node x (Model_dim x #.head)]
+        value = nodes.mailbox['value{}'.format(etype_idx)]  # [(Batched) Node x (Model_dim x #.head)]
+        return {'key{}'.format(etype_idx): key, 'value{}'.format(etype_idx): value}
+
+    def apply_node_function(self, nodes, num_etypes):
+
         node_features = nodes.data['node_feature']
         queries = self.WQ(node_features)  # [(Batched) Node x (Model_dim x #.head)]
 
-        keys = nodes.mailbox['key']  # [(Batched) Node x (Model_dim x #.head)]
-        values = nodes.mailbox['value']  # [(Batched) Node x (Model_dim x #.head)]
+        keys = []
+        values = []
+
+        for i in range(num_etypes):
+            key = nodes.data.pop('key{}'.format(i))
+            value = nodes.data.pop('value{}'.format(i))
+            keys.append(key)
+            values.append(value)
+
+        keys = torch.cat(keys, dim=1)
+        values = torch.cat(values, dim=1)
 
         node_counter = 0
         node_indices = []
@@ -156,17 +167,13 @@ class RelationalAttentionLayer(torch.nn.Module):
         normalized_score = normalized_score.view(-1, self.num_head, 1)
         values_scatter = values.view(-1, self.num_head, self.model_dim)
         weighted_values = normalized_score * values_scatter
-        ret_z = scatter_add(weighted_values, node_indices, dim=0)
+        z = scatter_add(weighted_values, node_indices, dim=0)
 
-        return {'z': ret_z}
-
-    def apply_node_function(self, nodes):
-        z = nodes.data['z']  # num_nodes * num_head * model_dim
         z = z.reshape(-1, self.num_head * self.model_dim)
 
         if self.concat_self_o:
-            z = torch.cat([z, nodes.data['node_feature']], dim=1)
+            z = torch.cat([z, nodes.data.pop('node_feature')], dim=1)
 
         out = self.WO(z)
 
-        return {'updated_node_feature': out}
+        return {'node_feature': out}

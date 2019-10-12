@@ -12,7 +12,7 @@ def reward_func(s, ns):
 
 
 if __name__ == "__main__":
-    map_name = "training_scenario_1"
+    map_name = "2m_vs_1hellion"
     test_reward_func = reward_func
     test_sate_proc_func = state_proc_func
     done_cnt = 0
@@ -21,8 +21,6 @@ if __name__ == "__main__":
     actor = Actor(1, 20, 6, use_hypernet=False, num_relations=2)
     while True:
         cur_state, meta_data = env.observe()
-        # allies_node_feature = cur_state.nodes['ally'].data.pop('node_feature')
-        # enemies_node_feature = cur_state.nodes['enemy'].data.pop('node_feature')
         global_feature = meta_data['global_feature']
 
         action = actor.get_action(cur_state, torch.zeros(1), torch.zeros(1))

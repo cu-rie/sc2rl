@@ -135,10 +135,10 @@ def state_proc_func(state):
     graph = dgl.hetero_from_relations([g_allies, g_enemy, g_attack])
     if exist_allies:
         graph.nodes['ally'].data['node_feature'] = ally_node_features
-        graph.nodes['ally'].data['tag'] = torch.Tensor(allies_tag)
+        graph.nodes['ally'].data['tag'] = torch.Tensor(allies_tag).reshape(-1, 1)
     if exist_enemies:
         graph.nodes['enemy'].data['node_feature'] = enemy_node_features
-        graph.nodes['enemy'].data['tag'] = torch.Tensor(enemies_tag)
+        graph.nodes['enemy'].data['tag'] = torch.Tensor(enemies_tag).reshape(-1, 1)
 
     _gf = [allies_mineral_cost,
            allies_vespene_cost,
