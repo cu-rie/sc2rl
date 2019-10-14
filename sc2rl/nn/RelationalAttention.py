@@ -67,10 +67,11 @@ class RelationalAttentionLayer(torch.nn.Module):
 
     def forward(self, graph, feature_dict, update_node_types=['ally'], skip_edge_types=['attack_edge']):
         """
-        :param graph: Structure only graph. Input graph has no node features
-        :param node_feature: Tensor. Node features
-        :param device: str. device flag
-        :return: updated features
+        :param graph: structure only graph
+        :param feature_dict:
+        :param update_node_types:
+        :param skip_edge_types:
+        :return:
         """
 
         for key, val in feature_dict.items():

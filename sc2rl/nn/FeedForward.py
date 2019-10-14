@@ -40,11 +40,12 @@ class FeedForwardNeighbor(torch.nn.Module):
                 graph.apply_nodes(func=self.apply_node_function_yes_neighbor, ntype=ntype)
 
         ret_dict = dict()
+
         for ntype in graph.ntypes:
             ret_dict[ntype] = graph.nodes[ntype].data.pop('node_feature')
-
-        for ntype in update_node_types:
-            graph.nodes[ntype].data.pop('aggregated_message')
+        if self.neighbor_degree >= 1:  # clear intermediate messages
+            for ntype in update_node_types:
+                graph.nodes[ntype].data.pop('aggregated_message')
 
         return ret_dict
 

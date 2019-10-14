@@ -6,6 +6,7 @@ from sc2rl.nn.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.rl_modules.ActionModules import MoveModule, HoldModule, AttackModule
 
 VERY_SMALL_NUMBER = 1e-10
+VERY_LARGE_NUMBER = 1e10
 
 
 class Actor(torch.nn.Module):
@@ -99,7 +100,7 @@ class Actor(torch.nn.Module):
         cum_num_units = 0
         for attack_a, num_unit in zip(attack_arg[0], num_units):
             attack_arg_out[cum_num_units:cum_num_units + num_unit, :attack_a.shape[1]] = attack_a
-            attack_arg_out[cum_num_units:cum_num_units + num_unit, attack_a.shape[1]:] = 0
+            attack_arg_out[cum_num_units:cum_num_units + num_unit, attack_a.shape[1]:] = - VERY_LARGE_NUMBER
             cum_num_units += num_unit
 
         unnormed_ps = torch.cat((move_arg, hold_arg, attack_arg_out), dim=-1)

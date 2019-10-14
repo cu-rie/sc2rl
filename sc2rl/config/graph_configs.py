@@ -1,9 +1,9 @@
 # Node relations
-NODE_ALLIES = 0
+NODE_ALLY = 0
 NODE_ENEMY = 1
 
 # Edge relationships
-EDGE_ALLIES = 0
+EDGE_ALLY = 0
 EDGE_ENEMY = 1
 EDGE_IN_ATTACK_RANGE = 2
 
@@ -13,7 +13,7 @@ EDGE_IN_ATTACK_RANGE = 2
 # Todo: Programmatically managing 'NUM_EDGE_TYPES' varaible
 
 NUM_NODE_TYPES = 2
-NUM_EDGE_TYPES = 6
+NUM_EDGE_TYPES = 3
 
 # Edge key
 EDGE_ALLIES_KEY = 0

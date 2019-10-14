@@ -19,7 +19,7 @@ def get_batched_index(batched_graph, index_list, return_num_targets=False):
 
 def pop_node_feature_dict(graph, node_feature_key='node_feature'):
     ret_dict = dict()
-    for ntype in graph.ntpyes:
+    for ntype in graph.ntypes:
         ret_dict[ntype] = graph.nodes[ntype].data.pop(node_feature_key)
     return ret_dict
 

@@ -1,14 +1,10 @@
-import dgl
-import numpy as np
-import torch
 import itertools
 
-from sc2rl.config.unit_config import type2cost, type2onehot, NUM_TOTAL_TYPES
-from sc2rl.config.graph_configs import NUM_NODE_TYPES, NUM_EDGE_TYPES, NODE_ALLIES, NODE_ENEMY
-from sc2.game_state import GameState
+from sc2rl.config.unit_config import type2onehot, NUM_TOTAL_TYPES
+from sc2rl.config.graph_configs import NUM_NODE_TYPES, NUM_EDGE_TYPES
 
 
-def cartesian_product_(*iterables, return_1d=False):
+def cartesian_product(*iterables, return_1d=False):
     if return_1d:
         xs = []
         ys = []
@@ -33,6 +29,31 @@ def get_one_hot_node_type(node_type: int):
     ret = [0] * NUM_NODE_TYPES
     ret[node_type] = 1.0
     return ret
+
+
+def get_one_hot_edge_type(edge_type: int):
+    ret = [0] * NUM_EDGE_TYPES
+    ret[edge_type] = 1.0
+    return ret
+
+
+def edge_total_damage(unit_src, unit_target):
+    # WARNING: not yet tested
+
+    # Junyoung Edited
+    # Assume every unit_src has only 1 weapon
+    # WARNING2 : does not cover melee attack units!
+
+    damage = unit_src._weapons[0].damage
+
+    if unit_src.bonus_damage is not None:
+        bonus, attribute = unit_src.bonus_damage
+        check = getattr(unit_target, f"is_{attributes[attribute]}")
+
+        if check:
+            damage += bonus
+
+    return damage
 
 
 def state_proc_func(state):
