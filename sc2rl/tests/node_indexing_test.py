@@ -1,3 +1,5 @@
+from functools import partial
+
 import dgl
 import torch
 
@@ -11,6 +13,10 @@ from sc2rl.nn.RelationalNetwork import RelationalNetwork
 
 def reward_func(s, ns):
     return 1
+
+
+def filter_by_edge_type_idx(edges, etype_idx):
+    return edges.data['edge_type'] == etype_idx
 
 
 if __name__ == "__main__":
@@ -43,6 +49,9 @@ if __name__ == "__main__":
         cur_state = cur_state_dict['g']
 
         cur_state = dgl.batch([cur_state, cur_state])
+        filter_func = partial(filter_by_edge_type_idx, etype_idx=1)
+        filter_edge_idx = cur_state.filter_edges(filter_func)
+
         cur_state_feature_dict = pop_node_feature_dict(cur_state)
 
         action = actor.forward(batch_size=1, num_time_steps=1,

@@ -65,7 +65,7 @@ class RelationalAttentionLayer(torch.nn.Module):
             self.WV = torch.nn.ModuleDict(wv_dict)
             self.WO = torch.nn.Linear(o_input_dim, model_dim, bias=False)
 
-    def forward(self, graph, feature_dict, update_node_types=['ally'], skip_edge_types=['attack_edge']):
+    def forward(self, graph, feature_dict, update_node_types, skip_edge_types):
         """
         :param graph: structure only graph
         :param feature_dict:
@@ -74,8 +74,7 @@ class RelationalAttentionLayer(torch.nn.Module):
         :return:
         """
 
-        for key, val in feature_dict.items():
-            graph.nodes[key].data['node_feature'] = val
+        graph.nodes.data['node_feature'] = feature_dict
 
         executable_edge_types = graph.etypes
         for remove_edge_type in skip_edge_types:
