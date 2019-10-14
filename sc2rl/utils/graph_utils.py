@@ -40,3 +40,15 @@ def get_filtered_edge_index_by_type(graph, etype_idx):
     filter_func = partial(filter_by_edge_type_idx, etype_idx=etype_idx)
     edge_idx = graph.filter_edges(filter_func)
     return edge_idx
+
+
+def filter_by_node_type_idx(nodes, ntype_idx):
+    return nodes.data['node_type'] == ntype_idx
+
+
+def get_filtered_node_index_by_type(graph, ntype_idx):
+    filter_func = partial(filter_by_node_type_idx, ntype_idx=ntype_idx)
+    node_idx = graph.filter_nodes(filter_func)
+    return node_idx
+
+

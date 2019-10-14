@@ -3,6 +3,7 @@ import torch
 from torch_scatter import scatter_add
 
 from .Hypernet import HyperNetwork
+from sc2rl.utils.graph_utils import get_filtered_edge_index_by_type, get_filtered_node_index_by_type
 
 
 class RelationalAttentionLayer(torch.nn.Module):
@@ -65,36 +66,31 @@ class RelationalAttentionLayer(torch.nn.Module):
             self.WV = torch.nn.ModuleDict(wv_dict)
             self.WO = torch.nn.Linear(o_input_dim, model_dim, bias=False)
 
-    def forward(self, graph, feature_dict, update_node_types, skip_edge_types):
+    def forward(self, graph, feature_dict, update_node_type_indices, update_edge_type_indices):
         """
         :param graph: structure only graph
         :param feature_dict:
-        :param update_node_types:
-        :param skip_edge_types:
+        :param update_node_type_indices:
+        :param update_edge_type_indices:
         :return:
         """
 
-        graph.nodes.data['node_feature'] = feature_dict
+        graph.ndata['node_feature'] = feature_dict
 
-        executable_edge_types = graph.etypes
-        for remove_edge_type in skip_edge_types:
-            executable_edge_types.remove(remove_edge_type)
-
-        for i, etype in enumerate(executable_edge_types):
+        for i, etype_index in enumerate(update_edge_type_indices):
             message_func = partial(self.message_function, etype_idx=i)
             reduce_func = partial(self.reduce_function, etype_idx=i)
-            graph.send_and_recv(graph[etype].edges(), message_func=message_func, reduce_func=reduce_func, etype=etype)
+            edge_index = get_filtered_edge_index_by_type(graph, etype_index)
+            graph.send_and_recv(edge_index, message_func=message_func, reduce_func=reduce_func)
 
-        apply_func = partial(self.apply_node_function, num_etypes=len(executable_edge_types))
+        apply_func = partial(self.apply_node_function, num_etypes=len(update_edge_type_indices))
+        for ntype_idx in update_node_type_indices:
+            node_index = get_filtered_node_index_by_type(graph, ntype_idx)
+            graph.apply_nodes(apply_func, v=node_index)
 
-        for ntype in update_node_types:
-            graph.apply_nodes(apply_func, ntype=ntype)
+        updated_node_feature = graph.ndata.pop('node_feature')
 
-        ret_dict = dict()
-        for ntype in graph.ntypes:
-            ret_dict[ntype] = graph.nodes[ntype].data.pop('node_feature')
-
-        return ret_dict
+        return updated_node_feature
 
     def message_function(self, edges, etype_idx):
         src_node_features = edges.src['node_feature']  # [Num. Edges x Model_dim]

@@ -33,9 +33,11 @@ class RelationalEncoder(torch.nn.Module):
         self.addNorm2 = AddNormLayerHetero(model_dim=model_dim,
                                            use_norm=use_norm)
 
-    def forward(self, graph, feature_dict):
+    def forward(self, graph, feature_dict, update_node_type_indices, update_edge_type_indices):
         after_attn_feature_dict = self.attention.forward(graph=graph,
-                                                         feature_dict=feature_dict)
+                                                         feature_dict=feature_dict,
+                                                         update_node_type_indices=update_node_type_indices,
+                                                         update_edge_type_indices=update_edge_type_indices)
         after_norm_feature_dict = self.addNorm.forward(x_dict=feature_dict,
                                                        x_updated_dict=after_attn_feature_dict)
         after_ff_node_feat_dict = self.feedforward.forward(graph=graph,
