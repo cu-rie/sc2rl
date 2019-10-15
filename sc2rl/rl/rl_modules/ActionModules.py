@@ -1,7 +1,10 @@
 from functools import partial
 import torch
+
 from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
-from sc2rl.utils.graph_utils import get_filtered_edge_index_by_type, get_filtered_node_index_by_type
+from sc2rl.utils.graph_utils import get_filtered_edge_index_by_type
+
+from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 
 
 class MoveModule(torch.nn.Module):
@@ -42,25 +45,25 @@ class AttackModule(torch.nn.Module):
                                               hidden_activation=hidden_activation,
                                               out_activation=out_activation)
 
-    def forward(self, graph, node_feature, attack_edge_type_index: int):
-        """
-        :param graph: (dgl.Graph or dgl.BatchedGraph) Attack graph is a graph that only contains edges for denoting attack relationship
-        :param node_feature: (pytorch Tensor) Node features of units.
-        :param attack_edge_type_index: key value for describing 'attack' edges
-        :return: attack_argument, enemy_index
-        """
-        graph.ndata['node_feature'] = node_feature
-
-        edge_index = get_filtered_edge_index_by_type(graph, attack_edge_type_index)
-        graph.send_and_recv(edges=edge_index,
-                            message_func=self.message_function,
-                            reduce_func=self.reduce_function)
-        if len(edge_index) != 0:
-            attack_argument = graph.ndata.pop('attack_argument')
-            print(graph.ndata['enemy_tag'])
-        else:
-            attack_argument = 0
-        return attack_argument
+    # def forward(self, graph, node_feature, maximum_num_enemy: int, attack_edge_type_index: int):
+    #     """
+    #     :param graph: (dgl.Graph or dgl.BatchedGraph) Attack graph is a graph that only contains edges for denoting attack relationship
+    #     :param node_feature: (pytorch Tensor) Node features of units.
+    #     :param attack_edge_type_index: key value for describing 'attack' edges
+    #     :return: attack_argument, enemy_index
+    #     """
+    #     graph.ndata['node_feature'] = node_feature
+    #
+    #     edge_index = get_filtered_edge_index_by_type(graph, attack_edge_type_index)
+    #     graph.send_and_recv(edges=edge_index,
+    #                         message_func=self.message_function,
+    #                         reduce_func=self.reduce_function)
+    #     if len(edge_index) != 0:
+    #         attack_argument = graph.ndata.pop('attack_argument')
+    #         print(graph.ndata['enemy_tag'])
+    #     else:
+    #         attack_argument = 0
+    #     return attack_argument
 
     def message_function(self, edges):
         enemy_node_features = edges.src['node_feature']  # Enemy units' feature
@@ -71,13 +74,9 @@ class AttackModule(torch.nn.Module):
         return {'attack_argument': attack_argument, 'enemy_tag': enemy_tag}
 
     @staticmethod
-    def reduce_function(nodes):
-        pass
-
-    @staticmethod
     def get_action_reduce_function(nodes, num_enemy_units):
         mailbox_attack_argument = nodes.mailbox['attack_argument']
-        attack_argument = torch.zeros(size=(len(nodes), num_enemy_units))
+        attack_argument = torch.ones(size=(len(nodes), num_enemy_units)) * - VERY_LARGE_NUMBER
         attack_argument[:, :mailbox_attack_argument.shape[1]] = mailbox_attack_argument.squeeze(dim=-1)
 
         mailbox_enemy_tag = nodes.mailbox['enemy_tag']
@@ -85,25 +84,18 @@ class AttackModule(torch.nn.Module):
         enemy_tag[:, :mailbox_enemy_tag.shape[1]] = mailbox_enemy_tag
         return {'attack_argument': attack_argument, 'enemy_tag': enemy_tag}
 
-    def get_action(self, graph, node_feature, attack_edge_type_index: int, enemy_node_type_index: int):
-        """
-        Assume the input 'graph' is a single graph! Not a batch-of-graphs
-        """
+    def forward(self, graph, node_feature, maximum_num_enemy: int, attack_edge_type_index: int):
         num_total_nodes = graph.number_of_nodes()
-        num_enemy_units = len(get_filtered_node_index_by_type(graph, enemy_node_type_index))
-
         graph.ndata['node_feature'] = node_feature
-
         edge_index = get_filtered_edge_index_by_type(graph, attack_edge_type_index)
-
-        reduce_func = partial(self.get_action_reduce_function, num_enemy_units=num_enemy_units)
+        reduce_func = partial(self.get_action_reduce_function, num_enemy_units=maximum_num_enemy)
         graph.send_and_recv(edges=edge_index,
                             message_func=self.message_function,
                             reduce_func=reduce_func)
         if len(edge_index) != 0:
             attack_argument = graph.ndata.pop('attack_argument')
         else:
-            attack_argument = torch.zeros(size=(num_total_nodes, num_enemy_units))
+            attack_argument = torch.ones(size=(num_total_nodes, maximum_num_enemy)) * - VERY_LARGE_NUMBER
         return attack_argument
 
 
