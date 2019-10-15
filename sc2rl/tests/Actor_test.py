@@ -9,6 +9,7 @@ from sc2rl.utils.graph_utils import pop_node_feature_dict
 
 from sc2rl.rl.rl_networks.rnn_encoder import RNNEncoder
 from sc2rl.nn.RelationalNetwork import RelationalNetwork
+from sc2rl.rl.rl_networks.Actor import Actor
 
 
 def reward_func(s, ns):
@@ -42,7 +43,11 @@ if __name__ == "__main__":
                                  num_neurons=[128, 128],
                                  pooling_op='relu')
 
-    actor = RNNEncoder(rnn=rnn, one_step_encoder=hist_enc)
+    global_encoder = RNNEncoder(rnn=rnn, one_step_encoder=hist_enc)
+    actor = Actor(global_encoder=global_encoder,
+                  node_dim=20
+
+                  )
 
     while True:
         cur_state_dict = env.observe()
