@@ -18,7 +18,6 @@ from sc2rl.utils.state_to_graph_utils import (get_one_hot_node_type,
 
 
 def process_game_state_to_dgl(game_state: GameState):
-
     # TODO 1 : Find a better way for managing input features and related constants!
 
     units = game_state.units
@@ -182,7 +181,7 @@ def process_game_state_to_dgl(game_state: GameState):
 
                         damage = edge_total_damage(ally_unit, in_range_unit)
                         damage = torch.Tensor(data=(damage,)).reshape(1, -1)
-                        g.add_edge(allies_index, enemy_index, {'edge_type': edge_in_attack_range,
+                        g.add_edge(enemy_index, allies_index, {'edge_type': edge_in_attack_range,
                                                                'damage': damage,
                                                                'dist': dist})
 
