@@ -17,14 +17,13 @@ class FeedForwardNeighbor(torch.nn.Module):
         input_dim = (neighbor_degree + 1) * model_dim
         self.node_updater = MLP(input_dim, model_dim, num_neurons=num_neurons)
 
-    def forward(self, graph, feature_dict, update_node_types=['ally']):
+    def forward(self, graph, node_feature, update_node_types=['ally']):
         """
         :param graph: Structure only graph. Input graph has no node features
-        :param feature_dict:
+        :param node_feature:
         :return: updated features
         """
-        for key, val in feature_dict.items():
-            graph.nodes[key].data['node_feature'] = val
+        graph.ndata['node_feature'] = node_feature
 
         if self.neighbor_degree == 0:  # Update features with only own features
             for ntype in update_node_types:

@@ -66,16 +66,16 @@ class RelationalAttentionLayer(torch.nn.Module):
             self.WV = torch.nn.ModuleDict(wv_dict)
             self.WO = torch.nn.Linear(o_input_dim, model_dim, bias=False)
 
-    def forward(self, graph, feature_dict, update_node_type_indices, update_edge_type_indices):
+    def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
         """
         :param graph: structure only graph
-        :param feature_dict:
+        :param node_feature:
         :param update_node_type_indices:
         :param update_edge_type_indices:
         :return:
         """
 
-        graph.ndata['node_feature'] = feature_dict
+        graph.ndata['node_feature'] = node_feature
 
         for i, etype_index in enumerate(update_edge_type_indices):
             message_func = partial(self.message_function, etype_idx=i)
@@ -126,8 +126,8 @@ class RelationalAttentionLayer(torch.nn.Module):
         values = []
 
         for i in range(num_etypes):
-            key = nodes.data.pop('key{}'.format(i))
-            value = nodes.data.pop('value{}'.format(i))
+            key = nodes.data['key{}'.format(i)]
+            value = nodes.data['value{}'.format(i)]
             keys.append(key)
             values.append(value)
 

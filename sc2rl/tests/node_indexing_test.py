@@ -32,7 +32,7 @@ if __name__ == "__main__":
                        batch_first=True)
 
     hist_enc = RelationalNetwork(num_layers=1,
-                                 model_dim=20,
+                                 model_dim=26,
                                  use_hypernet=False,
                                  hypernet_input_dim=None,
                                  num_relations=3,
