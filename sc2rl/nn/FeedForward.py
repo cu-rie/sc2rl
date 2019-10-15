@@ -7,6 +7,7 @@ class FeedForwardNeighbor(torch.nn.Module):
     def __init__(self,
                  model_dim,
                  neighbor_degree: int = 0,
+                 num_node_types: int = 1,
                  num_neurons: list = [128, 128]):
         super(FeedForwardNeighbor, self).__init__()
 
@@ -15,9 +16,14 @@ class FeedForwardNeighbor(torch.nn.Module):
         self.neighbor_degree = neighbor_degree
 
         input_dim = (neighbor_degree + 1) * model_dim
+
+
+
+        for i in range(num_node_types):
+
         self.node_updater = MLP(input_dim, model_dim, num_neurons=num_neurons)
 
-    def forward(self, graph, node_feature, update_node_types=['ally']):
+    def forward(self, graph, node_feature, update_node_type_indices):
         """
         :param graph: Structure only graph. Input graph has no node features
         :param node_feature:
