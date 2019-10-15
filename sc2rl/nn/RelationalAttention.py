@@ -74,65 +74,68 @@ class RelationalAttentionLayer(torch.nn.Module):
         :param update_edge_type_indices:
         :return:
         """
-
         graph.ndata['node_feature'] = node_feature
 
-        for i, etype_index in enumerate(update_edge_type_indices):
-            message_func = partial(self.message_function, etype_idx=i)
-            reduce_func = partial(self.reduce_function, etype_idx=i)
-            edge_index = get_filtered_edge_index_by_type(graph, etype_index)
-            graph.send_and_recv(edge_index, message_func=message_func, reduce_func=reduce_func)
+        message_func = partial(self.message_function, update_edge_type_indices=update_edge_type_indices)
+        graph.send_and_recv(graph.edges(), message_func=message_func, reduce_func=self.reduce_function)
 
-        apply_func = partial(self.apply_node_function, num_etypes=len(update_edge_type_indices))
         for ntype_idx in update_node_type_indices:
             node_index = get_filtered_node_index_by_type(graph, ntype_idx)
-            graph.apply_nodes(apply_func, v=node_index)
+            graph.apply_nodes(self.apply_node_function, v=node_index)
 
         updated_node_feature = graph.ndata.pop('node_feature')
 
+        graph.ndata.pop('z')
+
         return updated_node_feature
 
-    def message_function(self, edges, etype_idx):
+    def message_function(self, edges, update_edge_type_indices):
         src_node_features = edges.src['node_feature']  # [Num. Edges x Model_dim]
 
         if self.use_hypernet:
-            src_node_features = src_node_features.unsqueeze(-1)  # [#.Edges x Model_dim x 1]
-            WK = self.WK(etype_idx)
-            WV = self.WV(etype_idx)
+            src_node_features = src_node_features.unsqueeze(-1)
+            edge_types = edges.data['edge_type_one_hot']  #
+            for i in range(edge_types.shape[1]):
+                if i not in update_edge_type_indices:
+                    edge_types[:, i] = 0
+
+            WK = self.WK(edge_types)
+            WV = self.WV(edge_types)
 
             keys = torch.bmm(WK, src_node_features)  # [#.Edges x (Model_dim x #.head) x 1]
-            keys = keys.squeeze()  # [#.Edges x (Model_dim x #.head)]
             values = torch.bmm(WV, src_node_features)  # [#.Edges x (Model_dim x #.head) x 1]
+
+            keys = keys.squeeze()  # [#.Edges x (Model_dim x #.head)]
             values = values.squeeze()  # [#.Edges x (Model_dim x #.head)]
+
         else:
-            WK = self.WK['WK{}'.format(etype_idx)]
-            WV = self.WV['WV{}'.format(etype_idx)]
-            keys = WK(src_node_features)
-            values = WV(src_node_features)
+            edge_types = edges.data['edge_type']
+            keys = torch.zeros(self.model_dim * self.num_head,
+                               src_node_features.shape[0])  # [(Model_dim x #.head) x #.Edges]
 
-        return {'key{}'.format(etype_idx): keys, 'value{}'.format(etype_idx): values}
+            values = torch.zeros(self.model_dim * self.num_head,
+                                 src_node_features.shape[0])  # [(Model_dim x #.head) x #.Edges]
+            for i in update_edge_type_indices:
+                WK = self.WK['WK{}'.format(i)]
+                WV = self.WV['WV{}'.format(i)]
+                curr_relation_mask = edge_types == i
+                curr_relation_post = torch.arange(src_node_features.shape[0])[curr_relation_mask]
+                if curr_relation_mask.sum() == 0:
+                    continue
+                cur_node_features = src_node_features[curr_relation_mask]
+                keys[:, curr_relation_post] = WK(cur_node_features).t()
+                values[:, curr_relation_post] = WV(cur_node_features).t()
+            keys = keys.t()  # [#.Edges x (Model_dim x #.head)]
+            values = values.t()  # [#.Edges x (Model_dim x #.head)]
 
-    def reduce_function(self, nodes, etype_idx):
-        key = nodes.mailbox['key{}'.format(etype_idx)]  # [(Batched) Node x (Model_dim x #.head)]
-        value = nodes.mailbox['value{}'.format(etype_idx)]  # [(Batched) Node x (Model_dim x #.head)]
-        return {'key{}'.format(etype_idx): key, 'value{}'.format(etype_idx): value}
+        return {'key': keys, 'value': values}
 
-    def apply_node_function(self, nodes, num_etypes):
-
+    def reduce_function(self, nodes):
         node_features = nodes.data['node_feature']
         queries = self.WQ(node_features)  # [(Batched) Node x (Model_dim x #.head)]
 
-        keys = []
-        values = []
-
-        for i in range(num_etypes):
-            key = nodes.data['key{}'.format(i)]
-            value = nodes.data['value{}'.format(i)]
-            keys.append(key)
-            values.append(value)
-
-        keys = torch.cat(keys, dim=1)
-        values = torch.cat(values, dim=1)
+        keys = nodes.mailbox['key']  # [(Batched) Node x (Model_dim x #.head)]
+        values = nodes.mailbox['value']  # [(Batched) Node x (Model_dim x #.head)]
 
         node_counter = 0
         node_indices = []
@@ -170,8 +173,11 @@ class RelationalAttentionLayer(torch.nn.Module):
         normalized_score = normalized_score.view(-1, self.num_head, 1)
         values_scatter = values.view(-1, self.num_head, self.model_dim)
         weighted_values = normalized_score * values_scatter
-        z = scatter_add(weighted_values, node_indices, dim=0)
+        ret_z = scatter_add(weighted_values, node_indices, dim=0)
+        return {'z': ret_z}
 
+    def apply_node_function(self, nodes):
+        z = nodes.data['z']  # num_nodes * num_head * model_dim
         z = z.reshape(-1, self.num_head * self.model_dim)
 
         if self.concat_self_o:
