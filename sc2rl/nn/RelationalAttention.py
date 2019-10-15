@@ -77,9 +77,9 @@ class RelationalAttentionLayer(torch.nn.Module):
 
         graph.ndata['node_feature'] = node_feature
 
-        for i, etype_index in enumerate(update_edge_type_indices):
-            message_func = partial(self.message_function, etype_idx=i)
-            reduce_func = partial(self.reduce_function, etype_idx=i)
+        for etype_index in update_edge_type_indices:
+            message_func = partial(self.message_function, etype_idx=etype_index)
+            reduce_func = partial(self.reduce_function, etype_idx=etype_index)
             edge_index = get_filtered_edge_index_by_type(graph, etype_index)
             graph.send_and_recv(edge_index, message_func=message_func, reduce_func=reduce_func)
 
@@ -87,6 +87,9 @@ class RelationalAttentionLayer(torch.nn.Module):
         for ntype_idx in update_node_type_indices:
             node_index = get_filtered_node_index_by_type(graph, ntype_idx)
             graph.apply_nodes(apply_func, v=node_index)
+            for i in range(len(update_edge_type_indices)):
+                graph.ndata.pop('key{}'.format(i))
+                graph.ndata.pop('value{}'.format(i))
 
         updated_node_feature = graph.ndata.pop('node_feature')
 

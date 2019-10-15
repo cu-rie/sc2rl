@@ -38,7 +38,7 @@ if __name__ == "__main__":
                                  num_relations=3,
                                  num_head=1,
                                  use_norm=True,
-                                 neighbor_degree=0,
+                                 neighbor_degree=1,
                                  num_neurons=[128, 128],
                                  pooling_op='relu')
 
@@ -49,8 +49,6 @@ if __name__ == "__main__":
         cur_state = cur_state_dict['g']
 
         cur_state = dgl.batch([cur_state, cur_state])
-        filter_func = partial(filter_by_edge_type_idx, etype_idx=1)
-        filter_edge_idx = cur_state.filter_edges(filter_func)
 
         cur_state_feature_dict = cur_state.ndata.pop('node_feature')
 

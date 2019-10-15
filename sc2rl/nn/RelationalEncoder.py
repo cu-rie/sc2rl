@@ -13,7 +13,7 @@ class RelationalEncoder(torch.nn.Module):
                  num_relations=None,
                  num_head: int = 3,
                  use_norm=True,
-                 neighbor_degree=1,
+                 neighbor_degree=0,
                  num_neurons=[128, 128],
                  pooling_op='relu'):
         super(RelationalEncoder, self).__init__()
@@ -41,7 +41,9 @@ class RelationalEncoder(torch.nn.Module):
         after_norm_feature = self.addNorm(x=node_feature,
                                           x_updated=after_attn_feature)
         after_ff_node_feature = self.feedforward(graph=graph,
-                                                 node_feature=after_norm_feature)
+                                                 node_feature=after_norm_feature,
+                                                 update_node_type_indices=update_node_type_indices,
+                                                 update_edge_type_indices=update_edge_type_indices)
         after_norm2_node_feature = self.addNorm2(x=after_norm_feature,
                                                  x_updated=after_ff_node_feature)
 
