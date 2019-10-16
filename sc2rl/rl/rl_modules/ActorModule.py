@@ -62,7 +62,7 @@ class ActorModule(torch.nn.Module):
 
         ps = torch.nn.functional.softmax(unnormed_ps, dim=-1)
         log_ps = torch.log(ps + VERY_SMALL_NUMBER)
-        unit_entropy = - torch.sum(log_ps * ps, dim=-1)  # per unit entropy
+        ally_entropy = - torch.sum(log_ps * ps, dim=-1)  # per unit entropy
         log_p_move, log_p_hold, log_p_attack = torch.split(log_ps, [self.move_dim, 1, maximum_num_enemy], dim=1)
 
         return_dict = dict()
@@ -71,7 +71,7 @@ class ActorModule(torch.nn.Module):
         return_dict['log_p_move'] = log_p_move
         return_dict['log_p_hold'] = log_p_hold
         return_dict['log_p_attack'] = log_p_attack
-        return_dict['unit_entropy'] = unit_entropy
+        return_dict['ally_entropy'] = ally_entropy
         # for SC2 interfacing
         return_dict['ally_tags'] = ally_tags
         return_dict['enemy_tags'] = enemy_tags

@@ -1,4 +1,5 @@
 from functools import partial
+import dgl
 import torch
 
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
@@ -65,5 +66,66 @@ def get_largest_number_of_enemy_nodes(graphs):
     return max_num_enemy
 
 
+# ************************ WARNING ****************************
+# DO NOT ERASE UNUSED ARGUMENT 'id_range' OF curie_initializer
+# ************************ WARNING ****************************
+
 def curie_initializer(shape, dtype, ctx, id_range):
     return torch.ones(shape, dtype=dtype, device=ctx) * - VERY_LARGE_NUMBER
+
+
+# ************************ WARNING ****************************
+# DO NOT ERASE UNUSED ARGUMENT 'id_range' OF curie_initializer
+# ************************ WARNING ****************************
+
+
+def _get_index_mapper_list(graph, next_graph, cur_node_start_idx, next_node_start_idx):
+    """
+    generate map tags in the next graph into the tags in the graph if exist.
+    """
+    cur_idx = []
+    next_idx = []
+
+    next_graph_tag = next_graph.ndata['tag']
+    for cn_index in graph.nodes:
+        curr_tag = graph.ndata['tag'][cn_index]
+        next_graph_index = (next_graph_tag == curr_tag).nonzero().squeeze().int()
+        if next_graph_index.nelement() == 0:
+            pass
+        elif next_graph_index.nelement() == 1:
+            cur_idx.append(cn_index + cur_node_start_idx)
+            next_idx.append(next_graph_index + next_node_start_idx)
+        else:
+            raise RuntimeError("Existing multiple units with same tag in next graph")
+    return cur_idx, next_idx
+
+
+def get_index_mapper(graph, next_graph):
+    """
+    :param graph:
+    :param next_graph:
+    :param target_indices:
+    :return:
+    """
+    if type(graph) == dgl.BatchedDGLGraph and type(next_graph) == dgl.BatchedDGLGraph:
+        graphs = dgl.unbatch(graph)
+        next_graphs = dgl.unbatch(next_graph)
+
+        cur_idx = []
+        next_idx = []
+
+        curr_num_nodes = 0
+        next_num_nodes = 0
+        for g, ng in zip(graphs, next_graphs):
+            _curr_num_nodes = g.number_of_nodes()
+            _next_num_nodes = ng.number_of_nodes()
+            ci, ni = _get_index_mapper_list(g, ng, curr_num_nodes, next_num_nodes)
+            cur_idx.extend(ci)
+            next_idx.extend(ni)
+
+            curr_num_nodes += _curr_num_nodes
+            next_num_nodes += _next_num_nodes
+    else:
+        cur_idx, next_idx = _get_index_mapper_list(graph, next_graph, 0, 0)
+
+    return cur_idx, next_idx
