@@ -22,19 +22,18 @@ class ActorCriticModule(torch.nn.Module):
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
         exp_Q = self.get_exp_Qs(graph, node_feature, maximum_num_enemy)
 
-
     def get_action(self, *args, **kwargs):
         return self.actor.get_action(*args, **kwargs)
 
     def get_exp_Qs(self, graph, node_feature, maximum_num_enemy):
         actor_ret_dict = self.actor.compute_probs(graph, node_feature, maximum_num_enemy)
-        move_Q, hold_Q, attack_Q = self.critic(graph, node_feature, maximum_num_enemy)
-        Q = torch.cat([move_Q, hold_Q, attack_Q], dim=-1)
+        move_q, hold_q, attack_q = self.critic(graph, node_feature, maximum_num_enemy)
+        concat_q = torch.cat([move_q, hold_q, attack_q], dim=-1)
 
         ally_node_idx = get_filtered_node_index_by_type(graph, NODE_ALLY)
-        ally_Qs = Q[ally_node_idx, :]
+        ally_qs = concat_q[ally_node_idx, :]
         probs = actor_ret_dict['probs']
-        return ally_Qs * probs
+        return ally_qs * probs
 
 
 if __name__ == "__main__":
