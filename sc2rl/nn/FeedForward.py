@@ -1,5 +1,7 @@
 import torch
+from functools import partial
 from .MultiLayerPerceptron import MultiLayerPerceptron as MLP
+from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, get_filtered_edge_index_by_type
 
 
 class FeedForwardNeighbor(torch.nn.Module):
@@ -7,6 +9,7 @@ class FeedForwardNeighbor(torch.nn.Module):
     def __init__(self,
                  model_dim,
                  neighbor_degree: int = 0,
+                 num_node_types: int = 1,
                  num_neurons: list = [128, 128]):
         super(FeedForwardNeighbor, self).__init__()
 
@@ -15,39 +18,41 @@ class FeedForwardNeighbor(torch.nn.Module):
         self.neighbor_degree = neighbor_degree
 
         input_dim = (neighbor_degree + 1) * model_dim
-        self.node_updater = MLP(input_dim, model_dim, num_neurons=num_neurons)
+        node_updater_dict = {}
+        for i in range(num_node_types):
+            node_updater_dict['node_updater{}'.format(i)] = MLP(input_dim, model_dim, num_neurons=num_neurons)
 
-    def forward(self, graph, feature_dict, update_node_types=['ally']):
+        self.node_updater = torch.nn.ModuleDict(node_updater_dict)
+
+    def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
         """
-        :param graph: Structure only graph. Input graph has no node features
-        :param feature_dict:
-        :return: updated features
+        :param graph:
+        :param node_feature:
+        :param update_node_type_indices:
+        :param update_edge_type_indices:
+        :return:
         """
-        for key, val in feature_dict.items():
-            graph.nodes[key].data['node_feature'] = val
+        graph.ndata['node_feature'] = node_feature
 
         if self.neighbor_degree == 0:  # Update features with only own features
-            for ntype in update_node_types:
-                graph.apply_nodes(func=self.apply_node_function_no_neighbor, ntype=ntype)
+            for ntype_idx in update_node_type_indices:
+                node_index = get_filtered_node_index_by_type(graph, ntype_idx)
+                apply_func = partial(self.apply_node_function_no_neighbor, ntype_idx=ntype_idx)
+                graph.apply_nodes(func=apply_func, v=node_index)
         else:  # Update features with own features and 1 hop neighbor features
-            for etype in graph.etypes:
-                graph.send_and_recv(graph[etype].edges(),
-                                    message_func=self.message_function,
-                                    reduce_func=self.reduce_function,
-                                    etype=etype)
+            for etype_idx in update_edge_type_indices:
+                edge_index = get_filtered_edge_index_by_type(graph, etype_idx)
+                graph.send_and_recv(edge_index, message_func=self.message_function, reduce_func=self.reduce_function)
+            for ntype_idx in update_node_type_indices:
+                node_index = get_filtered_node_index_by_type(graph, ntype_idx)
+                apply_func = partial(self.apply_node_function_yes_neighbor, ntype_idx=ntype_idx)
+                graph.apply_nodes(func=apply_func, v=node_index)
 
-            for ntype in update_node_types:
-                graph.apply_nodes(func=self.apply_node_function_yes_neighbor, ntype=ntype)
+        updated_node_feature = graph.ndata.pop('node_feature')
+        if self.neighbor_degree >= 1:
+            graph.ndata.pop('aggregated_message')
 
-        ret_dict = dict()
-
-        for ntype in graph.ntypes:
-            ret_dict[ntype] = graph.nodes[ntype].data.pop('node_feature')
-        if self.neighbor_degree >= 1:  # clear intermediate messages
-            for ntype in update_node_types:
-                graph.nodes[ntype].data.pop('aggregated_message')
-
-        return ret_dict
+        return updated_node_feature
 
     @staticmethod
     def message_function(edges):
@@ -57,9 +62,11 @@ class FeedForwardNeighbor(torch.nn.Module):
     def reduce_function(nodes):
         return {'aggregated_message': nodes.mailbox['neighbor_feature'].sum(1)}
 
-    def apply_node_function_yes_neighbor(self, nodes):
+    def apply_node_function_yes_neighbor(self, nodes, ntype_idx):
         _inp = torch.cat((nodes.data['aggregated_message'], nodes.data['node_feature']), dim=-1)
-        return {'node_feature': self.node_updater(_inp)}
+        updater = self.node_updater['node_updater{}'.format(ntype_idx)]
+        return {'node_feature': updater(_inp)}
 
-    def apply_node_function_no_neighbor(self, nodes):
-        return {'node_feature': self.node_updater(nodes.data['node_feature'])}
+    def apply_node_function_no_neighbor(self, nodes, ntype_idx):
+        updater = self.node_updater['node_updater{}'.format(ntype_idx)]
+        return {'node_feature': updater(nodes.data['node_feature'])}

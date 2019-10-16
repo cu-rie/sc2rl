@@ -17,6 +17,8 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
         self.reward_func = reward_func
         self.state_proc_func = state_proc_func
+        self.prev_health = 1000
+        self.curr_health = 1000
 
     def reset(self):
         sc2_game_state = self._reset()
@@ -26,11 +28,22 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         sc2_game_state = self._observe()
         return self.state_proc_func(sc2_game_state)
 
-    @staticmethod
-    def _check_done(sc2_game_state):
+    def _check_done(self, sc2_game_state):
         num_allies = len(sc2_game_state.units.owned)
         num_enemies = len(sc2_game_state.units.enemy)
+        cur_health = 0
+        for u in sc2_game_state.units:
+            cur_health += u.health
+        self.curr_health = cur_health
         return num_allies == 0 or num_enemies == 0
+
+    def _check_num_units(self):
+        if self.prev_health < self.curr_health:
+            done = True
+        else:
+            done = False
+        self.prev_health = self.curr_health
+        return done
 
     def step(self, action):
         sc2_cur_state = self._observe()
@@ -38,13 +51,15 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
         # additional routine for checking done!
         # Done checking behaviour of the variants of 'MicroTest' are different from the standard checking done routine.
-        done = self._check_done(sc2_next_state)
+        done_zero_units = self._check_done(sc2_next_state)
+        done_increase = self._check_num_units()
+        done = done_zero_units or done_increase
 
         cur_state = self.state_proc_func(sc2_cur_state)
         next_state = self.state_proc_func(sc2_next_state)
         reward = self.reward_func(cur_state, next_state)
 
-        if done:  # Burn few remaining frames
+        if done_zero_units:  # Burn few remaining frames
             self.burn_last_frames()
 
         return next_state, reward, done
