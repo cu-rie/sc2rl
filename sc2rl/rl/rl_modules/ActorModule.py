@@ -32,7 +32,7 @@ class ActorModule(torch.nn.Module):
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation)
 
-    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index):
+    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
         move_argument = self.move_module(graph, node_feature)
         hold_argument = self.hold_module(graph, node_feature)
         attack_argument = self.attack_module(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
@@ -42,7 +42,7 @@ class ActorModule(torch.nn.Module):
                       ally_node_type_index=NODE_ALLY,
                       attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
         # get logits of each action
-        move_arg, hold_arg, attack_arg = self.forward(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
+        move_arg, hold_arg, attack_arg = self(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
 
         # Prepare un-normalized probability of attacks
 
@@ -51,10 +51,10 @@ class ActorModule(torch.nn.Module):
         ally_node_indices = get_filtered_node_index_by_type(graph, ally_node_type_index)
         unnormed_ps = unnormed_ps[ally_node_indices, :]  # of only ally units
 
-        ally_tags = graph.ndata.pop('tag')
+        ally_tags = graph.ndata['tag']
         ally_tags = ally_tags[ally_node_indices]
         if 'enemy_tag' in graph.ndata.keys():
-            enemy_tags = graph.ndata.pop('enemy_tag')
+            enemy_tags = graph.ndata['enemy_tag']
         else:
             enemy_tags = torch.zeros_like(ally_tags).view(-1, 1)  # dummy
 
@@ -94,3 +94,7 @@ class ActorModule(torch.nn.Module):
         else:
             nn_actions = ally_probs.argmax(dim=1)
         return nn_actions, info_dict
+
+
+if __name__ == "__main__":
+    ActorModule(node_input_dim=26, out_activation='relu', hidden_activation='relu')
