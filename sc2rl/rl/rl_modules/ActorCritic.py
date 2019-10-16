@@ -3,8 +3,6 @@ import dgl
 from sc2rl.rl.rl_modules.ActorModule import ActorModule
 from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
-from torch.optim.optimizer import
-
 
 class ActorCriticModule(torch.nn.Module):
 
