@@ -20,7 +20,7 @@ def filter_by_edge_type_idx(edges, etype_idx):
 
 
 if __name__ == "__main__":
-    map_name = "2m_vs_1hellion"
+    map_name = "5m_vs_1z"
     test_reward_func = reward_func
     test_sate_proc_func = process_game_state_to_dgl
     done_cnt = 0
@@ -55,9 +55,10 @@ if __name__ == "__main__":
         enc_out = hist_enc(cur_state, cur_state_feature_dict, [NODE_ALLY], [EDGE_ALLY, EDGE_ENEMY])
 
         next_state, reward, done = env.step(action=None)
+
         if done:
             done_cnt += 1
-            if done_cnt >= 10:
+            if done_cnt >= 1000:
                 break
 
     env.close()
