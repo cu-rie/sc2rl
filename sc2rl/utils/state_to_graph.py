@@ -31,12 +31,13 @@ def process_game_state_to_dgl(game_state: GameState):
     num_enemies = len(enemy_units)
 
     exist_allies = False
-    has_edge = False
     node_types = []
 
     g = dgl.DGLGraph(multigraph=True)
     g.set_e_initializer(dgl.init.zero_initializer)
-    #g.set_n_initializer(dgl.init.zero_initializer)
+
+    # using curie_initializer for node features matters a lot !
+    # working as a mask for computing action probs later.
     g.set_n_initializer(curie_initializer)
 
     node_features = []
@@ -147,7 +148,6 @@ def process_game_state_to_dgl(game_state: GameState):
             g.add_edges(allies_edge_indices[0], allies_edge_indices[1],
                         {'edge_type_one_hot': allies_edge_type_one_hot.repeat(num_allies_edges, 1),
                          'edge_type': allies_edge_type.repeat(num_allies_edges)})
-            has_edge = True
 
         if num_allies >= 1 and num_enemies >= 1:
             # Constructing bipartite graph for computing primitive attack on attack
@@ -182,24 +182,14 @@ def process_game_state_to_dgl(game_state: GameState):
                         g.add_edge(enemy_index, allies_index, {'edge_type': edge_in_attack_range,
                                                                'damage': damage,
                                                                'dist': dist})
-
-            has_edge = True
-
     else:
         pass
 
     ret_dict = dict()
     ret_dict['g'] = g
+
+    # For interfacing nn action args with sc2 action commends.
     ret_dict['tag2unit_dict'] = tag2unit_dict
-
-    if num_allies >= 1:
-        ret_dict['allies_index_dict'] = allies_index_dict
-        ret_dict['allies_unit_dict'] = allies_unit_dict
-
-    if num_enemies >= 1:
-        ret_dict['enemy_index_dict'] = enemy_index_dict
-        ret_dict['enemy_unit_dict'] = enemy_unit_dict
-
     ret_dict['units'] = units
 
     _gf = [allies_mineral_cost,

@@ -57,7 +57,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
         cur_state = self.state_proc_func(sc2_cur_state)
         next_state = self.state_proc_func(sc2_next_state)
-        reward = self.reward_func(cur_state, next_state)
+        reward = self.reward_func(cur_state, next_state, done)
 
         if done_zero_units:  # Burn few remaining frames
             self.burn_last_frames()
