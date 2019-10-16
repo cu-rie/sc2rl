@@ -1,4 +1,8 @@
 from functools import partial
+import torch
+
+from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
+from sc2rl.config.graph_configs import NODE_ENEMY
 
 
 def get_batched_index(batched_graph, index_list, return_num_targets=False):
@@ -40,3 +44,26 @@ def get_filtered_edge_index_by_type(graph, etype_idx):
     filter_func = partial(filter_by_edge_type_idx, etype_idx=etype_idx)
     edge_idx = graph.filter_edges(filter_func)
     return edge_idx
+
+
+def filter_by_node_type_idx(nodes, ntype_idx):
+    return nodes.data['node_type'] == ntype_idx
+
+
+def get_filtered_node_index_by_type(graph, ntype_idx):
+    filter_func = partial(filter_by_node_type_idx, ntype_idx=ntype_idx)
+    node_idx = graph.filter_nodes(filter_func)
+    return node_idx
+
+
+def get_largest_number_of_enemy_nodes(graphs):
+    max_num_enemy = 0
+    for graph in graphs:
+        num_enemy = len(get_filtered_node_index_by_type(graph, NODE_ENEMY))
+        if max_num_enemy <= num_enemy:
+            max_num_enemy = num_enemy
+    return max_num_enemy
+
+
+def curie_initializer(shape, dtype, ctx, id_range):
+    return torch.ones(shape, dtype=dtype, device=ctx) * - VERY_LARGE_NUMBER

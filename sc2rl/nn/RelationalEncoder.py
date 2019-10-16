@@ -1,7 +1,7 @@
 import torch
 
 from sc2rl.nn.RelationalAttention import RelationalAttentionLayer
-from sc2rl.nn.AddNorm import AddNormLayerHetero
+from sc2rl.nn.AddNorm import AddNormLayer
 from sc2rl.nn.FeedForward import FeedForwardNeighbor
 
 
@@ -13,7 +13,7 @@ class RelationalEncoder(torch.nn.Module):
                  num_relations=None,
                  num_head: int = 3,
                  use_norm=True,
-                 neighbor_degree=1,
+                 neighbor_degree=0,
                  num_neurons=[128, 128],
                  pooling_op='relu'):
         super(RelationalEncoder, self).__init__()
@@ -25,22 +25,26 @@ class RelationalEncoder(torch.nn.Module):
                                                   num_head=num_head,
                                                   pooling_op=pooling_op)
 
-        self.addNorm = AddNormLayerHetero(model_dim=model_dim,
-                                          use_norm=use_norm)
+        self.addNorm = AddNormLayer(model_dim=model_dim,
+                                    use_norm=use_norm)
         self.feedforward = FeedForwardNeighbor(model_dim=model_dim,
                                                neighbor_degree=neighbor_degree,
                                                num_neurons=num_neurons)
-        self.addNorm2 = AddNormLayerHetero(model_dim=model_dim,
-                                           use_norm=use_norm)
+        self.addNorm2 = AddNormLayer(model_dim=model_dim,
+                                     use_norm=use_norm)
 
-    def forward(self, graph, feature_dict):
-        after_attn_feature_dict = self.attention.forward(graph=graph,
-                                                         feature_dict=feature_dict)
-        after_norm_feature_dict = self.addNorm.forward(x_dict=feature_dict,
-                                                       x_updated_dict=after_attn_feature_dict)
-        after_ff_node_feat_dict = self.feedforward.forward(graph=graph,
-                                                           feature_dict=after_norm_feature_dict)
-        after_norm2_node_feat_dict = self.addNorm2.forward(x_dict=after_norm_feature_dict,
-                                                           x_updated_dict=after_ff_node_feat_dict)
+    def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
+        after_attn_feature = self.attention(graph=graph,
+                                            node_feature=node_feature,
+                                            update_node_type_indices=update_node_type_indices,
+                                            update_edge_type_indices=update_edge_type_indices)
+        after_norm_feature = self.addNorm(x=node_feature,
+                                          x_updated=after_attn_feature)
+        after_ff_node_feature = self.feedforward(graph=graph,
+                                                 node_feature=after_norm_feature,
+                                                 update_node_type_indices=update_node_type_indices,
+                                                 update_edge_type_indices=update_edge_type_indices)
+        after_norm2_node_feature = self.addNorm2(x=after_norm_feature,
+                                                 x_updated=after_ff_node_feature)
 
-        return after_norm2_node_feat_dict
+        return after_norm2_node_feature
