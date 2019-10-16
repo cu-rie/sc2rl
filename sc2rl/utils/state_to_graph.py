@@ -16,6 +16,8 @@ from sc2rl.utils.state_to_graph_utils import (get_one_hot_node_type,
                                               get_one_hot_edge_type,
                                               edge_total_damage)
 
+from sc2rl.utils.graph_utils import curie_initializer
+
 
 def process_game_state_to_dgl(game_state: GameState):
     # TODO 1 : Find a better way for managing input features and related constants!
@@ -33,13 +35,9 @@ def process_game_state_to_dgl(game_state: GameState):
     node_types = []
 
     g = dgl.DGLGraph(multigraph=True)
-    g_attack = dgl.DGLGraph(multigraph=False)
-
     g.set_e_initializer(dgl.init.zero_initializer)
-    g.set_n_initializer(dgl.init.zero_initializer)
-
-    g_attack.set_e_initializer(dgl.init.zero_initializer)
-    g_attack.set_n_initializer(dgl.init.zero_initializer)
+    #g.set_n_initializer(dgl.init.zero_initializer)
+    g.set_n_initializer(curie_initializer)
 
     node_features = []
 

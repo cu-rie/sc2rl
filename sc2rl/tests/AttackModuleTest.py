@@ -1,7 +1,9 @@
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.state_to_graph import process_game_state_to_dgl
-from sc2rl.rl.rl_modules.ActionModules import AttackModule
-from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY, NODE_ENEMY
+from sc2rl.rl.rl_modules.ActorModule import ActorModule
+
+from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
+from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 
 
 def reward_func(s, ns):
@@ -14,7 +16,9 @@ if __name__ == "__main__":
     test_sate_proc_func = process_game_state_to_dgl
 
     env = MicroTestEnvironment(map_name, test_reward_func, test_sate_proc_func)
-    attack_module = AttackModule(node_dim=26)
+    attack_module = ActorModule(node_input_dim=26,
+                                out_activation='tanh',
+                                hidden_activation='tanh')
 
     done_cnt = 0
     i = 0
@@ -27,8 +31,20 @@ if __name__ == "__main__":
 
         g = cur_state['g']
         g_feature = g.ndata.pop('node_feature')
-        attack_argument = attack_module.get_action(g, g_feature, EDGE_IN_ATTACK_RANGE, NODE_ENEMY)
-        next_state, reward, done = env.step(action=None)
+
+        num_enemy = get_largest_number_of_enemy_nodes([g])
+        nn_actions, info_dict = attack_module.get_action(g, g_feature, num_enemy)
+
+        tag2unit_dict = cur_state['tag2unit_dict']
+        ally_tags = info_dict['ally_tags']
+        enemy_tags = info_dict['enemy_tags']
+
+        sc2_actions = nn_action_to_sc2_action(nn_actions=nn_actions,
+                                              ally_tags=ally_tags,
+                                              enemy_tags=enemy_tags,
+                                              tag2unit_dict=tag2unit_dict)
+
+        next_state, reward, done = env.step(action=sc2_actions)
 
         if done:
             done_cnt += 1
