@@ -35,5 +35,7 @@ class MultiStepActorCriticAgent(AgentBase):
 
         return nn_actions, sc2_actions
 
-    def fit(self, batch_size):
+    def fit(self, batch_size, hist_num_time_steps):
+        c_h_graph, c= self.buffer.sample(batch_size)
+
         #self.brain.fit()
