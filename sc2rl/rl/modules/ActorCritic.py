@@ -1,11 +1,11 @@
-import dgl
 import torch
 
 from sc2rl.rl.modules.Actor import ActorModule
-from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
-from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
+
+from sc2rl.config.graph_configs import NODE_ALLY
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
-from sc2rl.utils.graph_utils import get_index_mapper
+
+from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, get_index_mapper
 
 
 class ActorCriticModule(torch.nn.Module):
@@ -29,9 +29,6 @@ class ActorCriticModule(torch.nn.Module):
 
         self.actor = ActorModule(node_input_dim, actor_out_activation, hidden_activation)
         self.critic = ActorModule(node_input_dim, critic_out_activation, hidden_activation)
-
-        # self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
-        # self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
 
     def forward(self, *args, **kwargs):
         return self.get_action(args, kwargs)

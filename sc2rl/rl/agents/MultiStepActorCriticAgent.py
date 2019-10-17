@@ -1,7 +1,6 @@
 import itertools
 
 import dgl
-import torch
 
 from sc2rl.rl.agents.AgentBase import AgentBase
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
