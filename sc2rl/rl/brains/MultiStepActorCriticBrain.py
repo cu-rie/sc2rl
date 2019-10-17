@@ -2,6 +2,11 @@ import torch
 import dgl
 from sc2rl.rl.brains.BrainBase import BrainBase
 
+# for hinting
+from sc2rl.rl.rl_modules.ActorCriticModule import ActorCriticModule
+from sc2rl.rl.rl_networks.rnn_encoder import RNNEncoder
+from sc2rl.rl.rl_networks.RelationalNetwork import RelationalNetwork
+
 
 class MultiStepActorCriticBrain(BrainBase):
     def __init__(self,
@@ -13,9 +18,9 @@ class MultiStepActorCriticBrain(BrainBase):
                  critic_lr: float = 1e-3,
                  ):
         super(MultiStepActorCriticBrain, self).__init__()
-        self.actor_critic = actor_critic
-        self.hist_encoder = hist_encoder
-        self.curr_encoder = curr_encoder
+        self.actor_critic = actor_critic  # type: ActorCriticModule
+        self.hist_encoder = hist_encoder  # type: RNNEncoder
+        self.curr_encoder = curr_encoder  # type: RelationalNetwork
 
         self._actor_related_params = list(self.actor_critic.actor.parameters()) + \
                                      list(self.hist_encoder.parameters()) + \
@@ -46,9 +51,8 @@ class MultiStepActorCriticBrain(BrainBase):
     def fit(self,
             c_num_time_steps, c_h_graph, c_h_node_feature, c_graph, c_node_feature, c_maximum_num_enemy,
             n_num_time_steps, n_h_graph, n_h_node_feature, n_graph, n_node_feature, n_maximum_num_enemy,
-            rewards, dones, target_critic,
-            actor_clip_norm=None, critic_clip_norm=None,
-            ):
+            actions, rewards, dones,
+            target_critic=None, actor_clip_norm=None, critic_clip_norm=None):
         # the prefix 'c' indicates #current# time stamp inputs
         # the prefix 'n' indicates #next# time stamp inputs
 
@@ -61,6 +65,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                                         n_graph, n_node_feature, self.curr_encoder)
 
         actor_loss, critic_loss = self.actor_critic.compute_loss(c_graph, c_encoded_node_feature, c_maximum_num_enemy,
+                                                                 actions,
                                                                  n_graph, n_encoded_node_feature, n_maximum_num_enemy,
                                                                  rewards, dones, target_critic)
 

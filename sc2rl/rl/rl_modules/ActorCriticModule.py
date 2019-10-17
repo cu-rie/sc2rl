@@ -36,13 +36,13 @@ class ActorCriticModule(torch.nn.Module):
     def forward(self, *args, **kwargs):
         return self.get_action(args, kwargs)
 
-    def compute_loss(self, graph, node_feature, maximum_num_enemy,
+    def compute_loss(self, graph, node_feature, maximum_num_enemy, action,
                      next_graph, next_node_feature, next_maximum_num_enemy,
                      rewards, dones, target_critic=None):
 
         actor_loss = self.compute_actor_loss(graph, node_feature, maximum_num_enemy)
 
-        critic_loss = self.compute_critic_loss(graph, node_feature, maximum_num_enemy,
+        critic_loss = self.compute_critic_loss(graph, node_feature, maximum_num_enemy, action,
                                                next_graph, next_node_feature, next_maximum_num_enemy,
                                                rewards, dones, target_critic)
         return actor_loss, critic_loss

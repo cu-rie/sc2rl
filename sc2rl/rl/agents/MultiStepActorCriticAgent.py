@@ -1,4 +1,8 @@
+import itertools
+
 import dgl
+import torch
+
 from sc2rl.rl.agents.AgentBase import AgentBase
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
@@ -36,6 +40,51 @@ class MultiStepActorCriticAgent(AgentBase):
         return nn_actions, sc2_actions
 
     def fit(self, batch_size, hist_num_time_steps):
-        c_h_graph, c= self.buffer.sample(batch_size)
+        # the prefix 'c' indicates #current# time stamp inputs
+        # the prefix 'n' indicates #next# time stamp inputs
 
-        #self.brain.fit()
+        # expected specs:
+        # bs = batch_size, nt = hist_num_time_steps
+        # 'h_graph' = list of graph lists [[g_(0,0), g_(0,1), ... g_(0,nt)],
+        #                                  [g_(1,0), g_(1,1), ..., g_(1,nt)],
+        #                                  [g_(2,0), ..., g_(bs, 0), ... g_(bs, nt)]]
+        # 'graph' = list of graphs  [g_(0), g_(1), ..., g_(bs)]
+
+        c_h_graph, c_graph, actions, rewards, n_h_graph, n_graph, dones = self.buffer.sample(batch_size)
+
+        # inferring maximum num enemies
+        c_maximum_num_enemy = get_largest_number_of_enemy_nodes(c_graph)
+        n_maximum_num_enemy = get_largest_number_of_enemy_nodes(n_graph)
+
+        # batching graphs
+        list_c_h_graph = itertools.chain.from_iterable(c_h_graph)
+        list_n_h_graph = itertools.chain.from_iterable(n_h_graph)
+        c_h_graph = dgl.batch(list_c_h_graph)
+        n_h_graph = dgl.batch(list_n_h_graph)
+        
+        c_graph = dgl.batch(c_graph)
+        n_graph = dgl.batch(n_graph)
+
+        c_h_node_feature = c_h_graph.ndata.pop('node_feature')
+        c_node_feature = c_graph.ndata.pop('node_feature')
+
+        n_h_node_feature = n_h_graph.ndata.pop('node_feature')
+        n_node_feature = n_graph.ndata.pop('node_feature')
+
+        actor_loss, critic_loss = self.brain.fit(c_num_time_steps=hist_num_time_steps,
+                                                 c_h_graph=c_h_graph,
+                                                 c_h_node_feature=c_h_node_feature,
+                                                 c_graph=c_graph,
+                                                 c_node_feature=c_node_feature,
+                                                 c_maximum_num_enemy=c_maximum_num_enemy,
+                                                 n_num_time_steps=n_maximum_num_enemy,
+                                                 n_h_graph=n_h_graph,
+                                                 n_h_node_feature=n_h_node_feature,
+                                                 n_graph=n_graph,
+                                                 n_node_feature=n_node_feature,
+                                                 n_maximum_num_enemy=n_maximum_num_enemy,
+                                                 actions=actions,
+                                                 rewards=rewards,
+                                                 dones=dones)
+
+        return actor_loss, critic_loss
