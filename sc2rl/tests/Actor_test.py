@@ -9,7 +9,8 @@ from sc2rl.utils.graph_utils import pop_node_feature_dict
 
 from sc2rl.rl.rl_networks.rnn_encoder import RNNEncoder
 from sc2rl.nn.RelationalNetwork import RelationalNetwork
-from sc2rl.config.graph_configs import NODE_ALLY, EDGE_ALLY, EDGE_ENEMY, EDGE_IN_ATTACK_RANGE
+from sc2rl.rl.rl_networks.Actor import Actor
+
 
 def reward_func(s, ns):
     return 1
@@ -20,7 +21,7 @@ def filter_by_edge_type_idx(edges, etype_idx):
 
 
 if __name__ == "__main__":
-    map_name = "5m_vs_1z"
+    map_name = "2m_vs_1hellion"
     test_reward_func = reward_func
     test_sate_proc_func = process_game_state_to_dgl
     done_cnt = 0
@@ -32,36 +33,39 @@ if __name__ == "__main__":
                        batch_first=True)
 
     hist_enc = RelationalNetwork(num_layers=1,
-                                 model_dim=26,
+                                 model_dim=20,
                                  use_hypernet=False,
                                  hypernet_input_dim=None,
                                  num_relations=3,
                                  num_head=1,
                                  use_norm=True,
-                                 neighbor_degree=1,
+                                 neighbor_degree=0,
                                  num_neurons=[128, 128],
                                  pooling_op='relu')
 
-    actor = RNNEncoder(rnn=rnn, one_step_encoder=hist_enc)
+    global_encoder = RNNEncoder(rnn=rnn, one_step_encoder=hist_enc)
+    actor = Actor(global_encoder=global_encoder,
+                  node_dim=20
+
+                  )
 
     while True:
         cur_state_dict = env.observe()
         cur_state = cur_state_dict['g']
 
         cur_state = dgl.batch([cur_state, cur_state])
+        filter_func = partial(filter_by_edge_type_idx, etype_idx=1)
+        filter_edge_idx = cur_state.filter_edges(filter_func)
 
-        cur_state_feature_dict = cur_state.ndata.pop('node_feature')
-
-        enc_out = hist_enc(cur_state, cur_state_feature_dict, [NODE_ALLY], [EDGE_ALLY, EDGE_ENEMY])
+        cur_state_feature_dict = pop_node_feature_dict(cur_state)
 
         action = actor(batch_size=1, num_time_steps=1,
                        batch_time_batched_graph=cur_state,
                        feature_dict=cur_state_feature_dict)
         next_state, reward, done = env.step(action=None)
-
         if done:
             done_cnt += 1
-            if done_cnt >= 1000:
+            if done_cnt >= 10:
                 break
 
     env.close()

@@ -12,16 +12,17 @@ VERY_LARGE_NUMBER = 1e10
 class Actor(torch.nn.Module):
 
     def __init__(self,
-                 num_layers: int,
+                 global_encoder,
+                 # num_layers: int,
                  node_dim: int,
                  global_dim: int,
-                 use_hypernet=True,
-                 hypernet_input_dim=None,
-                 num_relations=None,
-                 num_head: int = 1,
-                 use_norm=True,
-                 neighbor_degree=1,
-                 relational_enc_num_neurons=[128, 128],
+                 # use_hypernet=True,
+                 # hypernet_input_dim=None,
+                 # num_relations=None,
+                 # num_head: int = 1,
+                 # use_norm=True,
+                 # neighbor_degree=1,
+                 # relational_enc_num_neurons=[128, 128],
                  move_dim=4,
                  module_num_neurons=[128],
                  hidden_activation: str = 'tanh',
@@ -29,16 +30,7 @@ class Actor(torch.nn.Module):
                  pooling_op: str = 'relu'):
         super(Actor, self).__init__()
         self.move_dim = move_dim
-        self.relational_enc = RelationalNetwork(num_layers=num_layers,
-                                                model_dim=node_dim,
-                                                use_hypernet=use_hypernet,
-                                                hypernet_input_dim=hypernet_input_dim,
-                                                num_relations=num_relations,
-                                                num_head=num_head,
-                                                use_norm=use_norm,
-                                                neighbor_degree=neighbor_degree,
-                                                num_neurons=relational_enc_num_neurons,
-                                                pooling_op=pooling_op)
+        self.relational_enc = global_encoder
 
         module_input_dim = node_dim + global_dim
 

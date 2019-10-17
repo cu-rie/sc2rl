@@ -10,18 +10,7 @@ class BrainBase(torch.nn.Module):
 
         nn_args, sc2_args = self._get_action(*args, **kwargs)
 
-        return nn_args, sc2_args
-
-    def _get_action(self, *args, **kwargs):
-        """
-        :param args:
-        :param kwargs:
-        :return: nn_args, sc2_args
-        """
-        raise NotImplementedError("This method will be implemented in the child class")
-
-    def get_probs(self, *args, **kwargs):
-        pass
+        return nn_args
 
     def fit(self, *args, **kwargs):
         pass
