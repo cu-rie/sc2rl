@@ -47,10 +47,13 @@ class ActorCriticModule(torch.nn.Module):
                                                rewards, dones, target_critic)
         return actor_loss, critic_loss
 
-    def compute_critic_loss(self, graph, node_feature, maximum_num_enemy,
+    def compute_critic_loss(self, graph, node_feature, maximum_num_enemy, action,
                             next_graph, next_node_feature, next_maximum_num_enemy,
                             rewards, dones, target_critic=None):
-        cur_q = self.get_q(graph, node_feature, maximum_num_enemy, self.critic)
+
+        cur_q = self.get_q(graph, node_feature, maximum_num_enemy,
+                           self.critic)  # [#. current ally units x #. actions]
+        cur_q = cur_q[:, action].squeeze()  # [#. current ally units]
 
         # The number of allies in the current (batched) graph may differ from the one of the next graph
         target_q = torch.zeros_like(cur_q)
@@ -59,8 +62,11 @@ class ActorCriticModule(torch.nn.Module):
             exp_target_q, ally_entropy = self.get_exp_q(next_graph, next_node_feature, next_maximum_num_enemy,
                                                         target_critic)
 
-        next_q = exp_target_q + self.entropy_coeff * ally_entropy  # [# num. next ally_units]
-        unsorted_target_q = rewards + self.gamma * next_q * dones
+            # exp_target_q dim = [#. next ally units]
+            # ally_entropy = [#. next ally units]
+
+        next_q = exp_target_q + self.entropy_coeff * ally_entropy  # [#. next ally_units]
+        unsorted_target_q = rewards + self.gamma * next_q * dones  # [#. next ally_units]
 
         cur_idx, next_idx = get_index_mapper(graph, next_graph)
         target_q[cur_idx] = unsorted_target_q[next_idx]
@@ -103,7 +109,7 @@ class ActorCriticModule(torch.nn.Module):
         ally_entropy = actor_ret_dict['ally_entropy']
 
         q = self.get_q(graph, node_feature, maximum_num_enemy, critic)
-        exp_q = q * probs
+        exp_q = (q * probs).sum(dim=1)
         return exp_q, ally_entropy
 
     def get_q(self, graph, node_feature, maximum_num_enemy, critic=None):
