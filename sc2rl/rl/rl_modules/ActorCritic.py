@@ -16,8 +16,6 @@ class ActorCriticModule(torch.nn.Module):
                  critic_out_activation='relu',
                  hidden_activation='relu',
                  move_dim: int = 4,
-                 actor_lr=1e-4,
-                 critic_lr=1e-3,
                  norm_policy_target: bool = True,
                  entropy_coeff: float = 1e-3
                  ):
@@ -32,23 +30,26 @@ class ActorCriticModule(torch.nn.Module):
         self.actor = ActorModule(node_input_dim, actor_out_activation, hidden_activation)
         self.critic = ActorModule(node_input_dim, critic_out_activation, hidden_activation)
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
+        # self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
+        # self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
 
-    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
-        pass
+    def forward(self, *args, **kwargs):
+        return self.get_action(args, kwargs)
 
-    def fit(self, graph, node_feature, maximum_num_enemy, next_graph, next_node_feature, next_maximum_num_enemy,
-            rewards, target_critic=None):
+    def compute_loss(self, graph, node_feature, maximum_num_enemy,
+                     next_graph, next_node_feature, next_maximum_num_enemy,
+                     rewards, dones, target_critic=None):
 
-        actor_loss, entropy_coeff = self.fit_actor(graph, node_feature, maximum_num_enemy)
+        actor_loss = self.compute_actor_loss(graph, node_feature, maximum_num_enemy)
 
-        critic_loss = self.fit_critic(graph, node_feature, maximum_num_enemy, next_graph, next_node_feature,
-                                      next_maximum_num_enemy, rewards, target_critic)
+        critic_loss = self.compute_critic_loss(graph, node_feature, maximum_num_enemy,
+                                               next_graph, next_node_feature, next_maximum_num_enemy,
+                                               rewards, dones, target_critic)
         return actor_loss, critic_loss
 
-    def fit_critic(self, graph, node_feature, maximum_num_enemy, next_graph, next_node_feature,
-                   next_maximum_num_enemy, rewards, dones, target_critic=None):
+    def compute_critic_loss(self, graph, node_feature, maximum_num_enemy,
+                            next_graph, next_node_feature, next_maximum_num_enemy,
+                            rewards, dones, target_critic=None):
         cur_q = self.get_q(graph, node_feature, maximum_num_enemy, self.critic)
 
         # The number of allies in the current (batched) graph may differ from the one of the next graph
@@ -65,18 +66,10 @@ class ActorCriticModule(torch.nn.Module):
         target_q[cur_idx] = unsorted_target_q[next_idx]
 
         loss = torch.nn.functional.mse_loss(input=cur_q, target=target_q)
-        self.critic_optimizer.zero_grad()
-        loss.backward()
-        self.critic_optimizer.step()
 
-        return loss.detach().cpu().numpy()
+        return loss
 
-    #
-    # def fit_critic_zero_ally(self):
-    #     # TODO
-    #     pass
-
-    def fit_actor(self, graph, node_feature, maximum_num_enemy):
+    def compute_actor_loss(self, graph, node_feature, maximum_num_enemy):
         ret_dict = self.actor.compute_probs(graph, node_feature, maximum_num_enemy)
         ally_ps = ret_dict['probs']
 
@@ -99,14 +92,10 @@ class ActorCriticModule(torch.nn.Module):
         loss_mask = (ally_log_ps > torch.log(torch.tensor(VERY_SMALL_NUMBER))).float()
         loss = (unmasked_loss * loss_mask).sum() / loss_mask.sum()
 
-        self.actor_optimizer.zero_grad()
-        loss.backward()
-        self.actor_optimizer.step()
+        return loss
 
-        return loss.detach().cpu().numpy(), self.entropy_coeff
-
-    def get_action(self, *args, **kwargs):
-        return self.actor.get_action(*args, **kwargs)
+    def get_action(self, graph, node_feature, maximum_num_enemy):
+        return self.actor.get_action(graph, node_feature, maximum_num_enemy)
 
     def get_exp_q(self, graph, node_feature, maximum_num_enemy, critic=None):
         actor_ret_dict = self.actor.compute_probs(graph, node_feature, maximum_num_enemy)
