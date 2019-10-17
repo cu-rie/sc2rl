@@ -11,7 +11,8 @@ from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, get_index_m
 class ActorCriticModule(torch.nn.Module):
 
     def __init__(self,
-                 node_input_dim,
+                 node_input_dim: int,
+                 gamma: float = 1.0,
                  actor_out_activation='tanh',
                  critic_out_activation='relu',
                  hidden_activation='relu',
@@ -24,6 +25,7 @@ class ActorCriticModule(torch.nn.Module):
         self.move_dim = move_dim
 
         # RL training
+        self.gamma = gamma
         self.entropy_coeff = entropy_coeff
         self.norm_policy_target = norm_policy_target
 

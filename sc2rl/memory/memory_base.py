@@ -32,7 +32,7 @@ class EpisodicMemory(MemoryBase):
         self.max_n_episodes = max_n_episodes
         self.trajectories = deque(maxlen=max_n_episodes)
 
-        self.sepc = spec
+        self.spec = spec
         self.gamma = gamma
         self.max_traj_len = max_traj_len
         self._cur_traj = Trajectory(spec=spec, gamma=self.gamma, max_len=max_traj_len)

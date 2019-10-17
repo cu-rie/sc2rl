@@ -89,7 +89,7 @@ class MultiStepActorCriticBrain(BrainBase):
         h_enc_out, h_enc_hidden = h_encoder(num_time_steps, h_graph, h_node_feature)
 
         # recent_hist_enc : slice of the last RNN layer's hidden
-        recent_h_enc = h_enc_out[-1, :, :]  # [Batch size x rnn hidden]
+        recent_h_enc = h_enc_out[:, -1, :]  # [Batch size x rnn hidden]
         c_enc_out = c_encoder(c_graph, c_node_feature)
 
         c_units = c_graph.number_of_nodes()

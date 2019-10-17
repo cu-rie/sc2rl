@@ -1,7 +1,7 @@
 import torch
 
 
-class AgentBase(torch.nn.module):
+class AgentBase(torch.nn.Module):
     """
     An interface for RL agent
     """

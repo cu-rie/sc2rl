@@ -172,16 +172,14 @@ def process_game_state_to_dgl(game_state: GameState):
                         enemy_index = enemy_unit_dict[in_range_unit]
                         # Expected bottleneck (2) -> Doubled assignment of edges
                         edge_in_attack_range = torch.Tensor(data=(EDGE_IN_ATTACK_RANGE,))
+                        edge_in_attack_range_one_hot = torch.Tensor(data=get_one_hot_edge_type(EDGE_IN_ATTACK_RANGE))
                         edge_in_attack_range = edge_in_attack_range.reshape(-1)
-                        dist = np.linalg.norm(ally_unit.position - in_range_unit.position)
-                        dist = torch.Tensor(data=(dist,))
-                        dist = dist.reshape(1, -1)
-
-                        damage = edge_total_damage(ally_unit, in_range_unit)
-                        damage = torch.Tensor(data=(damage,)).reshape(1, -1)
-                        g.add_edge(enemy_index, allies_index, {'edge_type': edge_in_attack_range,
-                                                               'damage': damage,
-                                                               'dist': dist})
+                        # dist = np.linalg.norm(ally_unit.position - in_range_unit.position)
+                        # dist = torch.Tensor(data=(dist,))
+                        # dist = dist.reshape(1, -1)
+                        # damage = edge_total_damage(ally_unit, in_range_unit)
+                        # damage = torch.Tensor(data=(damage,)).reshape(1, -1)
+                        g.add_edge(enemy_index, allies_index, {'edge_type': edge_in_attack_range})
     else:
         pass
 

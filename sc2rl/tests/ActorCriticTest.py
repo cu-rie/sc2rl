@@ -1,5 +1,5 @@
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
-from sc2rl.utils.state_to_graph import process_game_state_to_dgl
+from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.rl.modules.ActorCritic import ActorCriticModule
 from sc2rl.rl.modules.Actor import ActorModule

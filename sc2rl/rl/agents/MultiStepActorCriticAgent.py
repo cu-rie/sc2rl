@@ -20,8 +20,8 @@ class MultiStepActorCriticAgent(AgentBase):
                    tag2unit_dict):
         assert isinstance(curr_graph, dgl.DGLGraph), "get action is designed to work on a single graph!"
         num_time_steps = hist_graph.batch_size
-        hist_node_feature = hist_graph.ndata.pop['node_feautre']
-        curr_node_feature = curr_graph.ndata.pop['node_feature']
+        hist_node_feature = hist_graph.ndata.pop('node_feature')
+        curr_node_feature = curr_graph.ndata.pop('node_feature')
         maximum_num_enemy = get_largest_number_of_enemy_nodes([curr_graph])
 
         nn_actions, info_dict = self.brain.get_action(num_time_steps,

@@ -3,7 +3,7 @@ import torch
 
 # env related
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
-from sc2rl.utils.state_to_graph import process_game_state_to_dgl
+from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 
 from sc2rl.config.graph_configs import NODE_ALLY
