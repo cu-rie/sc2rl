@@ -1,7 +1,7 @@
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.state_to_graph import process_game_state_to_dgl
 
-from sc2rl.rl.rl_modules.ActorCritic import ActorCriticModule
+from sc2rl.rl.rl_modules.ActorCriticModule import ActorCriticModule
 from sc2rl.rl.rl_modules.ActorModule import ActorModule
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action

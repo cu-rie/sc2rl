@@ -31,6 +31,5 @@ class AgentBase(torch.nn.module):
         """
         raise NotImplementedError("This method will be implemented in the child class")
 
-    def append_sample(self, *args):
-        sample = args
-        self.buffer.append(sample)
+    def append_sample(self, sample):
+        self.buffer.push(sample)
