@@ -3,7 +3,7 @@ import dgl
 from sc2rl.rl.brains.BrainBase import BrainBase
 
 # for hinting
-from sc2rl.rl.modules.ActorCriticModule import ActorCriticModule
+from sc2rl.rl.modules.ActorCritic import ActorCriticModule
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 
