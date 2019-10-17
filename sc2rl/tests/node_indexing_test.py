@@ -7,7 +7,7 @@ from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.state_to_graph import process_game_state_to_dgl
 from sc2rl.utils.graph_utils import pop_node_feature_dict
 
-from sc2rl.rl.rl_networks.rnn_encoder import RNNEncoder
+from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 from sc2rl.nn.RelationalNetwork import RelationalNetwork
 from sc2rl.config.graph_configs import NODE_ALLY, EDGE_ALLY, EDGE_ENEMY, EDGE_IN_ATTACK_RANGE
 

@@ -10,8 +10,8 @@ from sc2rl.config.graph_configs import NODE_ALLY
 from sc2rl.config.graph_configs import EDGE_ALLY, EDGE_ENEMY
 
 # rl related
-from sc2rl.rl.rl_networks.rnn_encoder import RNNEncoder
-from sc2rl.rl.rl_networks.RelationalNetwork import RelationalNetwork
+from sc2rl.rl.networks.rnn_encoder import RNNEncoder
+from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 
 if __name__ == "__main__":
     map_name = "3m_vs_4m_randoffset"

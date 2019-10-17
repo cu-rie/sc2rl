@@ -1,5 +1,5 @@
 import torch
-from sc2rl.rl.rl_modules.ActionModules import MoveModule, HoldModule, AttackModule
+from sc2rl.rl.modules.ActionModules import MoveModule, HoldModule, AttackModule
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER

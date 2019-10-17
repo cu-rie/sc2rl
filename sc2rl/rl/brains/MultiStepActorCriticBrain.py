@@ -3,9 +3,9 @@ import dgl
 from sc2rl.rl.brains.BrainBase import BrainBase
 
 # for hinting
-from sc2rl.rl.rl_modules.ActorCriticModule import ActorCriticModule
-from sc2rl.rl.rl_networks.rnn_encoder import RNNEncoder
-from sc2rl.rl.rl_networks.RelationalNetwork import RelationalNetwork
+from sc2rl.rl.modules.ActorCriticModule import ActorCriticModule
+from sc2rl.rl.networks.rnn_encoder import RNNEncoder
+from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 
 
 class MultiStepActorCriticBrain(BrainBase):
