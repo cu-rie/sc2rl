@@ -3,7 +3,7 @@ import dgl
 import torch
 
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
-from sc2rl.config.graph_configs import NODE_ENEMY
+from sc2rl.config.graph_configs import NODE_ENEMY, NODE_ALLY
 
 
 def get_batched_index(batched_graph, index_list, return_num_targets=False):
@@ -57,6 +57,7 @@ def get_filtered_node_index_by_type(graph, ntype_idx):
     return node_idx
 
 
+
 def get_largest_number_of_enemy_nodes(graphs):
     max_num_enemy = 0
     for graph in graphs:
@@ -87,14 +88,15 @@ def _get_index_mapper_list(graph, next_graph, cur_node_start_idx, next_node_star
     next_idx = []
 
     next_graph_tag = next_graph.ndata['tag']
-    for cn_index in graph.nodes:
+    ally_node_index = get_filtered_node_index_by_type(graph, NODE_ALLY)
+    for cn_index in graph.nodes()[ally_node_index]:
         curr_tag = graph.ndata['tag'][cn_index]
         next_graph_index = (next_graph_tag == curr_tag).nonzero().squeeze().int()
         if next_graph_index.nelement() == 0:
             pass
         elif next_graph_index.nelement() == 1:
-            cur_idx.append(cn_index + cur_node_start_idx)
-            next_idx.append(next_graph_index + next_node_start_idx)
+            cur_idx.append((cn_index + cur_node_start_idx).tolist())
+            next_idx.append((next_graph_index + next_node_start_idx).tolist())
         else:
             raise RuntimeError("Existing multiple units with same tag in next graph")
     return cur_idx, next_idx
@@ -104,7 +106,6 @@ def get_index_mapper(graph, next_graph):
     """
     :param graph:
     :param next_graph:
-    :param target_indices:
     :return:
     """
     if type(graph) == dgl.BatchedDGLGraph and type(next_graph) == dgl.BatchedDGLGraph:
@@ -117,12 +118,11 @@ def get_index_mapper(graph, next_graph):
         curr_num_nodes = 0
         next_num_nodes = 0
         for g, ng in zip(graphs, next_graphs):
-            _curr_num_nodes = g.number_of_nodes()
-            _next_num_nodes = ng.number_of_nodes()
+            _curr_num_nodes = len(get_filtered_node_index_by_type(g, NODE_ALLY))
+            _next_num_nodes = len(get_filtered_node_index_by_type(ng, NODE_ALLY))
             ci, ni = _get_index_mapper_list(g, ng, curr_num_nodes, next_num_nodes)
             cur_idx.extend(ci)
             next_idx.extend(ni)
-
             curr_num_nodes += _curr_num_nodes
             next_num_nodes += _next_num_nodes
     else:

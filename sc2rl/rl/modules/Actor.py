@@ -88,6 +88,9 @@ class ActorModule(torch.nn.Module):
                                        attack_edge_type_index=attack_edge_type_index)
         ally_probs = info_dict['probs']
 
+        if 'enemy_tag' in graph.ndata.keys():
+            _ = graph.ndata.pop('enemy_tag')
+
         if self.training:  # Sample from categorical dist
             dist = torch.distributions.Categorical(probs=ally_probs)
             nn_actions = dist.sample()

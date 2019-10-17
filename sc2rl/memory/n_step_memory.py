@@ -18,6 +18,19 @@ class NstepInputMemory(EpisodicMemory):
         done = sample.done
         self._cur_traj.push(sample)
         if done:
+            # check whether the graph actually has nodes
+            # when the last frame of each episode has 0 units
+            # delete the frame and set the frame before last set as new last frame
+            if sample.next_state.number_of_nodes() == 0:
+                self._cur_traj._trajectory.pop()
+                sample = self._cur_traj._trajectory.pop()
+                state = sample.state
+                action = sample.action
+                reward = sample.reward
+                next_state = sample.next_state
+                done = True
+                self._cur_traj.push(self.spec(state, action, reward, next_state, done))
+
             self.trajectories.append(self._cur_traj)
             self._cur_traj = Trajectory(spec=self.spec, gamma=self.gamma, max_len=self.max_traj_len)
 
@@ -27,12 +40,12 @@ class NstepInputMemory(EpisodicMemory):
 
         hist = []
         for j in range(i - self.N, i):
-            state, _, _, _, _ = traj[j]
+            state = traj[j].state
             hist.append(state)
 
         next_hist = []
         for j in range(i - self.N + 1, i + 1):
-            state, _, _, _, _ = traj[j]
+            state = traj[j].state
             next_hist.append(state)
 
         state, action, reward, next_state, done = traj[i]
@@ -60,10 +73,11 @@ class NstepInputMemory(EpisodicMemory):
 
         for traj_i, num_samples in enumerate(samples_per_traj):
             cur_traj = self.trajectories[traj_i]
-            sample_is = np.random.choice(np.arange(self.N, cur_traj.len_trajectory), num_samples)
+            sample_is = np.random.choice(np.arange(self.N, cur_traj.length), num_samples)
             for sample_i in sample_is:
                 hs, s, a, r, nhs, ns, d = self.sample_from_trajectory(trajectory_i=traj_i,
                                                                       sampling_index=sample_i)
+
                 hists.append(hs)
                 states.append(s)
                 actions.append(a)

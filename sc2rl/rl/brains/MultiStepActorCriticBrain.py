@@ -70,9 +70,9 @@ class MultiStepActorCriticBrain(BrainBase):
                                                                  rewards, dones, target_critic)
 
         self.clip_and_optimize(self.actor_optimizer, self._actor_related_params, actor_loss, actor_clip_norm)
-        self.clip_and_optimize(self.critic_optimizer, self._critic_related_params, critic_loss, critic_clip_norm)
+        #self.clip_and_optimize(self.critic_optimizer, self._critic_related_params, critic_loss, critic_clip_norm)
 
-        return actor_loss.detatch().cpu().numpy(), critic_loss.detatch().cpu().numpy()
+        return actor_loss.detach().cpu().numpy(), critic_loss.detach().cpu().numpy()
 
     @staticmethod
     def clip_and_optimize(optimizer, parameters, loss, clip_val=None):
@@ -92,7 +92,12 @@ class MultiStepActorCriticBrain(BrainBase):
         recent_h_enc = h_enc_out[:, -1, :]  # [Batch size x rnn hidden]
         c_enc_out = c_encoder(c_graph, c_node_feature)
 
-        c_units = c_graph.number_of_nodes()
-        recent_h_enc = recent_h_enc.repeat_interleave(c_units, dim=0)
+        if isinstance(c_graph, dgl.BatchedDGLGraph):
+            c_units = c_graph.batch_num_nodes
+            c_units = torch.Tensor(c_units).long()
+            recent_h_enc = recent_h_enc.repeat_interleave(c_units, dim=0)
+        else:
+            c_unit = c_graph.number_of_nodes()
+            recent_h_enc = recent_h_enc.repeat_interleave(c_unit, dim=0)
         c_encoded_node_feature = torch.cat([recent_h_enc, c_enc_out], dim=1)
         return c_encoded_node_feature

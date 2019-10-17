@@ -1,10 +1,11 @@
-import itertools
-
 import dgl
+import torch
 
 from sc2rl.rl.agents.AgentBase import AgentBase
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
+from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
+from sc2rl.config.graph_configs import NODE_ALLY
 
 
 class MultiStepActorCriticAgent(AgentBase):
@@ -36,6 +37,9 @@ class MultiStepActorCriticAgent(AgentBase):
                                               enemy_tags=enemy_tags,
                                               tag2unit_dict=tag2unit_dict)
 
+        hist_graph.ndata['node_feature'] = hist_node_feature
+        curr_graph.ndata['node_feature'] = curr_node_feature
+
         return nn_actions, sc2_actions
 
     def fit(self, batch_size, hist_num_time_steps):
@@ -52,12 +56,43 @@ class MultiStepActorCriticAgent(AgentBase):
         c_h_graph, c_graph, actions, rewards, n_h_graph, n_graph, dones = self.buffer.sample(batch_size)
 
         # inferring maximum num enemies
+        # for c_g in c_graph:
+        #     if 'node_type' in c_g.ndata:
+        #         pass
+        #     else:
+        #         print("node_type non exist")
+        #         import pdb
+        #         pdb.set_trace()
+        #
+        # for n_g in n_graph:
+        #     if 'node_type' in n_g.ndata:
+        #         pass
+        #     else:
+        #         print("node_type non exist")
+        #         import pdb
+        #         pdb.set_trace()
+
         c_maximum_num_enemy = get_largest_number_of_enemy_nodes(c_graph)
         n_maximum_num_enemy = get_largest_number_of_enemy_nodes(n_graph)
 
+        # casting actions to one torch tensor
+        actions = torch.cat(actions).long()
+
+        # 'c_graph' is now list of graphs
+        c_ally_units = [len(get_filtered_node_index_by_type(graph, NODE_ALLY)) for graph in c_graph]
+        c_ally_units = torch.Tensor(c_ally_units).long()
+
+        # prepare rewards
+        rewards = torch.Tensor(rewards)
+        rewards = rewards.repeat_interleave(c_ally_units, dim=0)
+
+        # preparing dones
+        dones = torch.Tensor(dones)
+        dones = dones.repeat_interleave(c_ally_units, dim=0)
+
         # batching graphs
-        list_c_h_graph = itertools.chain.from_iterable(c_h_graph)
-        list_n_h_graph = itertools.chain.from_iterable(n_h_graph)
+        list_c_h_graph = [g for L in c_h_graph for g in L]
+        list_n_h_graph = [g for L in n_h_graph for g in L]
         c_h_graph = dgl.batch(list_c_h_graph)
         n_h_graph = dgl.batch(list_n_h_graph)
 
@@ -76,7 +111,7 @@ class MultiStepActorCriticAgent(AgentBase):
                                                  c_graph=c_graph,
                                                  c_node_feature=c_node_feature,
                                                  c_maximum_num_enemy=c_maximum_num_enemy,
-                                                 n_num_time_steps=n_maximum_num_enemy,
+                                                 n_num_time_steps=hist_num_time_steps,
                                                  n_h_graph=n_h_graph,
                                                  n_h_node_feature=n_h_node_feature,
                                                  n_graph=n_graph,

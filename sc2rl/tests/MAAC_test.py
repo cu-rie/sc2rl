@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     brain = MultiStepActorCriticBrain(actor_critic=actor_critic, hist_encoder=hist_encoder, curr_encoder=curr_encoder)
 
-    sample_spec = namedtuple('exp_args', ["state", "action", "reward", "done"],
+    sample_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done"],
                              defaults=tuple([list() for _ in range(4)]))
 
     num_hist_steps = 5
@@ -93,22 +93,32 @@ if __name__ == "__main__":
     history_manager = HistoryManager(n_hist_steps=num_hist_steps, init_graph=init_graph)
 
     done_cnt = 0
+    iters = 0
     while True:
+        # print("Itertation : {} ".format(iters))
         curr_state_dict = env.observe()
         hist_graph = history_manager.get_hist()
         curr_graph = curr_state_dict['g']
+
         tag2unit_dict = curr_state_dict['tag2unit_dict']
 
         nn_action, sc2_action = agent.get_action(hist_graph=hist_graph, curr_graph=curr_graph,
                                                  tag2unit_dict=tag2unit_dict)
 
         next_state_dict, reward, done = env.step(sc2_action)
-        experience = sample_spec(curr_graph, nn_action, reward, done)
+        next_graph = next_state_dict['g']
+        experience = sample_spec(curr_graph, nn_action, reward, next_graph, done)
 
         agent.append_sample(experience)
-        history_manager.append(next_state_dict['g'])
+        history_manager.append(next_graph)
 
         if done:
             done_cnt += 1
-            if done_cnt >= 10:
+            if done_cnt % 20 == 0:
+                print("fit at {}".format(done_cnt))
+                agent.fit(batch_size=20, hist_num_time_steps=num_hist_steps)
+
+            if done_cnt >= 100:
                 break
+        iters += 1
+    env.close()

@@ -52,23 +52,24 @@ class ActorCriticModule(torch.nn.Module):
 
         cur_q = self.get_q(graph, node_feature, maximum_num_enemy,
                            self.critic)  # [#. current ally units x #. actions]
-        cur_q = cur_q[:, action].squeeze()  # [#. current ally units]
+        cur_q = cur_q.gather(-1, action.unsqueeze(-1)).squeeze(dim=-1)  # [#. current ally units]
 
         # The number of allies in the current (batched) graph may differ from the one of the next graph
         target_q = torch.zeros_like(cur_q)
 
-        with torch.no_grad:
+        with torch.no_grad():
             exp_target_q, ally_entropy = self.get_exp_q(next_graph, next_node_feature, next_maximum_num_enemy,
                                                         target_critic)
 
             # exp_target_q dim = [#. next ally units]
             # ally_entropy = [#. next ally units]
 
-        next_q = exp_target_q + self.entropy_coeff * ally_entropy  # [#. next ally_units]
-        unsorted_target_q = rewards + self.gamma * next_q * dones  # [#. next ally_units]
+        unsorted_target_q = exp_target_q + self.entropy_coeff * ally_entropy  # [#. next ally_units]
+        #unsorted_target_q = rewards + self.gamma * next_q * (1-dones)  # [#. next ally_units]
 
         cur_idx, next_idx = get_index_mapper(graph, next_graph)
         target_q[cur_idx] = unsorted_target_q[next_idx]
+        target_q = rewards + self.gamma * target_q * (1-dones)
 
         loss = torch.nn.functional.mse_loss(input=cur_q, target=target_q)
 
@@ -88,7 +89,7 @@ class ActorCriticModule(torch.nn.Module):
 
         ally_vs = (ally_qs * ally_ps).sum(1).detach()
 
-        policy_targets = ally_qs - ally_vs
+        policy_targets = ally_qs - ally_vs.view(-1, 1)
 
         if self.norm_policy_target:
             policy_targets = (policy_targets - policy_targets.mean()) / policy_targets.std()
