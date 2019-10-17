@@ -34,7 +34,7 @@ class HistoryManager:
 
 
 if __name__ == "__main__":
-    map_name = "3m_vs_4m_randoffset"
+    map_name = "training_scenario_1"
     env = MicroTestEnvironment(map_name=map_name,
                                reward_func=great_victor_with_kill_bonus,
                                state_proc_func=process_game_state_to_dgl)
