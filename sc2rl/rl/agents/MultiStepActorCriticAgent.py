@@ -61,7 +61,7 @@ class MultiStepActorCriticAgent(AgentBase):
         list_n_h_graph = itertools.chain.from_iterable(n_h_graph)
         c_h_graph = dgl.batch(list_c_h_graph)
         n_h_graph = dgl.batch(list_n_h_graph)
-        
+
         c_graph = dgl.batch(c_graph)
         n_graph = dgl.batch(n_graph)
 
