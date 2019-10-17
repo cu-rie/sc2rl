@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from sc2.game_state import GameState
 
-from sc2rl.config.unit_config import type2cost, type2onehot, NUM_TOTAL_TYPES
+from sc2rl.config.unit_config import type2cost
 from sc2rl.config.graph_configs import (NODE_ALLY,
                                         NODE_ENEMY,
                                         EDGE_ALLY,
