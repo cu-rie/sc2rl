@@ -1,9 +1,17 @@
 import torch
+
+from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.rl.modules.Actions import MoveModule, HoldModule, AttackModule
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
 from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
+
+
+class ActorModuleConfig(ConfigBase):
+
+    def __init__(self):
+        pass
 
 
 class ActorModule(torch.nn.Module):
@@ -67,6 +75,7 @@ class ActorModule(torch.nn.Module):
 
         return_dict = dict()
         # for RL training
+        return_dict['unnormed_ps'] = unnormed_ps
         return_dict['probs'] = ps
         return_dict['log_ps'] = log_ps
         return_dict['log_p_move'] = log_p_move

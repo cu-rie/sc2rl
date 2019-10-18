@@ -19,13 +19,13 @@ if __name__ == "__main__":
                                reward_func=great_victor_with_kill_bonus,
                                state_proc_func=process_game_state_to_dgl)
 
-    rnn = torch.nn.GRU(input_size=26,
+    rnn = torch.nn.GRU(input_size=20,
                        hidden_size=32,
                        num_layers=2,
                        batch_first=True)
 
     one_step_enc = RelationalNetwork(num_layers=1,
-                                     model_dim=26,
+                                     model_dim=20,
                                      use_hypernet=False,
                                      hypernet_input_dim=None,
                                      num_relations=3,

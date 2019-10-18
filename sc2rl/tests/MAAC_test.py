@@ -40,6 +40,7 @@ if __name__ == "__main__":
                                state_proc_func=process_game_state_to_dgl)
 
     node_dim = 17
+
     rnn_hidden_dim = 32
     rnn_layers = 2
 
