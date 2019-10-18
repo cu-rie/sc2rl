@@ -10,7 +10,7 @@ from sc2rl.memory.n_step_memory import NstepInputMemory
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 from sc2rl.rl.agents.MultiStepActorCriticAgent import MultiStepActorCriticAgent
-from sc2rl.rl.brains.MultiStepActorCriticBrain import MultiStepActorCriticBrain
+from sc2rl.rl.brains.MultiStepSharedActorCriticBrain import MultiStepSharedActorCriticBrain, get_hyper_param_dict
 from sc2rl.rl.modules.ActorCritic import ActorCriticModule
 
 
@@ -78,7 +78,11 @@ if __name__ == "__main__":
 
     actor_critic = ActorCriticModule(node_input_dim=rnn_hidden_dim + node_dim)
 
-    brain = MultiStepActorCriticBrain(actor_critic=actor_critic, hist_encoder=hist_encoder, curr_encoder=curr_encoder)
+    brain_hyper_param = get_hyper_param_dict()
+    brain = MultiStepSharedActorCriticBrain(actor_critic=actor_critic,
+                                            hist_encoder=hist_encoder,
+                                            curr_encoder=curr_encoder,
+                                            hyper_params=brain_hyper_param)
 
     sample_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done"],
                              defaults=tuple([list() for _ in range(4)]))
@@ -114,7 +118,7 @@ if __name__ == "__main__":
 
         if done:
             done_cnt += 1
-            if done_cnt % 20 == 0:
+            if done_cnt % 2 == 0:
                 print("fit at {}".format(done_cnt))
                 agent.fit(batch_size=20, hist_num_time_steps=num_hist_steps)
 
