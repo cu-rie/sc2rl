@@ -11,8 +11,10 @@ from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 class MultiStepActorRunner(RunnerBase):
 
     def __init__(self, env, agent, sample_spec, n_steps):
-        super(MultiStepActorRunner, self).__init__(env=env, agent=agent, sample_spec=sample_spec)
-        self.history_manager = HistoryManager(n_hist_steps=n_steps, init_graph=None)
+        super(MultiStepActorRunner, self).__init__(
+            env=env, agent=agent, sample_spec=sample_spec)
+        self.history_manager = HistoryManager(
+            n_hist_steps=n_steps, init_graph=None)
 
     def run_1_episode(self):
         trajectory = Trajectory(spec=self.sample_spec, gamma=1.0)
@@ -33,7 +35,8 @@ class MultiStepActorRunner(RunnerBase):
 
             next_state_dict, reward, done = self.env.step(sc2_action)
             next_graph = next_state_dict['g']
-            experience = self.sample_spec(curr_graph, nn_action, reward, next_graph, done)
+            experience = self.sample_spec(
+                curr_graph, nn_action, reward, next_graph, done)
 
             trajectory.push(experience)
             self.history_manager.append(next_graph)
@@ -61,3 +64,9 @@ class MultiStepActorRunner(RunnerBase):
         eval_dict['sum_reward'] = sum_reward
 
         return eval_dict
+
+    def set_train_mode(self):
+        self.agent.train()
+
+    def set_eval_mode(self):
+        self.agent.eval()

@@ -4,7 +4,8 @@
 Pipfile.lock
 
 # python related
-__pycache__/
+__pycache__
+sc2rl/environments/__pycache__/
 *.pyc
 
 # virtualenv related

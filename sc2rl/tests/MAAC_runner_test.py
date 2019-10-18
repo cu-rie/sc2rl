@@ -13,33 +13,13 @@ from sc2rl.rl.agents.MultiStepActorCriticAgent import MultiStepActorCriticAgent
 from sc2rl.rl.brains.MultiStepActorCriticBrain import MultiStepActorCriticBrain, get_hyper_param_dict
 from sc2rl.rl.modules.ActorCritic import ActorCriticModule
 
-
-class HistoryManager:
-
-    def __init__(self, n_hist_steps, init_graph):
-        self.n_hist_steps = n_hist_steps
-        self.hist = deque(maxlen=n_hist_steps)
-        self.reset(init_graph)
-
-    def append(self, graph):
-        self.hist.append(graph)
-
-    def get_hist(self):
-        return dgl.batch([g for g in self.hist])
-
-    def reset(self, init_graph):
-        self.hist.clear()
-        for _ in range(self.n_hist_steps):
-            self.hist.append(init_graph)
+from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 
 if __name__ == "__main__":
     map_name = "training_scenario_1"
-    env = MicroTestEnvironment(map_name=map_name,
-                               reward_func=great_victor_with_kill_bonus,
-                               state_proc_func=process_game_state_to_dgl)
 
-    node_dim = 17
+    node_dim = 20
     rnn_hidden_dim = 32
     rnn_layers = 2
 
@@ -126,39 +106,20 @@ if __name__ == "__main__":
 
     agent = MultiStepActorCriticAgent(brain=brain, buffer=buffer)
 
-    init_graph = env.observe()['g']
-    history_manager = HistoryManager(
-        n_hist_steps=num_hist_steps, init_graph=init_graph)
+    config = RunnerConfig(map_name=map_name, reward_func=great_victor_with_kill_bonus,
+                          state_proc_func=process_game_state_to_dgl,
+                          agent=agent,
+                          n_hist_steps=num_hist_steps)
 
-    done_cnt = 0
+    runner_manager = RunnerManager(config, 1)
+
     iters = 0
-    while True:
-        # print("Itertation : {} ".format(iters))
-        curr_state_dict = env.observe()
-        hist_graph = history_manager.get_hist()
-        curr_graph = curr_state_dict['g']
-
-        tag2unit_dict = curr_state_dict['tag2unit_dict']
-
-        nn_action, sc2_action = agent.get_action(hist_graph=hist_graph, curr_graph=curr_graph,
-                                                 tag2unit_dict=tag2unit_dict)
-
-        next_state_dict, reward, done = env.step(sc2_action)
-        next_graph = next_state_dict['g']
-        experience = sample_spec(
-            curr_graph, nn_action, reward, next_graph, done)
-
-        agent.append_sample(experience)
-        history_manager.append(next_graph)
-
-        if done:
-            done_cnt += 1
-            if done_cnt % 10 == 0:
-                print("fit at {}".format(done_cnt))
-                fit_return_dict = agent.fit(
-                    batch_size=20, hist_num_time_steps=num_hist_steps)
-
-            if done_cnt >= 1000:
-                break
+    while iters < 10:
         iters += 1
-    env.close()
+        runner_manager.sample(10)
+
+        print("fit at {}".format(iters))
+        fit_return_dict = agent.fit(
+            batch_size=20, hist_num_time_steps=num_hist_steps)
+
+    runner_manager.close()
