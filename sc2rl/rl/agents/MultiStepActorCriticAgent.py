@@ -55,23 +55,6 @@ class MultiStepActorCriticAgent(AgentBase):
 
         c_h_graph, c_graph, actions, rewards, n_h_graph, n_graph, dones = self.buffer.sample(batch_size)
 
-        # inferring maximum num enemies
-        # for c_g in c_graph:
-        #     if 'node_type' in c_g.ndata:
-        #         pass
-        #     else:
-        #         print("node_type non exist")
-        #         import pdb
-        #         pdb.set_trace()
-        #
-        # for n_g in n_graph:
-        #     if 'node_type' in n_g.ndata:
-        #         pass
-        #     else:
-        #         print("node_type non exist")
-        #         import pdb
-        #         pdb.set_trace()
-
         c_maximum_num_enemy = get_largest_number_of_enemy_nodes(c_graph)
         n_maximum_num_enemy = get_largest_number_of_enemy_nodes(n_graph)
 

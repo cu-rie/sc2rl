@@ -13,14 +13,28 @@ class MultiStepActorCriticBrain(BrainBase):
                  actor_critic,
                  hist_encoder,
                  curr_encoder,
-                 opt: str = 'Adam',
-                 actor_lr: float = 1e-4,
-                 critic_lr: float = 1e-3,
-                 ):
+                 hyper_params: dict):
+        """
+        :param actor_critic:
+        :param hist_encoder:
+        :param curr_encoder:
+        :param hyper_params: (dictionary)
+
+        expected keys :
+        'optimizer' (str)
+        'actor_lr' (float) lr for actor related parameters
+        'critic_lr' (float) lr for critic related parameters
+        'auto_entropy' (bool) flag for auto entropy tuning
+            'target_entropy' (float)
+            'entropy_lr' (float)
+        """
+
         super(MultiStepActorCriticBrain, self).__init__()
         self.actor_critic = actor_critic  # type: ActorCriticModule
         self.hist_encoder = hist_encoder  # type: RNNEncoder
         self.curr_encoder = curr_encoder  # type: RelationalNetwork
+
+        self.hyper_params = hyper_params
 
         self._actor_related_params = list(self.actor_critic.actor.parameters()) + \
                                      list(self.hist_encoder.parameters()) + \
@@ -29,11 +43,23 @@ class MultiStepActorCriticBrain(BrainBase):
         self._critic_related_params = list(self.actor_critic.critic.parameters()) + \
                                       list(self.hist_encoder.parameters()) + \
                                       list(self.curr_encoder.parameters())
-        if opt in ['Adam', 'adam']:
-            self.actor_optimizer = torch.optim.Adam(self._actor_related_params, lr=actor_lr)
-            self.critic_optimizer = torch.optim.Adam(self._critic_related_params, lr=critic_lr)
+
+        optimizer = self.get_optimizer()
+        self.actor_optimizer = optimizer(self._actor_related_params, lr=hyper_params['actor_lr'])
+        self.critic_optimizer = optimizer(self._critic_related_params, lr=hyper_params['critic_lr'])
+
+        if hyper_params['auto_entropy']:
+            self.target_entropy = hyper_params['target_entropy']
+            self.log_alpha = torch.zeros(1, requires_grad=True)
+            self.alpha_optimizer = optimizer([self.log_alpha], lr=hyper_params['entropy_lr'])
+
+    def get_optimizer(self):
+        target_opt = self.hyper_params['optimizer']
+        if target_opt in ['Adam', 'adam']:
+            opt = torch.optim.Adam
         else:
-            raise RuntimeError("Not supported optimizer type")
+            raise RuntimeError("Not supported optimizer type: {}".format(target_opt))
+        return opt
 
     def forward(self, hist, state):
         pass
@@ -70,7 +96,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                                                  rewards, dones, target_critic)
 
         self.clip_and_optimize(self.actor_optimizer, self._actor_related_params, actor_loss, actor_clip_norm)
-        #self.clip_and_optimize(self.critic_optimizer, self._critic_related_params, critic_loss, critic_clip_norm)
+        # self.clip_and_optimize(self.critic_optimizer, self._critic_related_params, critic_loss, critic_clip_norm)
 
         return actor_loss.detach().cpu().numpy(), critic_loss.detach().cpu().numpy()
 
