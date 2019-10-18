@@ -65,7 +65,6 @@ class ActorCriticModule(torch.nn.Module):
             # ally_entropy = [#. next ally units]
 
         unsorted_target_q = exp_target_q + self.entropy_coeff * ally_entropy  # [#. next ally_units]
-        #unsorted_target_q = rewards + self.gamma * next_q * (1-dones)  # [#. next ally_units]
 
         cur_idx, next_idx = get_index_mapper(graph, next_graph)
         target_q[cur_idx] = unsorted_target_q[next_idx]

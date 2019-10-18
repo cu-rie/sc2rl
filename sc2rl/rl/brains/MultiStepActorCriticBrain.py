@@ -55,7 +55,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                       list(self.critic_hist_encoder.parameters()) + \
                                       list(self.critic_curr_encoder.parameters())
 
-        optimizer = self.get_optimizer()
+        optimizer = self.get_optimizer(hyper_params['optimizer'])
         self.actor_optimizer = optimizer(self._actor_related_params, lr=hyper_params['actor_lr'])
         self.critic_optimizer = optimizer(self._critic_related_params, lr=hyper_params['critic_lr'])
 
@@ -65,14 +65,6 @@ class MultiStepActorCriticBrain(BrainBase):
             self.alpha_optimizer = optimizer([self.log_alpha], lr=hyper_params['entropy_lr'])
 
         self.update_steps = 0
-
-    def get_optimizer(self):
-        target_opt = self.hyper_params['optimizer']
-        if target_opt in ['Adam', 'adam']:
-            opt = torch.optim.Adam
-        else:
-            raise RuntimeError("Not supported optimizer type: {}".format(target_opt))
-        return opt
 
     def forward(self, hist, state):
         pass
@@ -113,6 +105,21 @@ class MultiStepActorCriticBrain(BrainBase):
                                                             rewards, dones, target_critic)
 
         self.clip_and_optimize(self.critic_optimizer, self._critic_related_params, critic_loss, critic_clip_norm)
+
+        # update alpha
+        if self.hyper_params['auto_entropy']:
+            c_encoded_node_feature = self.link_hist_to_curr(c_num_time_steps,
+                                                            c_h_graph, c_h_node_feature, self.actor_hist_encoder,
+                                                            c_graph, c_node_feature, self.actor_curr_encoder)
+            prob_dict = self.actor_critic.actor.compute_probs(c_graph, c_encoded_node_feature, c_maximum_num_enemy)
+            log_ps = prob_dict['log_ps']
+
+            alpha_loss = (-self.log_alpha * (log_ps * self.target_entropy).detach()).mean()
+            self.alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optimizer.step()
+            alpha = self.log_alpha.exp().data.item()
+            self.actor_critic.entropy_coeff = alpha
 
         # update actor
         if self.update_steps % self.hyper_params['actor_update_freq'] == 0:
@@ -157,7 +164,7 @@ def get_hyper_param_dict(**kwargs):
     hyper_params['actor_lr'] = 1e-4
     hyper_params['critic_lr'] = 1e-3
     hyper_params['auto_entropy'] = True
-    hyper_params['target_entropy'] = 0.1
+    hyper_params['target_entropy'] = -(4 + 1 + 1)  # Expected minimal action dim : Move 4 + Hold 1 + Attack 1
     hyper_params['entropy_lr'] = 1e-4
 
     return hyper_params

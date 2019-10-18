@@ -27,3 +27,10 @@ class BrainBase(torch.nn.Module):
         if clip_val is not None:
             torch.nn.utils.clip_grad_norm_(parameters, clip_val)
         optimizer.step()
+
+    def get_optimizer(self, target_opt):
+        if target_opt in ['Adam', 'adam']:
+            opt = torch.optim.Adam
+        else:
+            raise RuntimeError("Not supported optimizer type: {}".format(target_opt))
+        return opt
