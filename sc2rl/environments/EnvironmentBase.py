@@ -25,6 +25,7 @@ class SC2EnvironmentBase:
     """
 
     def __init__(self, map_name, allies, realtime=False):
+        self.name = map_name
         self.map = sc2.maps.get(map_name)
         self.allies = allies
         self.players = [self.allies]

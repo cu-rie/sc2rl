@@ -148,11 +148,11 @@ if __name__ == "__main__":
 
         if done:
             done_cnt += 1
-            if done_cnt % 2 == 0:
+            if done_cnt % 10 == 0:
                 print("fit at {}".format(done_cnt))
                 fit_return_dict = agent.fit(batch_size=20, hist_num_time_steps=num_hist_steps)
 
-            if done_cnt >= 100:
+            if done_cnt >= 1000:
                 break
         iters += 1
     env.close()
