@@ -114,7 +114,10 @@ class MultiStepSharedActorCriticBrain(BrainBase):
 
             self.clip_and_optimize(self.actor_optimizer, self._actor_related_params, actor_loss, actor_clip_norm)
 
-        return actor_loss.detach().cpu().numpy(), critic_loss.detach().cpu().numpy()
+        fit_return_dict = dict()
+        fit_return_dict['actor_loss'] = actor_loss.detach().cpu().numpy()
+        fit_return_dict['critic_loss'] = critic_loss.detach().cpu().numpy()
+        return fit_return_dict
 
     @staticmethod
     def link_hist_to_curr(num_time_steps,

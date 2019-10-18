@@ -88,20 +88,20 @@ class MultiStepActorCriticAgent(AgentBase):
         n_h_node_feature = n_h_graph.ndata.pop('node_feature')
         n_node_feature = n_graph.ndata.pop('node_feature')
 
-        actor_loss, critic_loss = self.brain.fit(c_num_time_steps=hist_num_time_steps,
-                                                 c_h_graph=c_h_graph,
-                                                 c_h_node_feature=c_h_node_feature,
-                                                 c_graph=c_graph,
-                                                 c_node_feature=c_node_feature,
-                                                 c_maximum_num_enemy=c_maximum_num_enemy,
-                                                 n_num_time_steps=hist_num_time_steps,
-                                                 n_h_graph=n_h_graph,
-                                                 n_h_node_feature=n_h_node_feature,
-                                                 n_graph=n_graph,
-                                                 n_node_feature=n_node_feature,
-                                                 n_maximum_num_enemy=n_maximum_num_enemy,
-                                                 actions=actions,
-                                                 rewards=rewards,
-                                                 dones=dones)
+        fit_return_dict = self.brain.fit(c_num_time_steps=hist_num_time_steps,
+                                         c_h_graph=c_h_graph,
+                                         c_h_node_feature=c_h_node_feature,
+                                         c_graph=c_graph,
+                                         c_node_feature=c_node_feature,
+                                         c_maximum_num_enemy=c_maximum_num_enemy,
+                                         n_num_time_steps=hist_num_time_steps,
+                                         n_h_graph=n_h_graph,
+                                         n_h_node_feature=n_h_node_feature,
+                                         n_graph=n_graph,
+                                         n_node_feature=n_node_feature,
+                                         n_maximum_num_enemy=n_maximum_num_enemy,
+                                         actions=actions,
+                                         rewards=rewards,
+                                         dones=dones)
 
-        return actor_loss, critic_loss
+        return fit_return_dict

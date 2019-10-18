@@ -120,7 +120,7 @@ if __name__ == "__main__":
             done_cnt += 1
             if done_cnt % 2 == 0:
                 print("fit at {}".format(done_cnt))
-                agent.fit(batch_size=20, hist_num_time_steps=num_hist_steps)
+                fit_return_dict = agent.fit(batch_size=20, hist_num_time_steps=num_hist_steps)
 
             if done_cnt >= 100:
                 break
