@@ -19,3 +19,11 @@ class BrainBase(torch.nn.Module):
     def update_target_network(tau, source, target):
         for source_param, target_param in zip(source.parameters(), target.parameters()):
             target_param.data.copy_(tau * source_param.data + (1.0 - tau) * target_param.data)
+
+    @staticmethod
+    def clip_and_optimize(optimizer, parameters, loss, clip_val=None):
+        optimizer.zero_grad()
+        loss.backward()
+        if clip_val is not None:
+            torch.nn.utils.clip_grad_norm_(parameters, clip_val)
+        optimizer.step()

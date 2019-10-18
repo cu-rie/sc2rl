@@ -117,14 +117,6 @@ class MultiStepSharedActorCriticBrain(BrainBase):
         return actor_loss.detach().cpu().numpy(), critic_loss.detach().cpu().numpy()
 
     @staticmethod
-    def clip_and_optimize(optimizer, parameters, loss, clip_val=None):
-        optimizer.zero_grad()
-        loss.backward()
-        if clip_val is not None:
-            torch.nn.utils.clip_grad_norm_(parameters, clip_val)
-        optimizer.step()
-
-    @staticmethod
     def link_hist_to_curr(num_time_steps,
                           h_graph, h_node_feature, h_encoder,
                           c_graph, c_node_feature, c_encoder):
