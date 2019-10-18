@@ -55,7 +55,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                       list(self.critic_hist_encoder.parameters()) + \
                                       list(self.critic_curr_encoder.parameters())
 
-        optimizer = self.get_optimizer()
+        optimizer = self.get_optimizer(hyper_params['optimizer'])
         self.actor_optimizer = optimizer(self._actor_related_params, lr=hyper_params['actor_lr'])
         self.critic_optimizer = optimizer(self._critic_related_params, lr=hyper_params['critic_lr'])
 
@@ -65,14 +65,6 @@ class MultiStepActorCriticBrain(BrainBase):
             self.alpha_optimizer = optimizer([self.log_alpha], lr=hyper_params['entropy_lr'])
 
         self.update_steps = 0
-
-    def get_optimizer(self):
-        target_opt = self.hyper_params['optimizer']
-        if target_opt in ['Adam', 'adam']:
-            opt = torch.optim.Adam
-        else:
-            raise RuntimeError("Not supported optimizer type: {}".format(target_opt))
-        return opt
 
     def forward(self, hist, state):
         pass
