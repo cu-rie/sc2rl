@@ -1,10 +1,10 @@
-from sc2rl.runners.MultiStepActorRunner import *
-from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
-
+from queue import Queue
+import threading as thr
+from copy import deepcopy
 from collections import namedtuple
 
-import threading as thr
-from queue import Queue
+from sc2rl.runners.MultiStepActorRunner import *
+from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 
 
 class RunnerConfig():
@@ -35,8 +35,10 @@ class RunnerManagerBase():
             "This method will be implemented in the child class")
 
 
-class RunnerManager():
+class RunnerManager:
     def __init__(self, config, num_runners):
+        self.num_runners = num_runners
+        self.agent = config.agent
         self.runners = []
 
         self.sample_queue = Queue()
@@ -64,11 +66,18 @@ class RunnerManager():
         for th in threads:
             th.join()
 
+    def transfer_sample(self):
+        trajectories = []
+        while not self.sample_queue.empty():
+            traj = self.sample_queue.get()
+            trajectories.append(traj)
+
+        self.agent.buffer.push_trajectories(trajectories)
+
     def evaluate(self, total_n):
         for runner in self.runners:
             runner.set_eval_mode()
 
-        ns = self.calc_even_ns(n, self.num_sim)
         threads = []
         for (n, runner) in zip(self._calc_n(total_n), self.runners):
             th = thr.Thread(target=runner.eval_n_episodes,
@@ -96,8 +105,7 @@ class RunnerManager():
         for runner in self.runners:
             runner.close()
 
-    @staticmethod
-    def _calc_n(total_n, num_workers):
-        div, remain = divmod(total_n, num_workers)
-        ns = [div] * (num_workers - remain) + [div + 1] * remain
+    def _calc_n(self, total_n):
+        div, remain = divmod(total_n, self.num_runners)
+        ns = [div] * (self.num_runners - remain) + [div + 1] * remain
         return ns

@@ -19,7 +19,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 if __name__ == "__main__":
     map_name = "training_scenario_1"
 
-    node_dim = 20
+    node_dim = 17
     rnn_hidden_dim = 32
     rnn_layers = 2
 
@@ -111,12 +111,13 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
-    runner_manager = RunnerManager(config, 1)
+    runner_manager = RunnerManager(config, 2)
 
     iters = 0
     while iters < 10:
         iters += 1
-        runner_manager.sample(10)
+        runner_manager.sample(5)
+        runner_manager.transfer_sample()
 
         print("fit at {}".format(iters))
         fit_return_dict = agent.fit(

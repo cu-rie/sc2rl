@@ -43,7 +43,7 @@ class MultiStepActorRunner(RunnerBase):
             if done:
                 break
 
-        return Trajectory
+        return trajectory
 
     def eval_1_episode(self):
         # expected return

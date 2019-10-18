@@ -34,6 +34,10 @@ class NstepInputMemory(EpisodicMemory):
             self.trajectories.append(self._cur_traj)
             self._cur_traj = Trajectory(spec=self.spec, gamma=self.gamma, max_len=self.max_traj_len)
 
+    def push_trajectories(self, trajectories):
+        for trajectory in trajectories:
+            self.trajectories.append(trajectory)
+
     def sample_from_trajectory(self, trajectory_i, sampling_index):
         traj = self.trajectories[trajectory_i]
         i = sampling_index
