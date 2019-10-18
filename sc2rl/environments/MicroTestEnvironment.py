@@ -1,22 +1,25 @@
-from time import sleep
 from sc2 import Race
 from sc2.player import Bot
 from sc2rl.environments.EnvironmentBase import SC2EnvironmentBase
 from sc2rl.environments.SC2BotAI import SimpleSC2BotAI
 
+from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
+
 
 class MicroTestEnvironment(SC2EnvironmentBase):
 
-    def __init__(self, map_name, reward_func, state_proc_func, realtime=False):
+    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=10000):
         allies = Bot(Race.Terran, SimpleSC2BotAI())
         super(MicroTestEnvironment, self).__init__(map_name=map_name,
                                                    allies=allies,
                                                    realtime=realtime)
+        self.max_steps = max_steps
+        self.step_counter = 0
 
         self.reward_func = reward_func
         self.state_proc_func = state_proc_func
-        self.prev_health = 1000
-        self.curr_health = 1000
+        self.prev_health = VERY_LARGE_NUMBER
+        self.curr_health = VERY_LARGE_NUMBER
 
     def reset(self):
         sc2_game_state = self._reset()
@@ -45,6 +48,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         return done_increase or done_zero_units
 
     def step(self, action):
+        self.step_counter += 1
         sc2_cur_state = self._observe()
         sc2_next_state, _ = self._step(action_args=action)
 
@@ -58,11 +62,14 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
         if done:  # Burn few remaining frames
             self.burn_last_frames()
+            if self.step_counter >= self.max_steps:
+                _ = self.reset()
 
         return next_state, reward, done
 
     def burn_last_frames(self):
         while True:
+            self.step_counter += 1
             sc2_cur_state = self._observe()
             done = self._check_done(sc2_cur_state)
             if not done:
