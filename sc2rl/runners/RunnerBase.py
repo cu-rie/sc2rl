@@ -26,7 +26,9 @@ class RunnerBase:
         raise NotImplementedError("This method will be implemented in the child class")
 
     def eval_n_episodes(self, n, queue):
-        raise NotImplementedError("This method will be implemented in the child class")
+        for _ in range(n):
+            eval_dict = self.run_1_episode()
+            queue.put(eval_dict)
 
     def reset(self):
         self.env.close()
