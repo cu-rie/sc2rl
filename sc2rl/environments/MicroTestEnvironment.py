@@ -23,6 +23,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
     def reset(self):
         sc2_game_state = self._reset()
+        self.step_counter = 0
         return self.state_proc_func(sc2_game_state)
 
     def observe(self):
@@ -84,10 +85,8 @@ if __name__ == "__main__":
     def reward_func(s, ns):
         return 1
 
-
     def _convert_nn_action_to_sc2_action(self, nn_action, graph):
         pass
-
 
     map_name = "training_scenario_1"
     test_reward_func = reward_func
