@@ -8,20 +8,16 @@ from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 
 
-class MultiStepActorCriticBrain(BrainBase):
+class MultiStepSharedActorCriticBrain(BrainBase):
     def __init__(self,
                  actor_critic,
-                 actor_hist_encoder,
-                 actor_curr_encoder,
-                 critic_hist_encoder,
-                 critic_curr_encoder,
+                 hist_encoder,
+                 curr_encoder,
                  hyper_params: dict):
         """
         :param actor_critic:
-        :param actor_hist_encoder:
-        :param actor_curr_encoder:
-        :param critic_hist_encoder:
-        :param critic_curr_encoder:
+        :param hist_encoder:
+        :param curr_encoder:
         :param hyper_params: (dictionary)
 
         expected keys :
@@ -34,26 +30,20 @@ class MultiStepActorCriticBrain(BrainBase):
             'entropy_lr' (float)
         """
 
-        super(MultiStepActorCriticBrain, self).__init__()
+        super(MultiStepSharedActorCriticBrain, self).__init__()
         self.actor_critic = actor_critic  # type: ActorCriticModule
-
-        # actor encoders
-        self.actor_hist_encoder = actor_hist_encoder  # type: RNNEncoder
-        self.actor_curr_encoder = actor_curr_encoder  # type: RelationalNetwork
-
-        # critic encoders
-        self.critic_hist_encoder = critic_hist_encoder
-        self.critic_curr_encoder = critic_curr_encoder
+        self.hist_encoder = hist_encoder  # type: RNNEncoder
+        self.curr_encoder = curr_encoder  # type: RelationalNetwork
 
         self.hyper_params = hyper_params
 
         self._actor_related_params = list(self.actor_critic.actor.parameters()) + \
-                                     list(self.actor_hist_encoder.parameters()) + \
-                                     list(self.actor_curr_encoder.parameters())
+                                     list(self.hist_encoder.parameters()) + \
+                                     list(self.curr_encoder.parameters())
 
         self._critic_related_params = list(self.actor_critic.critic.parameters()) + \
-                                      list(self.critic_hist_encoder.parameters()) + \
-                                      list(self.critic_curr_encoder.parameters())
+                                      list(self.hist_encoder.parameters()) + \
+                                      list(self.curr_encoder.parameters())
 
         optimizer = self.get_optimizer()
         self.actor_optimizer = optimizer(self._actor_related_params, lr=hyper_params['actor_lr'])
@@ -82,8 +72,8 @@ class MultiStepActorCriticBrain(BrainBase):
         assert isinstance(curr_graph, dgl.DGLGraph), "get action is designed to work on a single graph!"
 
         encoded_node_feature = self.link_hist_to_curr(num_time_steps,
-                                                      hist_graph, hist_node_feature, self.actor_hist_encoder,
-                                                      curr_graph, curr_node_feature, self.actor_curr_encoder)
+                                                      hist_graph, hist_node_feature, self.hist_encoder,
+                                                      curr_graph, curr_node_feature, self.curr_encoder)
 
         return self.actor_critic.get_action(curr_graph, encoded_node_feature, maximum_num_enemy)
 
@@ -100,12 +90,12 @@ class MultiStepActorCriticBrain(BrainBase):
 
         # update critic
         c_encoded_node_feature = self.link_hist_to_curr(c_num_time_steps,
-                                                        c_h_graph, c_h_node_feature, self.critic_hist_encoder,
-                                                        c_graph, c_node_feature, self.critic_curr_encoder)
+                                                        c_h_graph, c_h_node_feature, self.hist_encoder,
+                                                        c_graph, c_node_feature, self.curr_encoder)
 
         n_encoded_node_feature = self.link_hist_to_curr(n_num_time_steps,
-                                                        n_h_graph, n_h_node_feature, self.critic_hist_encoder,
-                                                        n_graph, n_node_feature, self.critic_curr_encoder)
+                                                        n_h_graph, n_h_node_feature, self.hist_encoder,
+                                                        n_graph, n_node_feature, self.curr_encoder)
 
         critic_loss = self.actor_critic.compute_critic_loss(c_graph, c_encoded_node_feature, c_maximum_num_enemy,
                                                             actions,
@@ -117,8 +107,8 @@ class MultiStepActorCriticBrain(BrainBase):
         # update actor
         if self.update_steps % self.hyper_params['actor_update_freq'] == 0:
             c_encoded_node_feature = self.link_hist_to_curr(c_num_time_steps,
-                                                            c_h_graph, c_h_node_feature, self.actor_hist_encoder,
-                                                            c_graph, c_node_feature, self.actor_curr_encoder)
+                                                            c_h_graph, c_h_node_feature, self.hist_encoder,
+                                                            c_graph, c_node_feature, self.curr_encoder)
 
             actor_loss = self.actor_critic.compute_actor_loss(c_graph, c_encoded_node_feature, c_maximum_num_enemy)
 

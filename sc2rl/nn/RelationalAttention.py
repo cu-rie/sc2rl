@@ -3,7 +3,7 @@ import torch
 from torch_scatter import scatter_add
 
 from .Hypernet import HyperNetwork
-from sc2rl.utils.graph_utils import get_filtered_edge_index_by_type, get_filtered_node_index_by_type
+from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 
 class RelationalAttentionLayer(torch.nn.Module):
