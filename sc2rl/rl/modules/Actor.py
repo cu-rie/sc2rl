@@ -68,6 +68,7 @@ class ActorModule(torch.nn.Module):
         return_dict = dict()
         # for RL training
         return_dict['probs'] = ps
+        return_dict['log_ps'] = log_ps
         return_dict['log_p_move'] = log_p_move
         return_dict['log_p_hold'] = log_p_hold
         return_dict['log_p_attack'] = log_p_attack
