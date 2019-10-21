@@ -1,6 +1,5 @@
 from collections import deque
 import numpy as np
-from sc2rl.memory.trajectory import Trajectory
 
 
 class MemoryBase:
@@ -35,7 +34,6 @@ class EpisodicMemory(MemoryBase):
         self.spec = spec
         self.gamma = gamma
         self.max_traj_len = max_traj_len
-        self._cur_traj = Trajectory(spec=spec, gamma=self.gamma, max_len=max_traj_len)
 
     def len_trajectories(self):
         return np.array([traj.length for traj in self.trajectories])

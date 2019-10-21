@@ -2,11 +2,11 @@ import numpy as np
 
 from sc2rl.runners.RunnerBase import RunnerBase
 from sc2rl.utils.HistoryManagers import HistoryManager
-from sc2rl.memory.trajectory import Trajectory
+from sc2rl.memory.Trajectory import Trajectory
 
 from sc2rl.config.graph_configs import NODE_ALLY, NODE_ENEMY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
-
+from sc2rl.environments.MicroTestEnvironment import Status
 
 class MultiStepActorRunner(RunnerBase):
 
@@ -17,7 +17,7 @@ class MultiStepActorRunner(RunnerBase):
             n_hist_steps=n_steps, init_graph=None)
 
     def run_1_episode(self):
-        trajectory = Trajectory(spec=self.sample_spec, gamma=1.0)
+        trajectory = Trajectory(gamma=1.0)
         # the first frame of each episode
         curr_state_dict = self.env.observe()
         curr_graph = curr_state_dict['g']
@@ -70,3 +70,10 @@ class MultiStepActorRunner(RunnerBase):
 
     def set_eval_mode(self):
         self.agent.eval()
+
+    def reset(self):
+        if self.env.status == Status.END:
+            self.env.reset()
+
+    def close(self):
+        self.env.close()

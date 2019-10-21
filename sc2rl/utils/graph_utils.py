@@ -57,7 +57,6 @@ def get_filtered_node_index_by_type(graph, ntype_idx):
     return node_idx
 
 
-
 def get_largest_number_of_enemy_nodes(graphs):
     max_num_enemy = 0
     for graph in graphs:
