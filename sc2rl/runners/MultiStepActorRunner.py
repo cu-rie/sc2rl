@@ -6,7 +6,7 @@ from sc2rl.memory.Trajectory import Trajectory
 
 from sc2rl.config.graph_configs import NODE_ALLY, NODE_ENEMY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
-
+from sc2rl.environments.MicroTestEnvironment import Status
 
 class MultiStepActorRunner(RunnerBase):
 
@@ -70,3 +70,10 @@ class MultiStepActorRunner(RunnerBase):
 
     def set_eval_mode(self):
         self.agent.eval()
+
+    def reset(self):
+        if self.env.status == Status.END:
+            self.env.reset()
+
+    def close(self):
+        self.env.close()

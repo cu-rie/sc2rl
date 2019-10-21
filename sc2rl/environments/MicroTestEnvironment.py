@@ -1,9 +1,15 @@
+import enum
 from sc2 import Race
 from sc2.player import Bot
 from sc2rl.environments.EnvironmentBase import SC2EnvironmentBase
 from sc2rl.environments.SC2BotAI import SimpleSC2BotAI
 
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
+
+
+class Status(enum.Enum):
+    RUNNING = 0
+    END = 1
 
 
 class MicroTestEnvironment(SC2EnvironmentBase):
@@ -14,16 +20,27 @@ class MicroTestEnvironment(SC2EnvironmentBase):
                                                    allies=allies,
                                                    realtime=realtime)
         self.max_steps = max_steps
-        self.step_counter = 0
+        self._step_count = 0
+        self.status = Status.RUNNING
 
         self.reward_func = reward_func
         self.state_proc_func = state_proc_func
         self.prev_health = VERY_LARGE_NUMBER
         self.curr_health = VERY_LARGE_NUMBER
 
+    @property
+    def step_count(self):
+        return self._step_count
+
+    @step_count.setter
+    def step_count(self, s_count):
+        self._step_count += s_count
+        if self.step_count >= self.max_steps:
+            self.status = self.status.END
+
     def reset(self):
         sc2_game_state = self._reset()
-        self.step_counter = 0
+        self.step_count = 0
         return self.state_proc_func(sc2_game_state)
 
     def observe(self):
@@ -49,7 +66,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         return done_increase or done_zero_units
 
     def step(self, action):
-        self.step_counter += 1
+        self.step_count += 1
         sc2_cur_state = self._observe()
         sc2_next_state, _ = self._step(action_args=action)
 
@@ -63,14 +80,14 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
         if done:  # Burn few remaining frames
             self.burn_last_frames()
-            if self.step_counter >= self.max_steps:
+            if self.status == Status.END:
                 _ = self.reset()
 
         return next_state, reward, done
 
     def burn_last_frames(self):
         while True:
-            self.step_counter += 1
+            self.step_count += 1
             sc2_cur_state = self._observe()
             done = self._check_done(sc2_cur_state)
             if not done:
@@ -85,8 +102,10 @@ if __name__ == "__main__":
     def reward_func(s, ns):
         return 1
 
+
     def _convert_nn_action_to_sc2_action(self, nn_action, graph):
         pass
+
 
     map_name = "training_scenario_1"
     test_reward_func = reward_func

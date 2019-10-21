@@ -111,7 +111,7 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
-    runner_manager = RunnerManager(config, 1)
+    runner_manager = RunnerManager(config, 2)
 
     iters = 0
     while iters < 10:

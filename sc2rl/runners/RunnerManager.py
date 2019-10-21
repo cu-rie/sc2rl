@@ -50,6 +50,8 @@ class RunnerManager:
                 env, config.agent, config.sample_spec, config.n_hist_steps))
 
     def sample(self, total_n):
+        self.reset()
+
         for runner in self.runners:
             runner.set_train_mode()
             if runner.env.step_counter >= runner.env.max_steps:
@@ -76,6 +78,8 @@ class RunnerManager:
         self.agent.buffer.push_trajectories(trajectories)
 
     def evaluate(self, total_n):
+        self.reset()
+
         for runner in self.runners:
             runner.set_eval_mode()
 
@@ -103,6 +107,10 @@ class RunnerManager:
         return performance
 
     def close(self):
+        for runner in self.runners:
+            runner.close()
+
+    def reset(self):
         for runner in self.runners:
             runner.close()
 
