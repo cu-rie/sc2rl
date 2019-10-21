@@ -53,15 +53,15 @@ class MultiStepInputNetworkConfig(ConfigBase):
         self.set_configs(self._curr_enc_conf, curr_enc_conf)
 
     @property
-    def get_hist_rnn_conf(self):
+    def hist_rnn_conf(self):
         return self.get_conf(self._hist_rnn_conf)
 
     @property
-    def get_hist_enc_conf(self):
+    def hist_enc_conf(self):
         return self.get_conf(self._hist_enc_conf)
 
     @property
-    def get_curr_enc_conf(self):
+    def curr_enc_conf(self):
         return self.get_conf(self._curr_enc_conf)
 
 
@@ -70,17 +70,17 @@ class MultiStepInputNetwork(torch.nn.Module):
     def __init__(self, conf):
         self.conf = conf  # type: MultiStepInputNetworkConfig
 
-        rnn_conf = conf.get_hist_rnn_conf
+        rnn_conf = conf.hist_rnn_conf
         rnn_type = rnn_conf.pop('rnn_type')
         rnn = getattr(torch.nn, rnn_type)
         self.hist_rnn = rnn(**rnn_conf)
 
-        hist_enc_conf = conf.get_hist_enc_conf
+        hist_enc_conf = conf.hist_enc_conf
         self.hist_one_step_enc = RelationalNetwork(**hist_enc_conf)
 
         self.hist_encoder = RNNEncoder(rnn=self.hist_rnn, one_step_encoder=self.hist_one_step_enc)
 
-        curr_enc_conf = conf.get_curr_enc_conf
+        curr_enc_conf = conf.curr_enc_conf
         self.curr_encoder = RelationalNetwork(**curr_enc_conf)
 
     def forward(self, num_time_steps, hist_graph, hist_feature,
