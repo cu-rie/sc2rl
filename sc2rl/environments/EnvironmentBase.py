@@ -53,12 +53,10 @@ class SC2EnvironmentBase:
         if self.host_server is not None:
             self.loop.run_until_complete(self.host_server._Controller__process._close_connection())
             self.host_server._Controller__process._clean()
-            self.allies = None
 
         if self.join_server is not None:
             self._loop_run(self.join_server._Controller__process._session.close())
             self.join_server._Controller__process._clean()
-            self.allies = None
 
         if self.allies_game_data is not None:
             self.allies_game_data = None
@@ -134,6 +132,7 @@ class SC2EnvironmentBase:
         self.allies_game_info = ret_allies[1]
         self.allies_game_state = ret_allies[2]
         return self.allies_game_state
+
 
     def _observe(self):
         return self.allies_game_state

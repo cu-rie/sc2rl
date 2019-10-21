@@ -1,9 +1,8 @@
 from queue import Queue
 import threading as thr
-from copy import deepcopy
 from collections import namedtuple
 
-from sc2rl.runners.MultiStepActorRunner import *
+from sc2rl.runners.MultiStepActorRunner import MultiStepActorRunner
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 
 
@@ -53,6 +52,8 @@ class RunnerManager:
     def sample(self, total_n):
         for runner in self.runners:
             runner.set_train_mode()
+            if runner.env.step_counter >= runner.env.max_steps:
+                runner.env.reset()
 
         threads = []
         for (n, runner) in zip(self._calc_n(total_n), self.runners):

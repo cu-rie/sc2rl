@@ -8,7 +8,7 @@ from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 
 class MicroTestEnvironment(SC2EnvironmentBase):
 
-    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=10000):
+    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=100):
         allies = Bot(Race.Terran, SimpleSC2BotAI())
         super(MicroTestEnvironment, self).__init__(map_name=map_name,
                                                    allies=allies,
