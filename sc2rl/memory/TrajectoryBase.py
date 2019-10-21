@@ -2,7 +2,7 @@ from collections import deque
 from copy import deepcopy
 
 
-class Trajectory:
+class TrajectoryBase:
 
     def __init__(self, spec, gamma, max_len=100000):
         self.spec = spec

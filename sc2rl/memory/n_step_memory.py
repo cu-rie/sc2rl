@@ -1,5 +1,5 @@
 from sc2rl.memory.memory_base import EpisodicMemory
-from sc2rl.memory.trajectory import Trajectory
+from sc2rl.memory.Trajectory import Trajectory
 
 import numpy as np
 
@@ -12,25 +12,13 @@ class NstepInputMemory(EpisodicMemory):
                                                gamma=gamma,
                                                max_traj_len=max_traj_len)
 
+        self._cur_traj = Trajectory(gamma=self.gamma, max_len=max_traj_len)
         self.N = N
 
     def push(self, sample):
         done = sample.done
         self._cur_traj.push(sample)
         if done:
-            # check whether the graph actually has nodes
-            # when the last frame of each episode has 0 units
-            # delete the frame and set the frame before last set as new last frame
-            if sample.next_state.number_of_nodes() == 0:
-                self._cur_traj._trajectory.pop()
-                sample = self._cur_traj._trajectory.pop()
-                state = sample.state
-                action = sample.action
-                reward = sample.reward
-                next_state = sample.next_state
-                done = True
-                self._cur_traj.push(self.spec(state, action, reward, next_state, done))
-
             self.trajectories.append(self._cur_traj)
             self._cur_traj = Trajectory(spec=self.spec, gamma=self.gamma, max_len=self.max_traj_len)
 
