@@ -14,7 +14,7 @@ class Status(enum.Enum):
 
 class MicroTestEnvironment(SC2EnvironmentBase):
 
-    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=100):
+    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=50000):
         allies = Bot(Race.Terran, SimpleSC2BotAI())
         super(MicroTestEnvironment, self).__init__(map_name=map_name,
                                                    allies=allies,
@@ -34,13 +34,14 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
     @step_count.setter
     def step_count(self, s_count):
-        self._step_count += s_count
+        self._step_count = s_count
         if self.step_count >= self.max_steps:
-            self.status = self.status.END
+            self.status = Status.END
 
     def reset(self):
         sc2_game_state = self._reset()
         self.step_count = 0
+        self.status = Status.RUNNING
         return self.state_proc_func(sc2_game_state)
 
     def observe(self):
@@ -66,7 +67,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         return done_increase or done_zero_units
 
     def step(self, action):
-        self.step_count += 1
+        self.step_count = self.step_count + 1
         sc2_cur_state = self._observe()
         sc2_next_state, _ = self._step(action_args=action)
 
@@ -87,15 +88,13 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
     def burn_last_frames(self):
         while True:
-            self.step_count += 1
+            self.step_count = self.step_count + 1
             sc2_cur_state = self._observe()
             done = self._check_done(sc2_cur_state)
-            if not done:
-                _, _ = self._step(action_args=None)
-                break
-            else:
-                _, _ = self._step(action_args=None)
+            _, _ = self._step(action_args=None)
 
+            if not done:
+                break
 
 if __name__ == "__main__":
 
