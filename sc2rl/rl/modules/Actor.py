@@ -10,8 +10,20 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
 
 class ActorModuleConfig(ConfigBase):
 
-    def __init__(self):
-        pass
+    def __init__(self,
+                 actor_conf=None):
+        self._actor_conf = {
+            'node_input_dim': 17,
+            'out_activation': None,
+            'hidden_activation': 'relu',
+            'num_neurons': [64, 64]
+        }
+
+        self.set_configs(self._actor_conf, actor_conf)
+
+    @property
+    def actor_conf(self):
+        return self.get_conf(self._actor_conf)
 
 
 class ActorModule(torch.nn.Module):

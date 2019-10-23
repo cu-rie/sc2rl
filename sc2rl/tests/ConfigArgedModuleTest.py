@@ -1,56 +1,85 @@
+import dgl
+from collections import deque
+
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
+from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
-from sc2rl.rl.modules.ActorCritic import ActorCriticModule
-from sc2rl.rl.modules.Actor import ActorModule
-from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
-from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
+from sc2rl.rl.agents.MultiStepActorCriticAgent_refac import MultiStepActorCriticAgent, MultiStepActorCriticAgentConfig
+from sc2rl.rl.brains.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrainConfig
+from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetworkConfig
+from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 
 
-def reward_func(s, ns):
-    return 1
+class HistoryManager:
+
+    def __init__(self, n_hist_steps, init_graph):
+        self.n_hist_steps = n_hist_steps
+        self.hist = deque(maxlen=n_hist_steps)
+        self.reset(init_graph)
+
+    def append(self, graph):
+        self.hist.append(graph)
+
+    def get_hist(self):
+        return dgl.batch([g for g in self.hist])
+
+    def reset(self, init_graph):
+        self.hist.clear()
+        for _ in range(self.n_hist_steps):
+            self.hist.append(init_graph)
 
 
 if __name__ == "__main__":
-    map_name = "3m_vs_4m_randoffset"
-    test_reward_func = reward_func
-    test_sate_proc_func = process_game_state_to_dgl
+    map_name = "training_scenario_1"
+    env = MicroTestEnvironment(map_name=map_name,
+                               reward_func=great_victor_with_kill_bonus,
+                               state_proc_func=process_game_state_to_dgl)
 
-    env = MicroTestEnvironment(map_name, test_reward_func, test_sate_proc_func)
-    ac_module = ActorCriticModule(node_input_dim=26)
-    # ac_module = ActorCriticModule(node_input_dim=26)
+    agent_conf = MultiStepActorCriticAgentConfig()
+    network_conf = MultiStepInputNetworkConfig()
+    brain_conf = MultiStepActorCriticBrainConfig()
+    buffer_conf = NstepInputMemoryConfig()
+
+    sample_spec = buffer_conf.memory_conf['spec']
+
+    agent = MultiStepActorCriticAgent(agent_conf,
+                                      network_conf,
+                                      brain_conf,
+                                      buffer_conf)
+
+    init_graph = env.observe()['g']
+    history_manager = HistoryManager(
+        n_hist_steps=buffer_conf.memory_conf['N'], init_graph=init_graph)
 
     done_cnt = 0
-    i = 0
-
+    iters = 0
     while True:
-        # print("=========={} th iter ============".format(i))
-        cur_state = env.observe()
-        # for tag, unit in cur_state['tag2unit_dict'].items():
-        #     print("TAG: {} | NAME: {} | Health: {} | POS: {} ".format(tag, unit.name, unit.health, unit.position))
+        # print("Itertation : {} ".format(iters))
+        curr_state_dict = env.observe()
+        hist_graph = history_manager.get_hist()
+        curr_graph = curr_state_dict['g']
 
-        g = cur_state['g']
-        node_feature = g.ndata.pop('node_feature')
+        tag2unit_dict = curr_state_dict['tag2unit_dict']
 
-        num_enemy = get_largest_number_of_enemy_nodes([g])
-        nn_actions, info_dict = ac_module.get_action(g, node_feature, num_enemy)
+        nn_action, sc2_action = agent.get_action(hist_graph=hist_graph, curr_graph=curr_graph,
+                                                 tag2unit_dict=tag2unit_dict)
 
-        tag2unit_dict = cur_state['tag2unit_dict']
-        ally_tags = info_dict['ally_tags']
-        enemy_tags = info_dict['enemy_tags']
+        next_state_dict, reward, done = env.step(sc2_action)
+        next_graph = next_state_dict['g']
+        experience = sample_spec(
+            curr_graph, nn_action, reward, next_graph, done)
 
-        sc2_actions = nn_action_to_sc2_action(nn_actions=nn_actions,
-                                              ally_tags=ally_tags,
-                                              enemy_tags=enemy_tags,
-                                              tag2unit_dict=tag2unit_dict)
-
-        loss = ac_module(g, node_feature, num_enemy)
-
-        next_state, reward, done = env.step(action=sc2_actions)
+        agent.append_sample(experience)
+        history_manager.append(next_graph)
 
         if done:
             done_cnt += 1
-            if done_cnt >= 10:
-                break
+            if done_cnt % 10 == 0:
+                print("fit at {}".format(done_cnt))
+                fit_return_dict = agent.fit()
 
-        i += 1
+            if done_cnt >= 1000:
+                break
+        iters += 1
+    env.close()

@@ -18,8 +18,8 @@ from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 class MultiStepActorCriticAgentConfig(ConfigBase):
 
     def __init__(self,
-                 module_conf,
-                 fit_conf):
+                 module_conf=None,
+                 fit_conf=None):
         self._module_conf = {
             'prefix': 'module',
             'use_target': True,
@@ -52,17 +52,17 @@ class MultiStepActorCriticAgent(AgentBase):
                                                         buffer_conf=buffer_conf)
         self.conf = conf
 
-        actor = MultiStepInputActor(**network_conf)
-        critic = MultiStepInputActor(**network_conf)
+        actor = MultiStepInputActor(network_conf)
+        critic = MultiStepInputActor(network_conf)
 
         if self.conf.module_conf['use_target']:
-            critic_target = MultiStepActorCriticAgent(**network_conf)
+            critic_target = MultiStepActorCriticAgent(network_conf)
         else:
             critic_target = None
 
         if self.conf.module_conf['use_double_q']:
-            critic2 = MultiStepActorCriticAgent(**network_conf)
-            critic2_target = MultiStepActorCriticAgent(**network_conf)
+            critic2 = MultiStepActorCriticAgent(network_conf)
+            critic2_target = MultiStepActorCriticAgent(network_conf)
         else:
             critic2 = None
             critic2_target = None
@@ -74,7 +74,7 @@ class MultiStepActorCriticAgent(AgentBase):
                                                critic2=critic2,
                                                critic2_target=critic2_target)
 
-        self.buffer = NstepInputMemory(**buffer_conf)
+        self.buffer = NstepInputMemory(buffer_conf)
 
     def get_action(self,
                    hist_graph,

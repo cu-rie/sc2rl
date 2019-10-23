@@ -1,12 +1,19 @@
 import torch
-from sc2rl.rl.modules.Actor import ActorModule
+from sc2rl.rl.modules.Actor import ActorModule, ActorModuleConfig
 from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
 
 
 class MultiStepInputActor(torch.nn.Module):
 
     def __init__(self, multi_step_input_network_conf,
-                 actor_conf):
+                 actor_conf=None):
+
+        if actor_conf is None:
+            rnn_hidden_dim = multi_step_input_network_conf.hist_rnn_conf['hidden_size']
+            curr_enc_hidden_dim = multi_step_input_network_conf.curr_enc_conf['model_dim']
+            actor_conf = ActorModuleConfig()
+            actor_conf._actor_conf['node_input_dim'] = rnn_hidden_dim + curr_enc_hidden_dim
+
         self.multi_step_input_net = MultiStepInputNetwork(multi_step_input_network_conf)
         self.actor = ActorModule(actor_conf)
 
