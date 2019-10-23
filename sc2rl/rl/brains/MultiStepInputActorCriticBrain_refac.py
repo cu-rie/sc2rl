@@ -78,6 +78,13 @@ class MultiStepActorCriticBrain(BrainBase):
         else:
             self.log_alpha = torch.log(torch.ones(1) * self.entropy_conf['alpha'])
 
+    def get_action(self,
+                   hist_graph,
+                   curr_graph,
+                   tag2unit_dict):
+
+        nn_actions, info_dict = self.actor.get_action()
+
     def fit_critic(self,
                    num_time_steps,
                    c_hist_graph, c_hist_feature,

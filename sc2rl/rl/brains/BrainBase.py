@@ -28,7 +28,8 @@ class BrainBase(torch.nn.Module):
             torch.nn.utils.clip_grad_norm_(parameters, clip_val)
         optimizer.step()
 
-    def get_optimizer(self, target_opt):
+    @staticmethod
+    def get_optimizer(target_opt):
         if target_opt in ['Adam', 'adam']:
             opt = torch.optim.Adam
         else:
