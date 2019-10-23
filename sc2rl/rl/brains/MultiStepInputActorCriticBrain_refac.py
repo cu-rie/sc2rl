@@ -15,12 +15,14 @@ class MultiStepActorCriticBrainConfig(ConfigBase):
             'prefix': 'brain_conf',
             'optimizer': 'Adam',
             'actor_lr': 1e-4,
-            'critic_lr': 1e-3
+            'critic_lr': 1e-3,
+            'gamma': 1.0
         }
         self.set_configs(self._brain_conf, brain_conf)
 
         self._fit_conf = {
-            'num_critic_pre_fit_steps': 20,
+            'prefix': 'brain_fit',
+            'num_critic_pre_fit_steps': 2,
             'tau': 0.005,
             'critic_norm_clip_val': 1.0,
             'actor_norm_clip_val': 1.0
@@ -64,6 +66,7 @@ class MultiStepActorCriticBrain(BrainBase):
         self.critic2_target = critic2_target
 
         self.brain_conf = conf.brain_conf
+        self.gamma = self.brain_conf['gamma']
 
         optimizer = self.get_optimizer(self.brain_conf['optimizer'])
         self.actor_optimizer = optimizer(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
@@ -90,11 +93,16 @@ class MultiStepActorCriticBrain(BrainBase):
         self.fit_steps = 0
 
     def get_action(self,
+                   num_time_steps,
                    hist_graph,
+                   hist_feature,
                    curr_graph,
-                   tag2unit_dict):
+                   curr_feature,
+                   maximum_num_enemy):
 
-        nn_actions, info_dict = self.actor.get_action()
+        nn_actions, info_dict = self.actor.get_action(num_time_steps,
+                                                      hist_graph, hist_feature,
+                                                      curr_graph, curr_feature, maximum_num_enemy)
         return nn_actions, info_dict
 
     def fit(self,
@@ -143,6 +151,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                           rewards=rewards,
                                           dones=dones)
         fit_dict.update(critic_fit_dict)
+        self.fit_steps += 1
         return fit_dict
 
     def fit_critic(self,
@@ -175,7 +184,7 @@ class MultiStepActorCriticBrain(BrainBase):
         self.clip_and_optimize(self.critic_optimizer, self.critic.parameters(), loss,
                                clip_val=self.fit_conf['critic_norm_clip_val'])
 
-        self.update_target_network(self.hyper_params['tau'], self.critic, self.critic_target)
+        self.update_target_network(self.fit_conf['tau'], self.critic, self.critic_target)
 
         fit_dict['critic_loss'] = loss.detach().cpu().numpy()
 
@@ -191,12 +200,12 @@ class MultiStepActorCriticBrain(BrainBase):
                                              n_maximum_num_enemy,
                                              rewards,
                                              dones,
-                                             target_net=self.critic_target2)
+                                             target_net=self.critic2_target)
 
             self.clip_and_optimize(self.critic2_optimizer, self.critic2.parameters(), loss2,
                                    clip_val=self.fit_conf['critic_norm_clip_val'])
 
-            self.update_target_network(self.hyper_params['tau'], self.critic2, self.critic_target2)
+            self.update_target_network(self.fit_conf['tau'], self.critic2, self.critic2_target)
             fit_dict['critic_loss2'] = loss2.detach().cpu().numpy()
 
         return fit_dict
@@ -237,7 +246,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                                    n_curr_graph, n_curr_feature,
                                                    n_maximum_num_enemy)
 
-        unsorted_target_q = exp_target_q + self.entropy_coeff * entropy  # [#. next ally_units]
+        unsorted_target_q = exp_target_q + self.log_alpha.exp().detach() * entropy  # [#. next ally_units]
         cur_idx, next_idx = get_index_mapper(c_curr_graph, n_curr_graph)
         target_q[cur_idx] = unsorted_target_q[next_idx]
         target_q = rewards + self.gamma * target_q * (1 - dones)
@@ -288,12 +297,12 @@ class MultiStepActorCriticBrain(BrainBase):
         log_ps = torch.cat([log_p_move, log_p_hold, log_p_attack], dim=1)
         ps = prob_dict['probs']
 
-        vs = (ps * qs).sum(1).deatch()
-        policy_target = qs - vs
+        vs = (ps * qs).sum(1).detach()
+        policy_target = qs - vs.view(-1,1)
 
         if self.double_q:
             vs2 = (ps * qs2).sum(1).detach()
-            policy_target2 = qs - vs2
+            policy_target2 = qs - vs2.view(-1,1)
             policy_target = torch.min(policy_target, policy_target2)
 
         unmasked_loss = log_ps * (self.log_alpha.exp() * log_ps - policy_target)
@@ -312,11 +321,16 @@ class MultiStepActorCriticBrain(BrainBase):
 
         log_ps = prob_dict['log_ps']
 
-        alpha_loss = (-self.log_alpha * (log_ps * self.target_entropy).detach()).mean()
+        alpha_loss = (-self.log_alpha * (log_ps * self.target_alpha).detach()).mean()
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
-        return alpha_loss
+
+        ret_dict = dict()
+        ret_dict['alpha_loss'] = alpha_loss
+        ret_dict['alpha'] = self.log_alpha.exp().detach().cpu().numpy()
+        return ret_dict
+
 
     @staticmethod
     def get_q(critic_net,

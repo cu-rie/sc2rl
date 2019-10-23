@@ -15,7 +15,7 @@ class MultiStepInputNetworkConfig(ConfigBase):
         self._hist_rnn_conf = {
             'prefix': 'hist_rnn',
             'rnn_type': 'GRU',
-            'input_size': 26,
+            'input_size': 17,
             'hidden_size': 32,
             'num_layers': 2,
             'batch_first': True
@@ -25,7 +25,7 @@ class MultiStepInputNetworkConfig(ConfigBase):
         self._hist_enc_conf = {
             'prefix': 'hist_enc_conf',
             'num_layers': 1,
-            'model_dim': 26,
+            'model_dim': 17,
             'use_hypernet': False,
             'hypernet_input_dim': None,
             'num_relations': 3,
@@ -40,7 +40,7 @@ class MultiStepInputNetworkConfig(ConfigBase):
         self._curr_enc_conf = {
             'prefix': 'curr_enc_conf',
             'num_layers': 1,
-            'model_dim': 26,
+            'model_dim': 17,
             'use_hypernet': False,
             'hypernet_input_dim': None,
             'num_relations': 3,
@@ -68,6 +68,7 @@ class MultiStepInputNetworkConfig(ConfigBase):
 class MultiStepInputNetwork(torch.nn.Module):
 
     def __init__(self, conf):
+        super(MultiStepInputNetwork, self).__init__()
         self.conf = conf  # type: MultiStepInputNetworkConfig
 
         rnn_conf = conf.hist_rnn_conf
@@ -76,12 +77,12 @@ class MultiStepInputNetwork(torch.nn.Module):
         self.hist_rnn = rnn(**rnn_conf)
 
         hist_enc_conf = conf.hist_enc_conf
-        self.hist_one_step_enc = RelationalNetwork(hist_enc_conf)
+        self.hist_one_step_enc = RelationalNetwork(**hist_enc_conf)
 
         self.hist_encoder = RNNEncoder(rnn=self.hist_rnn, one_step_encoder=self.hist_one_step_enc)
 
         curr_enc_conf = conf.curr_enc_conf
-        self.curr_encoder = RelationalNetwork(curr_enc_conf)
+        self.curr_encoder = RelationalNetwork(**curr_enc_conf)
 
     def forward(self, num_time_steps, hist_graph, hist_feature,
                 curr_graph, curr_feature):

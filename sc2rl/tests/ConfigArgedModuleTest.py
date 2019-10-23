@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
         if done:
             done_cnt += 1
-            if done_cnt % 10 == 0:
+            if done_cnt % 1 == 0:
                 print("fit at {}".format(done_cnt))
                 fit_return_dict = agent.fit()
 

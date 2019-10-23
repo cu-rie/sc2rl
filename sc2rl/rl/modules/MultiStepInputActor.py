@@ -7,6 +7,7 @@ class MultiStepInputActor(torch.nn.Module):
 
     def __init__(self, multi_step_input_network_conf,
                  actor_conf=None):
+        super(MultiStepInputActor, self).__init__()
 
         if actor_conf is None:
             rnn_hidden_dim = multi_step_input_network_conf.hist_rnn_conf['hidden_size']
@@ -40,9 +41,9 @@ class MultiStepInputActor(torch.nn.Module):
                                                                       curr_graph,
                                                                       curr_feature)
 
-        prob_dict = self.actor.get_action(curr_graph,
-                                          hist_current_encoded_node_feature,
-                                          maximum_num_enemy)
+        _, prob_dict = self.actor.get_action(curr_graph,
+                                             hist_current_encoded_node_feature,
+                                             maximum_num_enemy)
         return prob_dict
 
     def get_action(self, num_time_steps,

@@ -31,7 +31,7 @@ class MultiStepActorCriticAgentConfig(ConfigBase):
         self._fit_conf = {
             'prefix': 'agent_fit',
             'batch_size': 30,
-            'hist_num_time_steps': 3
+            'hist_num_time_steps': 5
         }
 
         self.set_configs(self._fit_conf, fit_conf)
@@ -56,13 +56,13 @@ class MultiStepActorCriticAgent(AgentBase):
         critic = MultiStepInputActor(network_conf)
 
         if self.conf.module_conf['use_target']:
-            critic_target = MultiStepActorCriticAgent(network_conf)
+            critic_target = MultiStepInputActor(network_conf)
         else:
             critic_target = None
 
         if self.conf.module_conf['use_double_q']:
-            critic2 = MultiStepActorCriticAgent(network_conf)
-            critic2_target = MultiStepActorCriticAgent(network_conf)
+            critic2 = MultiStepInputActor(network_conf)
+            critic2_target = MultiStepInputActor(network_conf)
         else:
             critic2 = None
             critic2_target = None
@@ -74,7 +74,7 @@ class MultiStepActorCriticAgent(AgentBase):
                                                critic2=critic2,
                                                critic2_target=critic2_target)
 
-        self.buffer = NstepInputMemory(buffer_conf)
+        self.buffer = NstepInputMemory(**buffer_conf.memory_conf)
 
     def get_action(self,
                    hist_graph,
@@ -149,11 +149,11 @@ class MultiStepActorCriticAgent(AgentBase):
         c_curr_graph = dgl.batch(c_graph)
         n_curr_graph = dgl.batch(n_graph)
 
-        c_hist_feature = c_h_graph.ndata.pop('node_feature')
-        c_curr_feature = c_graph.ndata.pop('node_feature')
+        c_hist_feature = c_hist_graph.ndata.pop('node_feature')
+        c_curr_feature = c_curr_graph.ndata.pop('node_feature')
 
-        n_hist_feature = n_h_graph.ndata.pop('node_feature')
-        n_curr_feature = n_graph.ndata.pop('node_feature')
+        n_hist_feature = n_hist_graph.ndata.pop('node_feature')
+        n_curr_feature = n_curr_graph.ndata.pop('node_feature')
 
         fit_return_dict = self.brain.fit(num_time_steps=hist_num_time_steps,
                                          c_hist_graph=c_hist_graph,
