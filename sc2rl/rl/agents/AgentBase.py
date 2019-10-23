@@ -6,10 +6,10 @@ class AgentBase(torch.nn.Module):
     An interface for RL agent
     """
 
-    def __init__(self, brain, buffer):
+    def __init__(self, brain_conf, buffer_conf):
         super(AgentBase, self).__init__()
-        self.brain = brain
-        self.buffer = buffer
+        self.brain_conf = brain_conf
+        self.buffer_conf = buffer_conf
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError("This method will be implemented in the child class")

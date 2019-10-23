@@ -8,30 +8,38 @@ from sc2rl.utils.graph_utils import get_index_mapper
 class MultiStepActorCriticBrainConfig(ConfigBase):
 
     def __init__(self,
+                 brain_conf=None,
                  fit_conf=None,
                  entropy_conf=None):
-        self._fit_conf = {
-            'prefix': 'fit',
+        self._brain_conf = {
+            'prefix': 'brain_conf',
             'optimizer': 'Adam',
             'actor_lr': 1e-4,
-            'critic_lr': 1e-3,
+            'critic_lr': 1e-3
+        }
+        self.set_configs(self._brain_conf, brain_conf)
+
+        self._fit_conf = {
+            'num_critic_pre_fit_steps': 20,
             'tau': 0.005,
             'critic_norm_clip_val': 1.0,
             'actor_norm_clip_val': 1.0
         }
-
         self.set_configs(self._fit_conf, fit_conf)
 
         self._entropy_conf = {
-            'prefix': 'entropy',
+            'prefix': 'brain_entropy',
             'optimizer': 'Adam',
             'auto_tune': True,
             'alpha': 0.01,
             'target_alpha': -(4 + 1 + 1),  # Expected minimal action dim : Move 4 + Hold 1 + Attack 1
             'lr': 1e-4
         }
-
         self.set_configs(self._entropy_conf, entropy_conf)
+
+    @property
+    def brain_conf(self):
+        return self.get_conf(self._brain_conf)
 
     @property
     def fit_conf(self):
@@ -44,7 +52,7 @@ class MultiStepActorCriticBrainConfig(ConfigBase):
 
 class MultiStepActorCriticBrain(BrainBase):
 
-    def __init__(self, actor, critic, conf,
+    def __init__(self, conf, actor, critic,
                  critic_target=None, critic2=None, critic2_target=None):
         super(MultiStepActorCriticBrain, self).__init__()
         self.actor = actor
@@ -55,18 +63,19 @@ class MultiStepActorCriticBrain(BrainBase):
         self.critic2 = critic2
         self.critic2_target = critic2_target
 
-        self.fit_conf = conf.fit_conf
+        self.brain_conf = conf.brain_conf
 
-        optimizer = self.get_optimizer(self.fit_conf['optimizer'])
-        self.actor_optimizer = optimizer(self.actor.parameters(), lr=self.fit_conf['actor_lr'])
-        self.critic_optimizer = optimizer(self.critic.parameters(), lr=self.fit_conf['critic_lr'])
+        optimizer = self.get_optimizer(self.brain_conf['optimizer'])
+        self.actor_optimizer = optimizer(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
+        self.critic_optimizer = optimizer(self.critic.parameters(), lr=self.brain_conf['critic_lr'])
 
         if critic2 is not None:
             self.double_q = True
-            self.critic2_optimizer = optimizer(self.critic2.parameters(), lr=self.fit_conf['critic_lr'])
+            self.critic2_optimizer = optimizer(self.critic2.parameters(), lr=self.brain_conf['critic_lr'])
         else:
             self.double_q = False
 
+        self.fit_conf = conf.fit_conf
         self.entropy_conf = conf.entropy_conf
 
         if self.entropy_conf['auto_tune']:
@@ -78,19 +87,70 @@ class MultiStepActorCriticBrain(BrainBase):
         else:
             self.log_alpha = torch.log(torch.ones(1) * self.entropy_conf['alpha'])
 
+        self.fit_steps = 0
+
     def get_action(self,
                    hist_graph,
                    curr_graph,
                    tag2unit_dict):
 
         nn_actions, info_dict = self.actor.get_action()
+        return nn_actions, info_dict
+
+    def fit(self,
+            num_time_steps,
+            c_hist_graph, c_hist_feature,
+            c_curr_graph, c_curr_feature,
+            c_maximum_num_enemy,
+            actions,
+            n_hist_graph, n_hist_feature,
+            n_curr_graph, n_curr_feature,
+            n_maximum_num_enemy,
+            rewards,
+            dones):
+
+        fit_dict = dict()
+        if self.fit_steps >= self.fit_conf['num_critic_pre_fit_steps']:
+            alpha_fit_dict = self.fit_alpha(num_time_steps,
+                                            hist_graph=c_hist_graph,
+                                            hist_feature=c_hist_feature,
+                                            curr_graph=c_curr_graph,
+                                            curr_feature=c_curr_feature,
+                                            maximum_num_enemy=c_maximum_num_enemy)
+
+            actor_fit_dict = self.fit_actor(num_time_steps=num_time_steps,
+                                            hist_graph=c_hist_graph,
+                                            hist_feature=c_hist_feature,
+                                            curr_graph=c_curr_graph,
+                                            curr_feature=c_curr_feature,
+                                            maximum_num_enemy=c_maximum_num_enemy)
+            fit_dict.update(alpha_fit_dict)
+            fit_dict.update(actor_fit_dict)
+
+        critic_fit_dict = self.fit_critic(num_time_steps=num_time_steps,
+
+                                          c_hist_graph=c_hist_graph,
+                                          c_hist_feature=c_hist_feature,
+                                          c_curr_graph=c_curr_graph,
+                                          c_curr_feature=c_curr_feature,
+                                          c_maximum_num_enemy=c_maximum_num_enemy,
+                                          actions=actions,
+                                          n_hist_graph=n_hist_graph,
+                                          n_hist_feature=n_hist_feature,
+                                          n_curr_graph=n_curr_graph,
+                                          n_curr_feature=n_curr_feature,
+                                          n_maximum_num_enemy=n_maximum_num_enemy,
+                                          rewards=rewards,
+                                          dones=dones)
+        fit_dict.update(critic_fit_dict)
+        return fit_dict
 
     def fit_critic(self,
                    num_time_steps,
                    c_hist_graph, c_hist_feature,
                    c_curr_graph, c_curr_feature,
                    c_maximum_num_enemy,
-                   action,
+                   actions,
                    n_hist_graph, n_hist_feature,
                    n_curr_graph, n_curr_feature,
                    n_maximum_num_enemy,
@@ -104,7 +164,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                         c_hist_graph, c_hist_feature,
                                         c_curr_graph, c_curr_feature,
                                         c_maximum_num_enemy,
-                                        action,
+                                        actions,
                                         n_hist_graph, n_hist_feature,
                                         n_curr_graph, n_curr_feature,
                                         n_maximum_num_enemy,
@@ -125,7 +185,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                              c_hist_graph, c_hist_feature,
                                              c_curr_graph, c_curr_feature,
                                              c_maximum_num_enemy,
-                                             action,
+                                             actions,
                                              n_hist_graph, n_hist_feature,
                                              n_curr_graph, n_curr_feature,
                                              n_maximum_num_enemy,
@@ -147,7 +207,7 @@ class MultiStepActorCriticBrain(BrainBase):
                             c_hist_graph, c_hist_feature,
                             c_curr_graph, c_curr_feature,
                             c_maximum_num_enemy,
-                            action,
+                            actions,
                             n_hist_graph, n_hist_feature,
                             n_curr_graph, n_curr_feature,
                             n_maximum_num_enemy,
@@ -165,7 +225,7 @@ class MultiStepActorCriticBrain(BrainBase):
                            c_curr_graph, c_curr_feature, c_maximum_num_enemy)
 
         # cur_q : [#. current ally units]
-        cur_q = cur_q.gather(-1, action.unsqueeze(-1)).squeeze(dim=-1)
+        cur_q = cur_q.gather(-1, actions.unsqueeze(-1)).squeeze(dim=-1)
 
         # The number of allies in the current (batched) graph may differ from the one of the next graph
         target_q = torch.zeros_like(cur_q)
@@ -197,7 +257,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                clip_val=self.fit_conf['actor_norm_clip_val'])
 
         fit_dict = dict()
-        fit_dict['actor_loss'] = loss.detach().cpu().nump()
+        fit_dict['actor_loss'] = loss.detach().cpu().numpy()
         return fit_dict
 
     def compute_actor_loss(self,
