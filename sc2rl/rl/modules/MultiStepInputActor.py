@@ -7,6 +7,7 @@ class MultiStepInputActor(torch.nn.Module):
 
     def __init__(self, multi_step_input_network_conf,
                  actor_conf=None):
+        super(MultiStepInputActor, self).__init__()
 
         if actor_conf is None:
             rnn_hidden_dim = multi_step_input_network_conf.hist_rnn_conf['hidden_size']
