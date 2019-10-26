@@ -8,6 +8,7 @@ from sc2rl.config.graph_configs import NODE_ALLY, NODE_ENEMY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 from sc2rl.environments.MicroTestEnvironment import Status
 
+
 class MultiStepActorRunner(RunnerBase):
 
     def __init__(self, env, agent, sample_spec, n_steps):

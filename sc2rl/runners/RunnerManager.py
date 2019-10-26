@@ -6,7 +6,7 @@ from sc2rl.runners.MultiStepActorRunner import MultiStepActorRunner
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 
 
-class RunnerConfig():
+class RunnerConfig:
     def __init__(self, map_name, reward_func, state_proc_func, agent, n_hist_steps):
         self.env_config = {
             "map_name": map_name,
@@ -20,7 +20,7 @@ class RunnerConfig():
                                       defaults=tuple([list() for _ in range(4)]))
 
 
-class RunnerManagerBase():
+class RunnerManagerBase:
     def __init__(self, config, num_runners):
         raise NotImplementedError(
             "This method will be implemented in the child class")
@@ -51,11 +51,6 @@ class RunnerManager:
 
     def sample(self, total_n):
         self.reset()
-
-        for runner in self.runners:
-            runner.set_train_mode()
-            if runner.env.step_counter >= runner.env.max_steps:
-                runner.env.reset()
 
         threads = []
         for (n, runner) in zip(self._calc_n(total_n), self.runners):
@@ -95,16 +90,12 @@ class RunnerManager:
         for th in threads:
             th.join()
 
-        numers = []
-        denoms = []
-
+        eval_dicts = []
         while not self.eval_queue.empty():
-            numer, denom = self.eval_queue.get()
-            numers.append(numer)
-            denoms.append(denom)
+            eval_dict = self.eval_queue.get()
+            eval_dicts.append(eval_dict)
 
-        performance = sum(numers) / sum(denoms)
-        return performance
+        return eval_dicts
 
     def close(self):
         for runner in self.runners:
@@ -112,7 +103,7 @@ class RunnerManager:
 
     def reset(self):
         for runner in self.runners:
-            runner.close()
+            runner.reset()
 
     def _calc_n(self, total_n):
         div, remain = divmod(total_n, self.num_runners)
