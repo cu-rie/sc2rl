@@ -40,7 +40,7 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
-    runner_manager = RunnerManager(config, 2)
+    runner_manager = RunnerManager(config, 5)
 
     wandb.init(project="sc2rl")
     wandb.config.update(agent_conf())
@@ -49,23 +49,28 @@ if __name__ == "__main__":
     wandb.config.update(buffer_conf())
     wandb.watch(agent)
 
-    iters = 0
-    while iters < 1000000:
-        iters += 1
-        runner_manager.sample(10)
-        runner_manager.transfer_sample()
+    try:
+        iters = 0
+        while iters < 1000000:
+            iters += 1
+            runner_manager.sample(10)
+            runner_manager.transfer_sample()
 
-        fit_return_dict = agent.fit()
+            fit_return_dict = agent.fit()
 
-        wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
-        mean_wr = np.mean(wrs)
+            wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
+            mean_wr = np.mean(wrs)
 
-        wandb.log(fit_return_dict, step=iters)
-        wandb.log(fit_return_dict, step=iters)
-        wandb.log({'winning_ratio': mean_wr}, step=iters)
+            wandb.log(fit_return_dict, step=iters)
+            wandb.log(fit_return_dict, step=iters)
+            wandb.log({'winning_ratio': mean_wr}, step=iters)
 
-        if iters % 50 == 0:
-            save_path = os.path.join(wandb.run.dir, "model_{}".format(iters))
-            torch.save(agent.state_dict(), save_path)
+            if iters % 50 == 0:
+                save_path = os.path.join(wandb.run.dir, "model_{}".format(iters))
+                torch.save(agent.state_dict(), save_path)
 
-    runner_manager.close()
+        runner_manager.close()
+    except KeyboardInterrupt:
+        runner_manager.close()
+    finally:
+        runner_manager.close()
