@@ -42,4 +42,4 @@ tests/memory_usage_log.txt
 .yaml
 
 # wandb
-*/wandb
+sc2rl/*/wandb

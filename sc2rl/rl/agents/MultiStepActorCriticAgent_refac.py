@@ -21,7 +21,7 @@ class MultiStepActorCriticAgentConfig(ConfigBase):
                  module_conf=None,
                  fit_conf=None):
         self._module_conf = {
-            'prefix': 'module',
+            'prefix': 'agent_module',
             'use_target': True,
             'use_double_q': True
         }
@@ -117,8 +117,10 @@ class MultiStepActorCriticAgent(AgentBase):
         #                                  [g_(2,0), ..., g_(bs, 0), ... g_(bs, nt)]]
         # 'graph' = list of graphs  [g_(0), g_(1), ..., g_(bs)]
 
-        batch_size = self.conf.fit_conf['batch_size']
-        hist_num_time_steps = self.conf.fit_conf['hist_num_time_steps']
+        fit_conf = self.conf.fit_conf
+
+        batch_size = fit_conf['batch_size']
+        hist_num_time_steps = fit_conf['hist_num_time_steps']
 
         c_h_graph, c_graph, actions, rewards, n_h_graph, n_graph, dones = self.buffer.sample(batch_size)
 
