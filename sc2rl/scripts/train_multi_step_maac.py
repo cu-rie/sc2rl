@@ -1,4 +1,5 @@
 import wandb
+import torch
 import numpy as np
 
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
@@ -54,5 +55,8 @@ if __name__ == "__main__":
 
         wandb.log(fit_return_dict, step=iters)
         wandb.log({'winning_ratio': mean_wr}, step=iters)
+
+        if iters % 20:
+            torch.save(agent.state_dict(), wandb.run.dir)
 
     runner_manager.close()
