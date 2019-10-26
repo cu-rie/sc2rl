@@ -22,7 +22,7 @@ class MultiStepActorCriticBrainConfig(ConfigBase):
 
         self._fit_conf = {
             'prefix': 'brain_fit',
-            'num_critic_pre_fit_steps': 2,
+            'num_critic_pre_fit_steps': 5,
             'tau': 0.005,
             'critic_norm_clip_val': 1.0,
             'actor_norm_clip_val': 1.0

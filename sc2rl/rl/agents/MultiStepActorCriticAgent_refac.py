@@ -30,7 +30,7 @@ class MultiStepActorCriticAgentConfig(ConfigBase):
 
         self._fit_conf = {
             'prefix': 'agent_fit',
-            'batch_size': 30,
+            'batch_size': 128,
             'hist_num_time_steps': 5
         }
 
