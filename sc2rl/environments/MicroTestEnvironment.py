@@ -14,7 +14,8 @@ class Status(enum.Enum):
 
 class MicroTestEnvironment(SC2EnvironmentBase):
 
-    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=50000):
+    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=50000,
+                 winning_ratio_gamma=0.6):
         """
         :param map_name:
         :param reward_func:
@@ -35,6 +36,9 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         self.state_proc_func = state_proc_func
         self.prev_health = VERY_LARGE_NUMBER
         self.curr_health = VERY_LARGE_NUMBER
+
+        self.winning_ratio = 0.0
+        self.winning_ratio_gamma = winning_ratio_gamma
 
     @property
     def step_count(self):
@@ -88,9 +92,14 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         reward = self.reward_func(cur_state, next_state, done)
 
         if done:  # Burn few remaining frames
+            win = int(len(sc2_next_state.units.owned) >= len(sc2_next_state.units.enemy))
+
             self.burn_last_frames()
             if self.status == Status.END:
                 _ = self.reset()
+
+            gamma = self.winning_ratio_gamma
+            self.winning_ratio = gamma * win + (1-gamma) * self.winning_ratio
 
         return next_state, reward, done
 
@@ -103,6 +112,7 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
             if not done:
                 break
+
 
 if __name__ == "__main__":
 
