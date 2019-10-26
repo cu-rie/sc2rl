@@ -40,3 +40,6 @@ tests/memory_usage_log.txt
 
 # exp config
 .yaml
+
+# wandb
+/wandb
