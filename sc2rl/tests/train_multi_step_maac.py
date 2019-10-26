@@ -1,4 +1,5 @@
 import wandb
+import numpy as np
 
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
@@ -32,7 +33,7 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
-    runner_manager = RunnerManager(config, 1)
+    runner_manager = RunnerManager(config, 3)
 
     wandb.init(project="sc2rl")
     wandb.config.update(agent_conf())
@@ -47,6 +48,11 @@ if __name__ == "__main__":
         runner_manager.transfer_sample()
         print("fit at {}".format(iters))
         fit_return_dict = agent.fit()
-        wandb.log(fit_return_dict)
+        wandb.log(fit_return_dict, step=iters)
+        wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
+        mean_wr = np.mean(wrs)
+
+        wandb.log(fit_return_dict, step=iters)
+        wandb.log({'winning_ratio': mean_wr}, step=iters)
 
     runner_manager.close()
