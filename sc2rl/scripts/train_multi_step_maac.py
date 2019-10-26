@@ -1,6 +1,7 @@
 import wandb
 import torch
 import numpy as np
+import os
 
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
@@ -34,13 +35,14 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
-    runner_manager = RunnerManager(config, 5)
+    runner_manager = RunnerManager(config, 2)
 
     wandb.init(project="sc2rl")
     wandb.config.update(agent_conf())
     wandb.config.update(network_conf())
     wandb.config.update(brain_conf())
     wandb.config.update(buffer_conf())
+    wandb.watch(agent)
 
     iters = 0
     while iters < 1000000:
@@ -57,7 +59,8 @@ if __name__ == "__main__":
         wandb.log(fit_return_dict, step=iters)
         wandb.log({'winning_ratio': mean_wr}, step=iters)
 
-        if iters % 20:
-            torch.save(agent.state_dict(), wandb.run.dir)
+        if iters % 50 == 0:
+            save_path = os.path.join(wandb.run.dir, "model_{}".format(iters))
+            torch.save(agent.state_dict(), save_path)
 
     runner_manager.close()
