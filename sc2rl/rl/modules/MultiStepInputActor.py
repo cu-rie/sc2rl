@@ -12,11 +12,11 @@ class MultiStepInputActor(torch.nn.Module):
         if actor_conf is None:
             rnn_hidden_dim = multi_step_input_network_conf.hist_rnn_conf['hidden_size']
             curr_enc_hidden_dim = multi_step_input_network_conf.curr_enc_conf['model_dim']
-            actor_conf = ActorModuleConfig()
-            actor_conf._actor_conf['node_input_dim'] = rnn_hidden_dim + curr_enc_hidden_dim
+            actor_conf = ActorModuleConfig().actor_conf
+            actor_conf['node_input_dim'] = rnn_hidden_dim + curr_enc_hidden_dim
 
         self.multi_step_input_net = MultiStepInputNetwork(multi_step_input_network_conf)
-        self.actor = ActorModule(**actor_conf)
+        self.actor = ActorModule(actor_conf)
 
     def forward(self,
                 num_time_steps,

@@ -34,10 +34,10 @@ class ActorModule(torch.nn.Module):
                  move_dim: int = 4):
         super(ActorModule, self).__init__()
         self.hyper_param = hyper_param
-        node_input_dim = self.hyper_param.actor_conf['node_input_dim']
-        out_activation = self.hyper_param.actor_conf['out_activation']
-        hidden_activation = self.hyper_param.actor_conf['hidden_activation']
-        num_neurons = self.hyper_param.actor_conf['num_neurons']
+        node_input_dim = self.hyper_param['node_input_dim']
+        out_activation = self.hyper_param['out_activation']
+        hidden_activation = self.hyper_param['hidden_activation']
+        num_neurons = self.hyper_param['num_neurons']
 
         self.move_dim = move_dim
         self.move_module = MoveModule(node_dim=node_input_dim,
