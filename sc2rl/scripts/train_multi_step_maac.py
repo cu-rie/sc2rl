@@ -47,12 +47,13 @@ if __name__ == "__main__":
         iters += 1
         runner_manager.sample(10)
         runner_manager.transfer_sample()
-        print("fit at {}".format(iters))
+
         fit_return_dict = agent.fit()
-        wandb.log(fit_return_dict, step=iters)
+
         wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
         mean_wr = np.mean(wrs)
 
+        wandb.log(fit_return_dict, step=iters)
         wandb.log(fit_return_dict, step=iters)
         wandb.log({'winning_ratio': mean_wr}, step=iters)
 
