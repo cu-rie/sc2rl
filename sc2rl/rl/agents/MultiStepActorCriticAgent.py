@@ -1,24 +1,97 @@
 import dgl
 import torch
 
+from sc2rl.memory.n_step_memory import NstepInputMemory
+
+from sc2rl.config.graph_configs import NODE_ALLY
+from sc2rl.config.ConfigBase import ConfigBase
+
 from sc2rl.rl.agents.AgentBase import AgentBase
+from sc2rl.rl.modules.MultiStepInputActor import MultiStepInputActor
+from sc2rl.rl.brains.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrain
+
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
-from sc2rl.config.graph_configs import NODE_ALLY
+
+
+class MultiStepActorCriticAgentConfig(ConfigBase):
+
+    def __init__(self,
+                 module_conf=None,
+                 fit_conf=None):
+        self._module_conf = {
+            'prefix': 'agent_module',
+            'use_target': True,
+            'use_double_q': True
+        }
+
+        self.set_configs(self._module_conf, module_conf)
+
+        self._fit_conf = {
+            'prefix': 'agent_fit',
+            'batch_size': 128,
+            'hist_num_time_steps': 5
+        }
+
+        self.set_configs(self._fit_conf, fit_conf)
+
+    @property
+    def module_conf(self):
+        return self.get_conf(self._module_conf)
+
+    @property
+    def fit_conf(self):
+        return self.get_conf(self._fit_conf)
 
 
 class MultiStepActorCriticAgent(AgentBase):
-    def __init__(self, brain, buffer):
-        super(MultiStepActorCriticAgent, self).__init__(brain, buffer)
 
-    def forward(self, *args, **kwargs):
-        return self.get_action(*args, **kwargs)
+    def __init__(self, conf, network_conf, brain_conf, buffer_conf,
+                 use_attention=True, use_hierarchical_actor=False):
+        super(MultiStepActorCriticAgent, self).__init__(brain_conf=brain_conf,
+                                                        buffer_conf=buffer_conf)
+        self.conf = conf
+
+        actor = MultiStepInputActor(network_conf,
+                                    use_attention=use_attention,
+                                    use_hierarchical_actor=use_hierarchical_actor)
+        critic = MultiStepInputActor(network_conf,
+                                     use_attention=use_attention,
+                                     use_hierarchical_actor=use_hierarchical_actor)
+
+        if self.conf.module_conf['use_target']:
+            critic_target = MultiStepInputActor(network_conf,
+                                                use_attention=use_attention,
+                                                use_hierarchical_actor=use_hierarchical_actor)
+        else:
+            critic_target = None
+
+        if self.conf.module_conf['use_double_q']:
+            critic2 = MultiStepInputActor(network_conf,
+                                          use_attention=use_attention,
+                                          use_hierarchical_actor=use_hierarchical_actor)
+            critic2_target = MultiStepInputActor(network_conf,
+                                                 use_attention=use_attention,
+                                                 use_hierarchical_actor=use_hierarchical_actor)
+        else:
+            critic2 = None
+            critic2_target = None
+
+        self.brain = MultiStepActorCriticBrain(actor=actor,
+                                               critic=critic,
+                                               conf=brain_conf,
+                                               critic_target=critic_target,
+                                               critic2=critic2,
+                                               critic2_target=critic2_target)
+
+        self.buffer = NstepInputMemory(**buffer_conf.memory_conf)
 
     def get_action(self,
                    hist_graph,
                    curr_graph,
                    tag2unit_dict):
+
         assert isinstance(curr_graph, dgl.DGLGraph), "get action is designed to work on a single graph!"
         num_time_steps = hist_graph.batch_size
         hist_node_feature = hist_graph.ndata.pop('node_feature')
@@ -39,10 +112,12 @@ class MultiStepActorCriticAgent(AgentBase):
 
         hist_graph.ndata['node_feature'] = hist_node_feature
         curr_graph.ndata['node_feature'] = curr_node_feature
-
         return nn_actions, sc2_actions
 
-    def fit(self, batch_size, hist_num_time_steps):
+    def forward(self, *args, **kwargs):
+        return None
+
+    def fit(self):
         # the prefix 'c' indicates #current# time stamp inputs
         # the prefix 'n' indicates #next# time stamp inputs
 
@@ -52,6 +127,11 @@ class MultiStepActorCriticAgent(AgentBase):
         #                                  [g_(1,0), g_(1,1), ..., g_(1,nt)],
         #                                  [g_(2,0), ..., g_(bs, 0), ... g_(bs, nt)]]
         # 'graph' = list of graphs  [g_(0), g_(1), ..., g_(bs)]
+
+        fit_conf = self.conf.fit_conf
+
+        batch_size = fit_conf['batch_size']
+        hist_num_time_steps = fit_conf['hist_num_time_steps']
 
         c_h_graph, c_graph, actions, rewards, n_h_graph, n_graph, dones = self.buffer.sample(batch_size)
 
@@ -76,29 +156,28 @@ class MultiStepActorCriticAgent(AgentBase):
         # batching graphs
         list_c_h_graph = [g for L in c_h_graph for g in L]
         list_n_h_graph = [g for L in n_h_graph for g in L]
-        c_h_graph = dgl.batch(list_c_h_graph)
-        n_h_graph = dgl.batch(list_n_h_graph)
+        c_hist_graph = dgl.batch(list_c_h_graph)
+        n_hist_graph = dgl.batch(list_n_h_graph)
 
-        c_graph = dgl.batch(c_graph)
-        n_graph = dgl.batch(n_graph)
+        c_curr_graph = dgl.batch(c_graph)
+        n_curr_graph = dgl.batch(n_graph)
 
-        c_h_node_feature = c_h_graph.ndata.pop('node_feature')
-        c_node_feature = c_graph.ndata.pop('node_feature')
+        c_hist_feature = c_hist_graph.ndata.pop('node_feature')
+        c_curr_feature = c_curr_graph.ndata.pop('node_feature')
 
-        n_h_node_feature = n_h_graph.ndata.pop('node_feature')
-        n_node_feature = n_graph.ndata.pop('node_feature')
+        n_hist_feature = n_hist_graph.ndata.pop('node_feature')
+        n_curr_feature = n_curr_graph.ndata.pop('node_feature')
 
-        fit_return_dict = self.brain.fit(c_num_time_steps=hist_num_time_steps,
-                                         c_h_graph=c_h_graph,
-                                         c_h_node_feature=c_h_node_feature,
-                                         c_graph=c_graph,
-                                         c_node_feature=c_node_feature,
+        fit_return_dict = self.brain.fit(num_time_steps=hist_num_time_steps,
+                                         c_hist_graph=c_hist_graph,
+                                         c_hist_feature=c_hist_feature,
+                                         c_curr_graph=c_curr_graph,
+                                         c_curr_feature=c_curr_feature,
                                          c_maximum_num_enemy=c_maximum_num_enemy,
-                                         n_num_time_steps=hist_num_time_steps,
-                                         n_h_graph=n_h_graph,
-                                         n_h_node_feature=n_h_node_feature,
-                                         n_graph=n_graph,
-                                         n_node_feature=n_node_feature,
+                                         n_hist_graph=n_hist_graph,
+                                         n_hist_feature=n_hist_feature,
+                                         n_curr_graph=n_curr_graph,
+                                         n_curr_feature=n_curr_feature,
                                          n_maximum_num_enemy=n_maximum_num_enemy,
                                          actions=actions,
                                          rewards=rewards,

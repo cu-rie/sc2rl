@@ -8,7 +8,7 @@ from sc2rl.config.ConfigBase import ConfigBase
 
 from sc2rl.rl.agents.AgentBase import AgentBase
 from sc2rl.rl.modules.MultiStepInputActor import MultiStepInputActor
-from sc2rl.rl.brains.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrain
+from sc2rl.rl.brains.MultiStepInputPolicyBrain import MultiStepPolicyGradientBrain
 
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
@@ -22,8 +22,6 @@ class MultiStepActorCriticAgentConfig(ConfigBase):
                  fit_conf=None):
         self._module_conf = {
             'prefix': 'agent_module',
-            'use_target': True,
-            'use_double_q': True
         }
 
         self.set_configs(self._module_conf, module_conf)
@@ -56,34 +54,10 @@ class MultiStepActorCriticAgent(AgentBase):
         actor = MultiStepInputActor(network_conf,
                                     use_attention=use_attention,
                                     use_hierarchical_actor=use_hierarchical_actor)
-        critic = MultiStepInputActor(network_conf,
-                                     use_attention=use_attention,
-                                     use_hierarchical_actor=use_hierarchical_actor)
 
-        if self.conf.module_conf['use_target']:
-            critic_target = MultiStepInputActor(network_conf,
-                                                use_attention=use_attention,
-                                                use_hierarchical_actor=use_hierarchical_actor)
-        else:
-            critic_target = None
-
-        if self.conf.module_conf['use_double_q']:
-            critic2 = MultiStepInputActor(network_conf,
-                                          use_attention=use_attention,
-                                          use_hierarchical_actor=use_hierarchical_actor)
-            critic2_target = MultiStepInputActor(network_conf,
-                                                 use_attention=use_attention,
-                                                 use_hierarchical_actor=use_hierarchical_actor)
-        else:
-            critic2 = None
-            critic2_target = None
-
-        self.brain = MultiStepActorCriticBrain(actor=actor,
-                                               critic=critic,
-                                               conf=brain_conf,
-                                               critic_target=critic_target,
-                                               critic2=critic2,
-                                               critic2_target=critic2_target)
+        self.brain = MultiStepPolicyGradientBrain(actor=actor,
+                                                  conf=brain_conf
+                                                  )
 
         self.buffer = NstepInputMemory(**buffer_conf.memory_conf)
 
@@ -91,7 +65,6 @@ class MultiStepActorCriticAgent(AgentBase):
                    hist_graph,
                    curr_graph,
                    tag2unit_dict):
-
         assert isinstance(curr_graph, dgl.DGLGraph), "get action is designed to work on a single graph!"
         num_time_steps = hist_graph.batch_size
         hist_node_feature = hist_graph.ndata.pop('node_feature')
