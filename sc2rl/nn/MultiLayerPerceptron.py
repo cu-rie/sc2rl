@@ -1,8 +1,13 @@
 import torch
+import torch.nn.functional as F
 
 
 def swish(x):
     return x * torch.nn.functional.sigmoid(x)
+
+
+def mish(x):
+    return x * torch.tanh(F.softplus(x))
 
 
 class Linear(torch.nn.Linear):
@@ -25,7 +30,7 @@ class MultiLayerPerceptron(torch.nn.Module):
                  output_dimension,
                  num_neurons=[128, 128, 128],
                  input_normalization=0,
-                 hidden_activation='leaky_relu',
+                 hidden_activation='mish',
                  out_activation=None,
                  drop_probability=0.0,
                  init='kaiming_normal',
@@ -61,7 +66,8 @@ class MultiLayerPerceptron(torch.nn.Module):
                 norm_layer = torch.nn.LayerNorm(self.input_dimension)
             self.layers.append(norm_layer)
 
-        self.layers.append(Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0]))  # input -> hidden 1
+        self.layers.append(
+            Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0]))  # input -> hidden 1
         for i, num_neuron in enumerate(num_neurons[:-1]):
             hidden_layer = Linear(norm=ws, in_features=num_neuron, out_features=num_neurons[i + 1])
             self.apply_weight_init(hidden_layer, self.init)
@@ -126,6 +132,8 @@ class MultiLayerPerceptron(torch.nn.Module):
             ret = torch.nn.LeakyReLU()
         elif activation == 'tanh':
             ret = torch.nn.Tanh()
+        elif activation == 'mish':
+            ret = mish
         else:
             raise RuntimeError("Given {} activation is not supported".format(self.out_activation))
         return ret
