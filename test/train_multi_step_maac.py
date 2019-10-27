@@ -2,7 +2,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-
 import wandb
 import torch
 import numpy as np
@@ -40,7 +39,7 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
-    runner_manager = RunnerManager(config, 5)
+    runner_manager = RunnerManager(config, 1)
 
     wandb.init(project="sc2rl")
     wandb.config.update(agent_conf())

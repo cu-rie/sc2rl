@@ -43,3 +43,4 @@ tests/memory_usage_log.txt
 
 # wandb
 sc2rl/*/wandb
+test/wandb

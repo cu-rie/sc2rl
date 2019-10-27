@@ -21,7 +21,8 @@ if __name__ == "__main__":
     brain_conf = MultiStepActorCriticBrainConfig()
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
-    num_runners = 5
+    use_hierarchical_actor = True
+    num_runners = 1
     num_samples = 10
 
     sample_spec = buffer_conf.memory_conf['spec']
@@ -31,7 +32,8 @@ if __name__ == "__main__":
                                       network_conf,
                                       brain_conf,
                                       buffer_conf,
-                                      use_attention=use_attention)
+                                      use_attention=use_attention,
+                                      use_hierarchical_actor=use_hierarchical_actor)
 
     config = RunnerConfig(map_name=map_name, reward_func=great_victor_with_kill_bonus,
                           state_proc_func=process_game_state_to_dgl,
@@ -43,24 +45,32 @@ if __name__ == "__main__":
     wandb.init(project="sc2rl")
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,
-                         'num_samples': num_samples})
+                         'num_samples': num_samples,
+                         'use_hierarchical_actor': use_hierarchical_actor})
     wandb.config.update(agent_conf())
     wandb.config.update(network_conf())
     wandb.config.update(brain_conf())
     wandb.config.update(buffer_conf())
 
-    iters = 0
-    while iters < 1000000:
-        iters += 1
-        runner_manager.sample(num_samples)
-        runner_manager.transfer_sample()
-        print("fit at {}".format(iters))
-        fit_return_dict = agent.fit()
-        wandb.log(fit_return_dict, step=iters)
-        wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
-        mean_wr = np.mean(wrs)
+    try:
+        iters = 0
+        while iters < 1000000:
+            iters += 1
+            runner_manager.sample(num_samples)
+            runner_manager.transfer_sample()
+            print("fit at {}".format(iters))
+            fit_return_dict = agent.fit()
+            wandb.log(fit_return_dict, step=iters)
+            wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
+            mean_wr = np.mean(wrs)
 
-        wandb.log(fit_return_dict, step=iters)
-        wandb.log({'winning_ratio': mean_wr}, step=iters)
+            wandb.log(fit_return_dict, step=iters)
+            wandb.log({'winning_ratio': mean_wr}, step=iters)
 
-    runner_manager.close()
+        runner_manager.close()
+        runner_manager.close()
+    except KeyboardInterrupt:
+        runner_manager.close()
+    finally:
+        runner_manager.close()
+
