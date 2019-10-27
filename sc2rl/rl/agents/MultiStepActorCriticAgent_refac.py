@@ -47,22 +47,33 @@ class MultiStepActorCriticAgentConfig(ConfigBase):
 
 class MultiStepActorCriticAgent(AgentBase):
 
-    def __init__(self, conf, network_conf, brain_conf, buffer_conf, use_attention=True):
+    def __init__(self, conf, network_conf, brain_conf, buffer_conf,
+                 use_attention=True, use_hierarchical_actor=False):
         super(MultiStepActorCriticAgent, self).__init__(brain_conf=brain_conf,
                                                         buffer_conf=buffer_conf)
         self.conf = conf
 
-        actor = MultiStepInputActor(network_conf, use_attention=use_attention)
-        critic = MultiStepInputActor(network_conf, use_attention=use_attention)
+        actor = MultiStepInputActor(network_conf,
+                                    use_attention=use_attention,
+                                    use_hierarchical_actor=use_hierarchical_actor)
+        critic = MultiStepInputActor(network_conf,
+                                     use_attention=use_attention,
+                                     use_hierarchical_actor=use_hierarchical_actor)
 
         if self.conf.module_conf['use_target']:
-            critic_target = MultiStepInputActor(network_conf, use_attention=use_attention)
+            critic_target = MultiStepInputActor(network_conf,
+                                                use_attention=use_attention,
+                                                use_hierarchical_actor=use_hierarchical_actor)
         else:
             critic_target = None
 
         if self.conf.module_conf['use_double_q']:
-            critic2 = MultiStepInputActor(network_conf, use_attention=use_attention)
-            critic2_target = MultiStepInputActor(network_conf, use_attention=use_attention)
+            critic2 = MultiStepInputActor(network_conf,
+                                          use_attention=use_attention,
+                                          use_hierarchical_actor=use_hierarchical_actor)
+            critic2_target = MultiStepInputActor(network_conf,
+                                                 use_attention=use_attention,
+                                                 use_hierarchical_actor=use_hierarchical_actor)
         else:
             critic2 = None
             critic2_target = None

@@ -298,11 +298,11 @@ class MultiStepActorCriticBrain(BrainBase):
         ps = prob_dict['probs']
 
         vs = (ps * qs).sum(1).detach()
-        policy_target = qs - vs.view(-1,1)
+        policy_target = qs - vs.view(-1, 1)
 
         if self.double_q:
             vs2 = (ps * qs2).sum(1).detach()
-            policy_target2 = qs - vs2.view(-1,1)
+            policy_target2 = qs - vs2.view(-1, 1)
             policy_target = torch.min(policy_target, policy_target2)
 
         unmasked_loss = log_ps * (self.log_alpha.exp() * log_ps - policy_target)
@@ -330,7 +330,6 @@ class MultiStepActorCriticBrain(BrainBase):
         ret_dict['alpha_loss'] = alpha_loss
         ret_dict['alpha'] = self.log_alpha.exp().detach().cpu().numpy()
         return ret_dict
-
 
     @staticmethod
     def get_q(critic_net,

@@ -45,26 +45,6 @@ class AttackModule(torch.nn.Module):
                                               hidden_activation=hidden_activation,
                                               out_activation=out_activation)
 
-    # def forward(self, graph, node_feature, maximum_num_enemy: int, attack_edge_type_index: int):
-    #     """
-    #     :param graph: (dgl.Graph or dgl.BatchedGraph) Attack graph is a graph that only contains edges for denoting attack relationship
-    #     :param node_feature: (pytorch Tensor) Node features of units.
-    #     :param attack_edge_type_index: key value for describing 'attack' edges
-    #     :return: attack_argument, enemy_index
-    #     """
-    #     graph.ndata['node_feature'] = node_feature
-    #
-    #     edge_index = get_filtered_edge_index_by_type(graph, attack_edge_type_index)
-    #     graph.send_and_recv(edges=edge_index,
-    #                         message_func=self.message_function,
-    #                         reduce_func=self.reduce_function)
-    #     if len(edge_index) != 0:
-    #         attack_argument = graph.ndata.pop('attack_argument')
-    #         print(graph.ndata['enemy_tag'])
-    #     else:
-    #         attack_argument = 0
-    #     return attack_argument
-
     def message_function(self, edges):
         enemy_node_features = edges.src['node_feature']  # Enemy units' feature
         enemy_tag = edges.src['tag']
