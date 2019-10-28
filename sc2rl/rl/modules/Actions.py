@@ -13,7 +13,7 @@ class MoveModule(torch.nn.Module):
                  node_dim: int,
                  move_dim: int = 4,
                  num_neurons: list = [128],
-                 hidden_activation: str = 'leaky_relu',
+                 hidden_activation: str = 'mish',
                  out_activation: str = None):
         super(MoveModule, self).__init__()
         self.move_argument_calculator = MLP(node_dim, move_dim, num_neurons,
@@ -37,7 +37,7 @@ class AttackModule(torch.nn.Module):
     def __init__(self,
                  node_dim: int,
                  num_neurons: list = [128],
-                 hidden_activation: str = 'leaky_relu',
+                 hidden_activation: str = 'mish',
                  out_activation: str = None):
         super(AttackModule, self).__init__()
         input_dim = node_dim * 2
@@ -85,7 +85,7 @@ class HoldModule(torch.nn.Module):
     def __init__(self,
                  node_dim: int,
                  num_neurons=[128],
-                 hidden_activation: str = 'leaky_relu',
+                 hidden_activation: str = 'mish',
                  out_activation: str = None):
         super(HoldModule, self).__init__()
         self.hold_argument_calculator = MLP(node_dim, 1, num_neurons,
