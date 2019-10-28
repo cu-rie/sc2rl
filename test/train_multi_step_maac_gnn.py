@@ -17,16 +17,18 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
-    map_name = "test_scenario_aligned_aligned_time_adjusted"
+    map_name = "training_scenario_1"
 
     agent_conf = MultiStepActorCriticAgentConfig()
     network_conf = MultiStepInputGraphNetworkConfig()
-    brain_conf = MultiStepActorCriticBrainConfig()
+    brain_conf = MultiStepActorCriticBrainConfig(brain_conf={'optimizer': 'lookahead'},
+                                                 fit_conf={'actor_norm_clip_val': 0.1},
+                                                 entropy_conf={'optimizer': 'lookahead'})
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 1
-    num_samples = 2
+    num_runners = 5
+    num_samples = 20
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -74,7 +76,7 @@ if __name__ == "__main__":
             fit_return_dict = agent.fit(device=fit_device)
             agent.to(run_device)
             e_time = time()
-            print("fit time : {}".format(e_time-s_time))
+            print("fit time : {}".format(e_time - s_time))
 
             wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
