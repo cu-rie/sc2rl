@@ -16,7 +16,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
-    map_name = "test_scenario_scattered_aligned_time_adjusted"
+    map_name = "test_scenario_aligned_aligned_time_adjusted"
 
     agent_conf = MultiStepActorCriticAgentConfig()
     network_conf = MultiStepInputGraphNetworkConfig()
@@ -70,7 +70,7 @@ if __name__ == "__main__":
             wandb.log({'winning_ratio': mean_wr}, step=iters)
 
             if iters % 20 == 0:
-                save_path = os.path.join(os.getcwd(), 'exp_{}.ptb'.format(iters))
+                save_path = os.path.join(os.getcwd(), 'exp_{}_{}.ptb'.format(iters, map_name))
                 torch.save(agent.state_dict(), save_path)
 
         runner_manager.close()

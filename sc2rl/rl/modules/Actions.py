@@ -28,7 +28,7 @@ class MoveModule(torch.nn.Module):
 
     def apply_node_function(self, nodes):
         input_node_feature = nodes.data['node_feature']
-        move_argument = self.move_argument_calculator.forward(input_node_feature)
+        move_argument = self.move_argument_calculator(input_node_feature)
         return {'move_argument': move_argument}
 
 
@@ -97,5 +97,5 @@ class HoldModule(torch.nn.Module):
 
     def apply_function(self, nodes):
         node_features = nodes.data['node_feature']
-        hold_argument = self.hold_argument_calculator.forward(node_features)
+        hold_argument = self.hold_argument_calculator(node_features)
         return {'hold_argument': hold_argument}
