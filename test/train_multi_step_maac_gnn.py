@@ -4,6 +4,8 @@ import wandb
 import numpy as np
 import context
 
+from time import time
+
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
@@ -68,9 +70,12 @@ if __name__ == "__main__":
             runner_manager.sample(num_samples)
             runner_manager.transfer_sample()
 
+            s_time = time()
             agent.to(fit_device)
             fit_return_dict = agent.fit(device=fit_device)
             agent.to(run_device)
+            e_time = time()
+            print("fit time : {}".format(e_time-s_time))
 
             wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]

@@ -94,7 +94,7 @@ class MultiStepActorCriticBrain(BrainBase):
 
         if self.entropy_conf['auto_tune']:
             self.target_alpha = self.entropy_conf['target_alpha']
-            self.log_alpha = torch.zeros(1, requires_grad=True)
+            self.log_alpha = torch.nn.Parameter(torch.zeros(1))
             optimizer = self.get_optimizer(self.entropy_conf['optimizer'])
             if self.entropy_conf['optimizer'] == 'lookahead':
                 self.alpha_optimizer = optimizer(RAdam([self.log_alpha], lr=self.entropy_conf['lr']))
@@ -320,8 +320,10 @@ class MultiStepActorCriticBrain(BrainBase):
             policy_target2 = qs - vs2.view(-1, 1)
             policy_target = torch.min(policy_target, policy_target2)
 
+        device = log_ps.device
+
         unmasked_loss = log_ps * (self.log_alpha.exp() * log_ps - policy_target)
-        loss_mask = (log_ps > torch.log(torch.tensor(VERY_SMALL_NUMBER))).float()
+        loss_mask = (log_ps > torch.log(torch.tensor(VERY_SMALL_NUMBER, device=device))).float()
         loss = (unmasked_loss * loss_mask).sum() / loss_mask.sum()
         return loss
 
