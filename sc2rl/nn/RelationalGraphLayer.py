@@ -19,9 +19,9 @@ class RelationalGraphLayer(torch.nn.Module):
         for i in range(num_relations):
             relational_updater = MLP(model_dim, model_dim, num_neurons)
             self.relational_updater['updater{}'.format(i)] = relational_updater
+        self.relational_updater = torch.nn.ModuleDict(self.relational_updater)
 
         self.node_updater_input_dim = model_dim * (num_relations + 1)
-
         self.node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons)
 
     def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
@@ -43,10 +43,11 @@ class RelationalGraphLayer(torch.nn.Module):
         src_node_features = edges.src['node_feature']
         edge_types = edges.data['edge_type']
 
-        msg_dict = dict()
+        device = src_node_features.device
 
+        msg_dict = dict()
         for i in update_edge_type_indices:
-            msg = torch.zeros(src_node_features.shape[0], self.model_dim)
+            msg = torch.zeros(src_node_features.shape[0], self.model_dim, device=device)
             updater = self.relational_updater['updater{}'.format(i)]
 
             curr_relation_mask = edge_types == i
@@ -62,8 +63,9 @@ class RelationalGraphLayer(torch.nn.Module):
 
     def reduce_function(self, nodes, update_edge_type_indices):
         node_feature = nodes.data['node_feature']
+        device = node_feature.device
 
-        node_enc_input = torch.zeros(node_feature.shape[0], self.node_updater_input_dim)
+        node_enc_input = torch.zeros(node_feature.shape[0], self.node_updater_input_dim, device=device)
         node_enc_input[:, :self.model_dim] = relu(node_feature)
 
         for i in update_edge_type_indices:

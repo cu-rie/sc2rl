@@ -25,10 +25,13 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
-    num_samples = 10
+    num_samples = 2
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
+
+    run_device = 'cpu'
+    fit_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     agent = MultiStepActorCriticAgent(agent_conf,
                                       network_conf,
@@ -36,8 +39,10 @@ if __name__ == "__main__":
                                       buffer_conf,
                                       use_attention=use_attention,
                                       use_hierarchical_actor=use_hierarchical_actor)
+    agent.to(run_device)
 
-    config = RunnerConfig(map_name=map_name, reward_func=great_victor_with_kill_bonus,
+    config = RunnerConfig(map_name=map_name,
+                          reward_func=great_victor_with_kill_bonus,
                           state_proc_func=process_game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps)
@@ -62,7 +67,11 @@ if __name__ == "__main__":
             iters += 1
             runner_manager.sample(num_samples)
             runner_manager.transfer_sample()
-            fit_return_dict = agent.fit()
+
+            agent.to(fit_device)
+            fit_return_dict = agent.fit(device=fit_device)
+            agent.to(run_device)
+
             wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
             mean_wr = np.mean(wrs)
@@ -78,5 +87,3 @@ if __name__ == "__main__":
         runner_manager.close()
     finally:
         runner_manager.close()
-
-

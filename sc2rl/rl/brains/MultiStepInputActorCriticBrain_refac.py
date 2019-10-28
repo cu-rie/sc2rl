@@ -246,12 +246,13 @@ class MultiStepActorCriticBrain(BrainBase):
                            num_time_steps,
                            c_hist_graph, c_hist_feature,
                            c_curr_graph, c_curr_feature, c_maximum_num_enemy)
+        device = cur_q.device
 
         # cur_q : [#. current ally units]
         cur_q = cur_q.gather(-1, actions.unsqueeze(-1)).squeeze(dim=-1)
 
         # The number of allies in the current (batched) graph may differ from the one of the next graph
-        target_q = torch.zeros_like(cur_q)
+        target_q = torch.zeros_like(cur_q, device=device)
 
         with torch.no_grad():
             exp_target_q, entropy = self.get_exp_q(target_net,
@@ -260,7 +261,7 @@ class MultiStepActorCriticBrain(BrainBase):
                                                    n_curr_graph, n_curr_feature,
                                                    n_maximum_num_enemy)
 
-        unsorted_target_q = exp_target_q + self.log_alpha.exp().detach() * entropy  # [#. next ally_units]
+        unsorted_target_q = exp_target_q + self.log_alpha.exp().detach().to(device) * entropy  # [#. next ally_units]
         cur_idx, next_idx = get_index_mapper(c_curr_graph, n_curr_graph)
         target_q[cur_idx] = unsorted_target_q[next_idx]
         target_q = rewards + self.gamma * target_q * (1 - dones)
