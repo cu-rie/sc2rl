@@ -1,3 +1,5 @@
+import os
+import torch
 import wandb
 import numpy as np
 import context
@@ -14,7 +16,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
-    map_name = "training_scenario_1"
+    map_name = "test_scenario_scattered_aligned_time_adjusted"
 
     agent_conf = MultiStepActorCriticAgentConfig()
     network_conf = MultiStepInputGraphNetworkConfig()
@@ -43,10 +45,12 @@ if __name__ == "__main__":
     runner_manager = RunnerManager(config, num_runners)
 
     wandb.init(project="sc2rl")
+    wandb.watch(agent)
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,
                          'num_samples': num_samples,
-                         'use_hierarchical_actor': use_hierarchical_actor})
+                         'use_hierarchical_actor': use_hierarchical_actor,
+                         'map_name': map_name})
     wandb.config.update(agent_conf())
     wandb.config.update(network_conf())
     wandb.config.update(brain_conf())
@@ -58,19 +62,21 @@ if __name__ == "__main__":
             iters += 1
             runner_manager.sample(num_samples)
             runner_manager.transfer_sample()
-            print("fit at {}".format(iters))
             fit_return_dict = agent.fit()
             wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
             mean_wr = np.mean(wrs)
-
             wandb.log(fit_return_dict, step=iters)
             wandb.log({'winning_ratio': mean_wr}, step=iters)
 
-        runner_manager.close()
+            if iters % 20 == 0:
+                save_path = os.path.join(os.getcwd(), 'exp_{}.ptb'.format(iters))
+                torch.save(agent.state_dict(), save_path)
+
         runner_manager.close()
     except KeyboardInterrupt:
         runner_manager.close()
     finally:
         runner_manager.close()
+
 
