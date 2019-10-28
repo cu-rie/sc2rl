@@ -9,8 +9,8 @@ from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 from sc2rl.memory.n_step_memory import NstepInputMemory
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
-from sc2rl.rl.agents.MultiStepActorCriticAgent import MultiStepActorCriticAgent
-from sc2rl.rl.brains.MultiStepActorCriticBrain import MultiStepActorCriticBrain, get_hyper_param_dict
+from sc2rl.rl.agents.MAAC.MultiStepActorCriticAgent import MultiStepActorCriticAgent
+from sc2rl.rl.brains.MAAC.MultiStepActorCriticBrain import MultiStepActorCriticBrain, get_hyper_param_dict
 from sc2rl.rl.modules.ActorCritic import ActorCriticModule
 
 

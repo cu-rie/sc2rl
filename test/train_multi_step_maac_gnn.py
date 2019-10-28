@@ -2,15 +2,14 @@ import os
 import torch
 import wandb
 import numpy as np
-import context
 
 from time import time
 
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
-from sc2rl.rl.agents.MultiStepActorCriticAgent import MultiStepActorCriticAgent, MultiStepActorCriticAgentConfig
-from sc2rl.rl.brains.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrainConfig
+from sc2rl.rl.agents.MAAC.MultiStepActorCriticAgent import MultiStepActorCriticAgent, MultiStepActorCriticAgentConfig
+from sc2rl.rl.brains.MAAC.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrainConfig
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
 
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
