@@ -3,6 +3,8 @@
 ## Known issues and fixes
 1. 'ValueError: 3794 is not a valid AbilityId' from pytho-sc2
 - Comment 'assert self.id != 0' in game_data.py of python-sc2
+2. AssertionError: Unsupported pixel density
+- Comment assert self.bits_per_pixel % 8 == 0, "Unsupported pixel density"
 
 ## wandb (Weight AND Bias) setup 
 ```
