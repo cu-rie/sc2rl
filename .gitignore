@@ -3,6 +3,9 @@
 .vscode/
 Pipfile.lock
 
+# pytorch model
+*.ptb
+
 # python related
 __pycache__
 sc2rl/environments/__pycache__/
