@@ -1,16 +1,14 @@
-import dgl
 import torch
-from collections import namedtuple, deque
+from collections import namedtuple
 
-from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.memory.n_step_memory import NstepInputMemory
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
-from sc2rl.rl.agents.MultiStepActorCriticAgent import MultiStepActorCriticAgent
-from sc2rl.rl.brains.MultiStepActorCriticBrain import MultiStepActorCriticBrain, get_hyper_param_dict
+from sc2rl.rl.agents.MAAC.MultiStepActorCriticAgent import MultiStepActorCriticAgent
+from sc2rl.rl.brains.MAAC.MultiStepActorCriticBrain import MultiStepActorCriticBrain, get_hyper_param_dict
 from sc2rl.rl.modules.ActorCritic import ActorCriticModule
 
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
