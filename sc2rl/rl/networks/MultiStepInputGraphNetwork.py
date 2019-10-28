@@ -76,6 +76,7 @@ class MultiStepInputGraphNetwork(torch.nn.Module):
                 curr_graph, curr_feature):
 
         h_enc_out, h_enc_hidden = self.hist_encoder(num_time_steps, hist_graph, hist_feature)
+        device = h_enc_out.device
 
         # recent_hist_enc : slice of the last RNN layer's hidden
         recent_h_enc = h_enc_out[:, -1, :]  # [Batch size x rnn hidden]
@@ -83,10 +84,9 @@ class MultiStepInputGraphNetwork(torch.nn.Module):
 
         if isinstance(curr_graph, dgl.BatchedDGLGraph):
             c_units = curr_graph.batch_num_nodes
-            c_units = torch.Tensor(c_units).long()
-            recent_h_enc = recent_h_enc.repeat_interleave(c_units, dim=0)
+            c_units = torch.tensor(c_units, dtype=torch.long, device=device)
         else:
-            c_unit = curr_graph.number_of_nodes()
-            recent_h_enc = recent_h_enc.repeat_interleave(c_unit, dim=0)
+            c_units = curr_graph.number_of_nodes()
+        recent_h_enc = recent_h_enc.repeat_interleave(c_units, dim=0)
         c_encoded_node_feature = torch.cat([recent_h_enc, c_enc_out], dim=1)
         return c_encoded_node_feature

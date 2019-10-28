@@ -76,8 +76,9 @@ class HierarchicalActorModule(torch.nn.Module):
         move_arg, hold_arg, attack_arg, high_level_prob = self(graph, node_feature, maximum_num_enemy,
                                                                attack_edge_type_index)
 
-        # Prepare un-normalized probability of attacks
+        device = move_arg.device
 
+        # Prepare un-normalized probability of attacks
         unnormed_ps = torch.cat((move_arg, hold_arg, attack_arg), dim=-1)  # of all units including enemies
 
         ally_node_indices = get_filtered_node_index_by_type(graph, ally_node_type_index)
@@ -88,7 +89,7 @@ class HierarchicalActorModule(torch.nn.Module):
         if 'enemy_tag' in graph.ndata.keys():
             enemy_tags = graph.ndata['enemy_tag']
         else:
-            enemy_tags = torch.zeros_like(ally_tags).view(-1, 1)  # dummy
+            enemy_tags = torch.zeros_like(ally_tags, device=device).view(-1, 1)  # dummy
 
         enemy_tags = enemy_tags[ally_node_indices, :]
 
@@ -96,7 +97,7 @@ class HierarchicalActorModule(torch.nn.Module):
         high_level_prob = high_level_prob[ally_node_indices, :]  # [#. ally units x 3]
 
         attack_dim = ps.shape[-1] - self.move_dim - 1
-        num_reps = torch.Tensor([self.move_dim, 1, attack_dim]).long()
+        num_reps = torch.tensor([self.move_dim, 1, attack_dim], dtype=torch.long, device=device)
         high_level_prob = high_level_prob.repeat_interleave(num_reps, dim=1)
         ps = high_level_prob * ps
 

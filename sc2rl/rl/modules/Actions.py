@@ -56,11 +56,13 @@ class AttackModule(torch.nn.Module):
     @staticmethod
     def get_action_reduce_function(nodes, num_enemy_units):
         mailbox_attack_argument = nodes.mailbox['attack_argument']
-        attack_argument = torch.ones(size=(len(nodes), num_enemy_units)) * - VERY_LARGE_NUMBER
+        device = mailbox_attack_argument.device
+
+        attack_argument = torch.ones(size=(len(nodes), num_enemy_units), device=device) * - VERY_LARGE_NUMBER
         attack_argument[:, :mailbox_attack_argument.shape[1]] = mailbox_attack_argument.squeeze(dim=-1)
 
         mailbox_enemy_tag = nodes.mailbox['enemy_tag']
-        enemy_tag = torch.zeros(size=(len(nodes), num_enemy_units), dtype=torch.long)
+        enemy_tag = torch.zeros(size=(len(nodes), num_enemy_units), dtype=torch.long, device=device)
         enemy_tag[:, :mailbox_enemy_tag.shape[1]] = mailbox_enemy_tag
         return {'attack_argument': attack_argument, 'enemy_tag': enemy_tag}
 

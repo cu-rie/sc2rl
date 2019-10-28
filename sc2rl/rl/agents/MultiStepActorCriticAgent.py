@@ -117,7 +117,7 @@ class MultiStepActorCriticAgent(AgentBase):
     def forward(self, *args, **kwargs):
         return None
 
-    def fit(self):
+    def fit(self, device='cpu'):
         # the prefix 'c' indicates #current# time stamp inputs
         # the prefix 'n' indicates #next# time stamp inputs
 
@@ -156,11 +156,21 @@ class MultiStepActorCriticAgent(AgentBase):
         # batching graphs
         list_c_h_graph = [g for L in c_h_graph for g in L]
         list_n_h_graph = [g for L in n_h_graph for g in L]
+
         c_hist_graph = dgl.batch(list_c_h_graph)
         n_hist_graph = dgl.batch(list_n_h_graph)
 
         c_curr_graph = dgl.batch(c_graph)
         n_curr_graph = dgl.batch(n_graph)
+
+        if device != 'cpu':
+            c_hist_graph.to(torch.device('cuda'))
+            n_hist_graph.to(torch.device('cuda'))
+            c_curr_graph.to(torch.device('cuda'))
+            n_curr_graph.to(torch.device('cuda'))
+            actions = actions.to(torch.device('cuda'))
+            rewards = rewards.to(torch.device('cuda'))
+            dones = dones.to(torch.device('cuda'))
 
         c_hist_feature = c_hist_graph.ndata.pop('node_feature')
         c_curr_feature = c_curr_graph.ndata.pop('node_feature')
