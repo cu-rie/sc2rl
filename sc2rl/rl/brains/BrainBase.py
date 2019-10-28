@@ -1,4 +1,6 @@
 import torch
+from sc2rl.optim.Radam import RAdam
+from sc2rl.optim.LookAhead import Lookahead
 
 
 class BrainBase(torch.nn.Module):
@@ -32,6 +34,10 @@ class BrainBase(torch.nn.Module):
     def get_optimizer(target_opt):
         if target_opt in ['Adam', 'adam']:
             opt = torch.optim.Adam
+        elif target_opt in ['Radam', 'RAdam', 'radam']:
+            opt = RAdam
+        elif target_opt in ['lookahead']:
+            opt = Lookahead
         else:
             raise RuntimeError("Not supported optimizer type: {}".format(target_opt))
         return opt

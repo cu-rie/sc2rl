@@ -5,7 +5,7 @@ from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
-from sc2rl.rl.agents.MultiStepActorCriticAgent_refac import MultiStepActorCriticAgent, MultiStepActorCriticAgentConfig
+from sc2rl.rl.agents.MultiStepActorCriticAgent import MultiStepActorCriticAgent, MultiStepActorCriticAgentConfig
 from sc2rl.rl.brains.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrainConfig
 from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetworkConfig
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig

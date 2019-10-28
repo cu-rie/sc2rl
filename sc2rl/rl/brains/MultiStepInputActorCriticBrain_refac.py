@@ -3,6 +3,7 @@ from sc2rl.rl.brains.BrainBase import BrainBase
 from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
 from sc2rl.utils.graph_utils import get_index_mapper
+from sc2rl.optim.Radam import RAdam
 
 
 class MultiStepActorCriticBrainConfig(ConfigBase):
@@ -13,7 +14,7 @@ class MultiStepActorCriticBrainConfig(ConfigBase):
                  entropy_conf=None):
         self._brain_conf = {
             'prefix': 'brain_conf',
-            'optimizer': 'Adam',
+            'optimizer': 'radam',
             'actor_lr': 1e-4,
             'critic_lr': 1e-3,
             'gamma': 1.0
@@ -31,7 +32,7 @@ class MultiStepActorCriticBrainConfig(ConfigBase):
 
         self._entropy_conf = {
             'prefix': 'brain_entropy',
-            'optimizer': 'Adam',
+            'optimizer': 'radam',
             'auto_tune': True,
             'alpha': 0.01,
             'target_alpha': -(4 + 1 + 1),  # Expected minimal action dim : Move 4 + Hold 1 + Attack 1
@@ -69,12 +70,22 @@ class MultiStepActorCriticBrain(BrainBase):
         self.gamma = self.brain_conf['gamma']
 
         optimizer = self.get_optimizer(self.brain_conf['optimizer'])
-        self.actor_optimizer = optimizer(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
-        self.critic_optimizer = optimizer(self.critic.parameters(), lr=self.brain_conf['critic_lr'])
+
+        if self.brain_conf['optimizer'] == 'lookahead':
+            actor_base_optimizer = RAdam(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
+            critic_base_optimizer = RAdam(self.critic.parameters(), lr=self.brain_conf['critic_lr'])
+            self.actor_optimizer = optimizer(actor_base_optimizer)
+            self.critic_optimizer = optimizer(critic_base_optimizer)
+        else:
+            self.actor_optimizer = optimizer(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
+            self.critic_optimizer = optimizer(self.critic.parameters(), lr=self.brain_conf['critic_lr'])
 
         if critic2 is not None:
             self.double_q = True
-            self.critic2_optimizer = optimizer(self.critic2.parameters(), lr=self.brain_conf['critic_lr'])
+            if self.brain_conf['optimizer'] == 'lookahead':
+                self.critic2_optimizer = optimizer(RAdam(self.critic2.parameters(), lr=self.brain_conf['critic_lr']))
+            else:
+                self.critic2_optimizer = optimizer(self.critic2.parameters(), lr=self.brain_conf['critic_lr'])
         else:
             self.double_q = False
 
@@ -85,7 +96,10 @@ class MultiStepActorCriticBrain(BrainBase):
             self.target_alpha = self.entropy_conf['target_alpha']
             self.log_alpha = torch.zeros(1, requires_grad=True)
             optimizer = self.get_optimizer(self.entropy_conf['optimizer'])
-            self.alpha_optimizer = optimizer([self.log_alpha], lr=self.entropy_conf['lr'])
+            if self.entropy_conf['optimizer'] == 'lookahead':
+                self.alpha_optimizer = optimizer(RAdam([self.log_alpha], lr=self.entropy_conf['lr']))
+            else:
+                self.alpha_optimizer = optimizer([self.log_alpha], lr=self.entropy_conf['lr'])
 
         else:
             self.log_alpha = torch.log(torch.ones(1) * self.entropy_conf['alpha'])
