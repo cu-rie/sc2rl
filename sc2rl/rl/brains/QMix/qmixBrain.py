@@ -13,8 +13,10 @@ class QMixBrain(BrainBase):
 
         if self.qnet_target is None:
             self.use_target = False
+            self.update_target_network(1.0, self.qnet, self.qnet_target)
+            self.update_target_network(1.0, self.mixer, self.mixer_target)
         else:
-            self.qnet_target = True
+            self.use_target = True
 
         self.brain_conf = conf.brain_conf
         self.gamma = self.brain_conf['gamma']
@@ -53,11 +55,12 @@ class QMixBrain(BrainBase):
             rewards,
             dones):
 
-
         # [ # allies x # c_maximum_num_enemy]
-        qs = self.qnet.compute_qs(num_time_steps,
-                                  c_hist_graph, c_hist_feature,
-                                  c_curr_graph, c_curr_feature, c_maximum_num_enemy)
+        q_dict = self.qnet.compute_qs(num_time_steps,
+                                      c_hist_graph, c_hist_feature,
+                                      c_curr_graph, c_curr_feature, c_maximum_num_enemy)
+
+        qs = q_dict['qs']
 
         qs = qs.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
         q_tot = self.mixer(c_curr_graph, c_hist_feature, qs)
@@ -71,19 +74,21 @@ class QMixBrain(BrainBase):
                 q_net = self.qnet
                 mixer = self.mixer
 
-            next_qs = q_net.compute_qs(num_time_steps,
-                                         n_hist_graph, n_hist_feature,
-                                         n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+            next_q_dict = q_net.compute_qs(num_time_steps,
+                                           n_hist_graph, n_hist_feature,
+                                           n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+
+            next_qs = next_q_dict['qs']
 
             next_qs = next_qs.argmax(dim=1)
             next_q_tot = mixer(n_curr_graph, n_curr_feature, next_qs)
 
-        q_targets = rewards + self.gamma * next_q_tot * (1-dones)
+        q_targets = rewards + self.gamma * next_q_tot * (1 - dones)
 
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
         self.clip_and_optimize(self.qnet_optimizer, loss, clip_val=self.fit_conf['norm_clip_val'])
+        self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
 
         fit_dict = dict()
-        fit_dict['actor_loss'] = loss.deatch().cpu().numpy()
+        fit_dict['loss'] = loss.deatch().cpu().numpy()
         return fit_dict
-

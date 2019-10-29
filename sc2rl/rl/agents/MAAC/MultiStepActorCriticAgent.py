@@ -8,7 +8,7 @@ from sc2rl.config.ConfigBase import ConfigBase
 
 from sc2rl.rl.agents.AgentBase import AgentBase
 from sc2rl.rl.modules.MultiStepInputActor import MultiStepInputActor
-from sc2rl.rl.brains.MAAC.MultiStepInputActorCriticBrain_refac import MultiStepActorCriticBrain
+from sc2rl.rl.brains.MAAC.MultiStepActorCriticBrain import MultiStepActorCriticBrain
 
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes

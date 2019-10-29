@@ -60,7 +60,8 @@ class MultiStepInputActor(torch.nn.Module):
                                              maximum_num_enemy)
         return prob_dict
 
-    def get_action(self, num_time_steps,
+    def get_action(self,
+                   num_time_steps,
                    hist_graph, hist_feature,
                    curr_graph, curr_feature, maximum_num_enemy):
 

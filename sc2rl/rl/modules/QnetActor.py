@@ -4,12 +4,12 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 
-class Qnet(torch.nn.Module):
+class QnetActor(torch.nn.Module):
 
     def __init__(self,
                  conf,
                  move_dim: int = 4):
-        super(Qnet, self).__init__()
+        super(QnetActor, self).__init__()
         self.conf = conf
         self.move_dim = move_dim
         node_input_dim = self.hyper_param['node_input_dim']
