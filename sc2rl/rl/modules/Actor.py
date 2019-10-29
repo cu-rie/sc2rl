@@ -22,6 +22,8 @@ class ActorModuleConfig(ConfigBase):
 
         self.set_configs(self._actor_conf, actor_conf)
 
+        self.post_process()
+
     @property
     def actor_conf(self):
         return self.get_conf(self._actor_conf)
