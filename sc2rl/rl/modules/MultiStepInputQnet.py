@@ -3,39 +3,27 @@ from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork, Multi
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork, MultiStepInputGraphNetworkConfig
 from sc2rl.rl.modules.QnetActor import QnetActor
 
-from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.ConfigBase_refac import ConfigBase
 
 
 class MultiStepInputQnetConfig(ConfigBase):
 
-    def __init__(self,
-                 multi_step_input_qnet_conf=None,
-                 qnet_actor_conf=None
-                 ):
-        self._multi_step_input_qnet_conf = {
+    def __init__(self, multi_step_input_qnet_conf=None, qnet_actor_conf=None):
+        super(MultiStepInputQnetConfig, self).__init__(multi_step_input_qnet_conf=multi_step_input_qnet_conf,
+                                                       qnet_actor_conf=qnet_actor_conf)
+        self.multi_step_input_qnet_conf = {
             'prefix': 'multi_step_input_qnet_conf',
             'use_attention': False,
-            'eps': 1.0,
+            'eps': 1.0
         }
 
-        self.set_configs(self._multi_step_input_qnet_conf, multi_step_input_qnet_conf)
-
-        self._qnet_actor_conf = {
+        self.qnet_actor_conf = {
             'prefix': 'qnet_actor_conf',
             'node_input_dim': 17,
             'out_activation': 'relu',
             'hidden_activation': 'mish',
-            'num_neurons': [64, 64],
+            'num_neurons': [64, 64]
         }
-        self.set_configs(self._qnet_actor_conf, qnet_actor_conf)
-
-    @property
-    def multi_step_input_qnet_conf(self):
-        return self.get_conf(self._multi_step_input_qnet_conf)
-
-    @property
-    def qnet_actor_conf(self):
-        return self.get_conf(self._qnet_actor_conf)
 
 
 class MultiStepInputQnet(torch.nn.Module):
