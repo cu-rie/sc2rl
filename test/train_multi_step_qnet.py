@@ -29,7 +29,7 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
-    num_samples = 20
+    num_samples = 1
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']

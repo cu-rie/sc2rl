@@ -13,17 +13,17 @@ class QMixer(torch.nn.Module):
         gnn_conf = RelationalGraphNetworkConfig()
         ff_conf = FeedForwardConfig()
 
-        self.hyper_w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
-        self.hyper_w_ff = FeedForward(ff_conf)
-        self.hyper_v = RelationalGraphNetwork(**gnn_conf.gnn_conf)
-        self.hyper_v_ff = FeedForward(ff_conf)
+        self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+        self.w_ff = FeedForward(ff_conf)
+        self.v = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+        self.v_ff = FeedForward(ff_conf)
 
     def forward(self, graph, node_feature, qs,
                 ally_node_type_index=NODE_ALLY):
         assert isinstance(graph, dgl.BatchedDGLGraph)
 
-        w_emb = self.hyper_w_gn(graph, node_feature)  # [# nodes x # node_dim]
-        w = self.hyper_w_ff(graph, w_emb)  # [# nodes x # 1]
+        w_emb = self.w_gn(graph, node_feature)  # [# nodes x # node_dim]
+        w = self.w_ff(graph, w_emb)  # [# nodes x # 1]
         ally_node_indices = get_filtered_node_index_by_type(graph, ally_node_type_index)
         w = w[ally_node_indices, :]  # [# allies x 1]
 
@@ -31,8 +31,8 @@ class QMixer(torch.nn.Module):
         q_tot = dgl.sum_nodes(graph, 'node_feature')
         _ = graph.ndata.pop('node_feature')
 
-        v_emb = self.hyper_v_gn(graph, node_feature)  # [# nodes x # node_dim]
-        v = self.hyper_v_ff(graph, v_emb)  # [# nodes x # 1]
+        v_emb = self.v_gn(graph, node_feature)  # [# nodes x # node_dim]
+        v = self.v_ff(graph, v_emb)  # [# nodes x # 1]
 
         graph.ndata['node_feature'] = v
         v = dgl.sum_nodes(graph, 'node_feature')

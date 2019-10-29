@@ -84,7 +84,7 @@ class QMixBrain(BrainBase):
         qs = q_dict['qs']
 
         qs = qs.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
-        q_tot = self.mixer(c_curr_graph, c_hist_feature, qs)
+        q_tot = self.mixer(c_curr_graph, c_curr_feature, qs)
 
         # compute q-target:
         with torch.no_grad():
