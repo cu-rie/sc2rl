@@ -10,35 +10,23 @@ from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, NODE_ALLY
 
-from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.ConfigBase_refac import ConfigBase
 
 
 class QmixAgentConf(ConfigBase):
-    def __init__(self,
-                 agent_conf=None,
-                 fit_conf=None,
-                 ):
-        self._agent_conf = {
+    def __init__(self, agent_conf=None, fit_conf=None):
+        super(QmixAgentConf, self).__init__(agent_conf=agent_conf,
+                                            fit_conf=fit_conf)
+        self.agent_conf = {
             'prefix': 'agent',
             'use_target': True
         }
 
-        self.set_configs(self._agent_conf, agent_conf)
-
-        self._fit_conf = {
+        self.fit_conf = {
             'prefix': 'agent_fit',
             'batch_size': 256,
             'hist_num_time_steps': 5
         }
-        self.set_configs(self._fit_conf, fit_conf)
-
-    @property
-    def fit_conf(self):
-        return self.get_conf(self._fit_conf)
-
-    @property
-    def agent_conf(self):
-        return self.get_conf(self._agent_conf)
 
 
 class QmixAgent(torch.nn.Module):
