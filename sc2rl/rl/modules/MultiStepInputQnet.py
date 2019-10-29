@@ -21,7 +21,7 @@ class MultiStepInputQnetConfig(ConfigBase):
         self.qnet_actor_conf = {
             'prefix': 'qnet_actor_conf',
             'node_input_dim': 17,
-            'out_activation': 'relu',
+            'out_activation': None,
             'hidden_activation': 'mish',
             'num_neurons': [64, 64]
         }

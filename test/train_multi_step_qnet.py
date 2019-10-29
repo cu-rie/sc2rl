@@ -28,8 +28,8 @@ if __name__ == "__main__":
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 1
-    num_samples = 1
+    num_runners = 5
+    num_samples = 20
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             wandb.log({'winning_ratio': mean_wr}, step=iters)
 
             if iters % 20 == 0:
-                save_path = os.path.join(os.getcwd(), 'exp_{}_{}.ptb'.format(iters, map_name))
+                save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
         runner_manager.close()

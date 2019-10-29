@@ -12,8 +12,8 @@ class QmixBrainConfig(ConfigBase):
         self.brain_conf = {
             'prefix': 'brain_conf',
             'optimizer': 'lookahead',
-            'lr': 1e-3,
-            'gamma': 0.9,
+            'lr': 1e-4,
+            'gamma': 1.0,
             'eps': 1.0,
             'eps_gamma': 0.995,
             'eps_min': 0.01
@@ -21,7 +21,7 @@ class QmixBrainConfig(ConfigBase):
 
         self.fit_conf = {
             'prefix': 'fit_conf',
-            'norm_clip_val': 1.0,
+            'norm_clip_val': 0.5,
             'tau': 0.1
         }
 
