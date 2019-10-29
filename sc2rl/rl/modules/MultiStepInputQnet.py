@@ -3,6 +3,30 @@ from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork
 from sc2rl.rl.modules.QnetActor import QnetActor
 
+from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
+
+class MultiStepInputQnetConfig(ConfigBase):
+
+    def __init__(self,
+                 multi_step_input_qnet_conf=None,
+                 multi_step_input_network_conf=None,
+                 qnet_conf=None):
+        self._multi_step_input_qnet_conf = {
+            'prefix': 'multi_step_input_qnet_conf',
+            'use_attention': False,
+            'eps': 1.0,
+        }
+
+        self.set_configs(self._multi_step_input_qnet_conf, multi_step_input_qnet_conf)
+
+        self._multi_step_input_network_conf = MultiStepInputGraphNetworkConfig()
+
+
+    @property
+    def multi_step_input_qnet_conf(self):
+        return self.get_conf(self._multi_step_input_qnet_conf)
+
 
 class MultiStepInputQnet(torch.nn.Module):
 

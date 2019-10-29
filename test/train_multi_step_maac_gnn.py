@@ -27,7 +27,7 @@ if __name__ == "__main__":
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 5
+    num_runners = 1
     num_samples = 20
 
     sample_spec = buffer_conf.memory_conf['spec']

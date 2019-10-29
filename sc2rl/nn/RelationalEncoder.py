@@ -2,7 +2,7 @@ import torch
 
 from sc2rl.nn.RelationalAttention import RelationalAttentionLayer
 from sc2rl.nn.AddNorm import AddNormLayer
-from sc2rl.nn.FeedForward import FeedForwardNeighbor
+from sc2rl.nn.FeedForwardNeighbor import FeedForwardNeighbor
 
 
 class RelationalEncoder(torch.nn.Module):

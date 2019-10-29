@@ -1,5 +1,5 @@
 __all__ = ['AddNorm',
-           'FeedForward',
+           'FeedForwardNeighbor.py',
            'Hypernet',
            'MultiLayerPerceptron',
            'RelationalNetwork',
