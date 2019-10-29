@@ -101,21 +101,6 @@ class QmixAgent(torch.nn.Module):
         c_maximum_num_enemy = get_largest_number_of_enemy_nodes(c_graph)
         n_maximum_num_enemy = get_largest_number_of_enemy_nodes(n_graph)
 
-        # casting actions to one torch tensor
-        actions = torch.cat(actions).long()
-
-        # 'c_graph' is now list of graphs
-        c_ally_units = [len(get_filtered_node_index_by_type(graph, NODE_ALLY)) for graph in c_graph]
-        c_ally_units = torch.Tensor(c_ally_units).long()
-
-        # prepare rewards
-        rewards = torch.Tensor(rewards)
-        rewards = rewards.repeat_interleave(c_ally_units, dim=0)
-
-        # preparing dones
-        dones = torch.Tensor(dones)
-        dones = dones.repeat_interleave(c_ally_units, dim=0)
-
         # batching graphs
         list_c_h_graph = [g for L in c_h_graph for g in L]
         list_n_h_graph = [g for L in n_h_graph for g in L]
@@ -125,6 +110,15 @@ class QmixAgent(torch.nn.Module):
 
         c_curr_graph = dgl.batch(c_graph)
         n_curr_graph = dgl.batch(n_graph)
+
+        # casting actions to one torch tensor
+        actions = torch.cat(actions).long()
+
+        # prepare rewards
+        rewards = torch.Tensor(rewards)
+
+        # preparing dones
+        dones = torch.Tensor(dones)
 
         if device != 'cpu':
             c_hist_graph.to(torch.device('cuda'))

@@ -19,7 +19,6 @@ class FeedForward(FeedForward):
         super(FeedForward, self).__init__(conf=conf, num_node_types=1)
 
     def forward(self, graph, node_feature):
-        graph.ndata['node_feature'] = node_feature
         update_feat = super().forward(graph=graph,
                                       node_feature=node_feature,
                                       update_node_type_indices=[NODE_ALLY])

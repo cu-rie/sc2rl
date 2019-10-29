@@ -5,7 +5,6 @@ from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 
-
 class FeedForward(torch.nn.Module):
 
     def __init__(self, conf, num_node_types):
@@ -23,9 +22,11 @@ class FeedForward(torch.nn.Module):
             node_index = get_filtered_node_index_by_type(graph, ntype_idx)
             apply_func = partial(self.apply_node_function, ntype_idx=ntype_idx)
             graph.apply_nodes(func=apply_func, v=node_index)
-        updated_node_feature = graph.ndata.pop('node_feature')
+
+        _ = graph.ndata.pop('node_feature')
+        updated_node_feature = graph.ndata.pop('updated_node_feature')
         return updated_node_feature
 
     def apply_node_function(self, nodes, ntype_idx):
         updater = self.node_updater['node_updater{}'.format(ntype_idx)]
-        return {'node_feature': updater(nodes.data['node_feature'])}
+        return {'updated_node_feature': updater(nodes.data['node_feature'])}

@@ -13,7 +13,10 @@ class QmixBrainConfig(ConfigBase):
             'prefix': 'brain_conf',
             'optimizer': 'lookahead',
             'lr': 1e-3,
-            'gamma': 0.9
+            'gamma': 0.9,
+            'eps': 1.0,
+            'eps_gamma': 0.995,
+            'eps_min': 0.01
         }
 
         self.fit_conf = {
@@ -41,6 +44,9 @@ class QMixBrain(BrainBase):
 
         self.brain_conf = conf.brain_conf
         self.gamma = self.brain_conf['gamma']
+        self.eps = self.brain_conf['eps']
+        self.eps_gamma = self.brain_conf['eps_gamma']
+        self.eps_min = self.brain_conf['eps_min']
 
         optimizer = self.get_optimizer(self.brain_conf['optimizer'])
 
@@ -101,15 +107,25 @@ class QMixBrain(BrainBase):
 
             next_qs = next_q_dict['qs']
 
-            next_qs = next_qs.argmax(dim=1)
+            next_qs, _ = next_qs.max(dim=1)
             next_q_tot = mixer(n_curr_graph, n_curr_feature, next_qs)
 
         q_targets = rewards + self.gamma * next_q_tot * (1 - dones)
 
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
-        self.clip_and_optimize(self.qnet_optimizer, loss, clip_val=self.fit_conf['norm_clip_val'])
+        self.clip_and_optimize(optimizer=self.qnet_optimizer,
+                               parameters=self.qnet.parameters(),
+                               loss=loss,
+                               clip_val=self.fit_conf['norm_clip_val'])
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
 
+        # decay epsilon
+        self.eps *= self.eps_gamma
+        if self.eps <= self.eps_min:
+            self.eps = self.eps_min
+        self.qnet.eps = self.eps
+
         fit_dict = dict()
-        fit_dict['loss'] = loss.deatch().cpu().numpy()
+        fit_dict['loss'] = loss.detach().cpu().numpy()
+
         return fit_dict
