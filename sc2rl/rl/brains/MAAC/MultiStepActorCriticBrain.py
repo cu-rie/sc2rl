@@ -1,170 +1,383 @@
 import torch
-import dgl
 from sc2rl.rl.brains.BrainBase import BrainBase
+from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
+from sc2rl.utils.graph_utils import get_index_mapper
+from sc2rl.optim.Radam import RAdam
 
-# for hinting
-from sc2rl.rl.modules.ActorCritic import ActorCriticModule
-from sc2rl.rl.networks.rnn_encoder import RNNEncoder
-from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
+
+class MultiStepActorCriticBrainConfig(ConfigBase):
+
+    def __init__(self,
+                 brain_conf=None,
+                 fit_conf=None,
+                 entropy_conf=None):
+        self._brain_conf = {
+            'prefix': 'brain_conf',
+            'optimizer': 'radam',
+            'actor_lr': 1e-4,
+            'critic_lr': 1e-3,
+            'gamma': 1.0
+        }
+        self.set_configs(self._brain_conf, brain_conf)
+
+        self._fit_conf = {
+            'prefix': 'brain_fit',
+            'num_critic_pre_fit_steps': 5,
+            'tau': 0.005,
+            'critic_norm_clip_val': 1.0,
+            'actor_norm_clip_val': 1.0
+        }
+        self.set_configs(self._fit_conf, fit_conf)
+
+        self._entropy_conf = {
+            'prefix': 'brain_entropy',
+            'optimizer': 'radam',
+            'auto_tune': True,
+            'alpha': 0.01,
+            'target_alpha': -(4 + 1 + 1),  # Expected minimal action dim : Move 4 + Hold 1 + Attack 1
+            'lr': 1e-4
+        }
+        self.set_configs(self._entropy_conf, entropy_conf)
+
+    @property
+    def brain_conf(self):
+        return self.get_conf(self._brain_conf)
+
+    @property
+    def fit_conf(self):
+        return self.get_conf(self._fit_conf)
+
+    @property
+    def entropy_conf(self):
+        return self.get_conf(self._entropy_conf)
 
 
 class MultiStepActorCriticBrain(BrainBase):
-    def __init__(self,
-                 actor_critic,
-                 actor_hist_encoder,
-                 actor_curr_encoder,
-                 critic_hist_encoder,
-                 critic_curr_encoder,
-                 hyper_params: dict):
-        """
-        :param actor_critic:
-        :param actor_hist_encoder:
-        :param actor_curr_encoder:
-        :param critic_hist_encoder:
-        :param critic_curr_encoder:
-        :param hyper_params: (dictionary)
 
-        expected keys :
-        'actor_update_freq' (int) update actor every 'actor_update_freq'
-        'optimizer' (str)
-        'actor_lr' (float) lr for actor related parameters
-        'critic_lr' (float) lr for critic related parameters
-        'auto_entropy' (bool) flag for auto entropy tuning
-            'target_entropy' (float)
-            'entropy_lr' (float)
-        """
-
+    def __init__(self, conf, actor, critic,
+                 critic_target=None, critic2=None, critic2_target=None):
         super(MultiStepActorCriticBrain, self).__init__()
-        self.actor_critic = actor_critic  # type: ActorCriticModule
+        self.actor = actor
 
-        # actor encoders
-        self.actor_hist_encoder = actor_hist_encoder  # type: RNNEncoder
-        self.actor_curr_encoder = actor_curr_encoder  # type: RelationalNetwork
+        self.critic = critic
+        if critic_target is not None:
+            self.critic_target = critic_target
+            self.update_target_network(1.0, self.critic, self.critic_target)
 
-        # critic encoders
-        self.critic_hist_encoder = critic_hist_encoder
-        self.critic_curr_encoder = critic_curr_encoder
+        self.critic2 = critic2
+        if critic2_target is not None:
+            self.critic2_target = critic2_target
+            self.update_target_network(1.0, self.critic2, self.critic2_target)
 
-        self.hyper_params = hyper_params
+        self.brain_conf = conf.brain_conf
+        self.gamma = self.brain_conf['gamma']
 
-        self._actor_related_params = list(self.actor_critic.actor.parameters()) + \
-                                     list(self.actor_hist_encoder.parameters()) + \
-                                     list(self.actor_curr_encoder.parameters())
+        optimizer = self.get_optimizer(self.brain_conf['optimizer'])
 
-        self._critic_related_params = list(self.actor_critic.critic.parameters()) + \
-                                      list(self.critic_hist_encoder.parameters()) + \
-                                      list(self.critic_curr_encoder.parameters())
+        if self.brain_conf['optimizer'] == 'lookahead':
+            actor_base_optimizer = RAdam(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
+            critic_base_optimizer = RAdam(self.critic.parameters(), lr=self.brain_conf['critic_lr'])
+            self.actor_optimizer = optimizer(actor_base_optimizer)
+            self.critic_optimizer = optimizer(critic_base_optimizer)
+        else:
+            self.actor_optimizer = optimizer(self.actor.parameters(), lr=self.brain_conf['actor_lr'])
+            self.critic_optimizer = optimizer(self.critic.parameters(), lr=self.brain_conf['critic_lr'])
 
-        optimizer = self.get_optimizer(hyper_params['optimizer'])
-        self.actor_optimizer = optimizer(self._actor_related_params, lr=hyper_params['actor_lr'])
-        self.critic_optimizer = optimizer(self._critic_related_params, lr=hyper_params['critic_lr'])
+        if critic2 is not None:
+            self.double_q = True
+            if self.brain_conf['optimizer'] == 'lookahead':
+                self.critic2_optimizer = optimizer(RAdam(self.critic2.parameters(), lr=self.brain_conf['critic_lr']))
+            else:
+                self.critic2_optimizer = optimizer(self.critic2.parameters(), lr=self.brain_conf['critic_lr'])
+        else:
+            self.double_q = False
 
-        if hyper_params['auto_entropy']:
-            self.target_entropy = hyper_params['target_entropy']
-            self.log_alpha = torch.zeros(1, requires_grad=True)
-            self.alpha_optimizer = optimizer([self.log_alpha], lr=hyper_params['entropy_lr'])
+        self.fit_conf = conf.fit_conf
+        self.entropy_conf = conf.entropy_conf
 
-        self.update_steps = 0
+        if self.entropy_conf['auto_tune']:
+            self.target_alpha = self.entropy_conf['target_alpha']
+            self.log_alpha = torch.nn.Parameter(torch.zeros(1))
+            optimizer = self.get_optimizer(self.entropy_conf['optimizer'])
+            if self.entropy_conf['optimizer'] == 'lookahead':
+                self.alpha_optimizer = optimizer(RAdam([self.log_alpha], lr=self.entropy_conf['lr']))
+            else:
+                self.alpha_optimizer = optimizer([self.log_alpha], lr=self.entropy_conf['lr'])
 
-    def forward(self, hist, state):
-        pass
+        else:
+            self.log_alpha = torch.log(torch.ones(1) * self.entropy_conf['alpha'])
 
-    def get_action(self, num_time_steps, hist_graph, hist_node_feature,
-                   curr_graph, curr_node_feature, maximum_num_enemy):
-        assert isinstance(curr_graph, dgl.DGLGraph), "get action is designed to work on a single graph!"
+        self.fit_steps = 0
 
-        encoded_node_feature = self.link_hist_to_curr(num_time_steps,
-                                                      hist_graph, hist_node_feature, self.actor_hist_encoder,
-                                                      curr_graph, curr_node_feature, self.actor_curr_encoder)
+    def get_action(self,
+                   num_time_steps,
+                   hist_graph,
+                   hist_feature,
+                   curr_graph,
+                   curr_feature,
+                   maximum_num_enemy):
 
-        return self.actor_critic.get_action(curr_graph, encoded_node_feature, maximum_num_enemy)
+        nn_actions, info_dict = self.actor.get_action(num_time_steps,
+                                                      hist_graph, hist_feature,
+                                                      curr_graph, curr_feature, maximum_num_enemy)
+        return nn_actions, info_dict
 
     def fit(self,
-            c_num_time_steps, c_h_graph, c_h_node_feature, c_graph, c_node_feature, c_maximum_num_enemy,
-            n_num_time_steps, n_h_graph, n_h_node_feature, n_graph, n_node_feature, n_maximum_num_enemy,
-            actions, rewards, dones,
-            target_critic=None, actor_clip_norm=None, critic_clip_norm=None):
+            num_time_steps,
+            c_hist_graph, c_hist_feature,
+            c_curr_graph, c_curr_feature,
+            c_maximum_num_enemy,
+            actions,
+            n_hist_graph, n_hist_feature,
+            n_curr_graph, n_curr_feature,
+            n_maximum_num_enemy,
+            rewards,
+            dones):
 
-        # the prefix 'c' indicates #current# time stamp inputs
-        # the prefix 'n' indicates #next# time stamp inputs
+        fit_dict = dict()
+        if self.fit_steps >= self.fit_conf['num_critic_pre_fit_steps']:
+            alpha_fit_dict = self.fit_alpha(num_time_steps,
+                                            hist_graph=c_hist_graph,
+                                            hist_feature=c_hist_feature,
+                                            curr_graph=c_curr_graph,
+                                            curr_feature=c_curr_feature,
+                                            maximum_num_enemy=c_maximum_num_enemy)
 
-        self.update_steps += 1
+            actor_fit_dict = self.fit_actor(num_time_steps=num_time_steps,
+                                            hist_graph=c_hist_graph,
+                                            hist_feature=c_hist_feature,
+                                            curr_graph=c_curr_graph,
+                                            curr_feature=c_curr_feature,
+                                            maximum_num_enemy=c_maximum_num_enemy)
+            fit_dict.update(alpha_fit_dict)
+            fit_dict.update(actor_fit_dict)
 
-        # update critic
-        c_encoded_node_feature = self.link_hist_to_curr(c_num_time_steps,
-                                                        c_h_graph, c_h_node_feature, self.critic_hist_encoder,
-                                                        c_graph, c_node_feature, self.critic_curr_encoder)
+        critic_fit_dict = self.fit_critic(num_time_steps=num_time_steps,
 
-        n_encoded_node_feature = self.link_hist_to_curr(n_num_time_steps,
-                                                        n_h_graph, n_h_node_feature, self.critic_hist_encoder,
-                                                        n_graph, n_node_feature, self.critic_curr_encoder)
+                                          c_hist_graph=c_hist_graph,
+                                          c_hist_feature=c_hist_feature,
+                                          c_curr_graph=c_curr_graph,
+                                          c_curr_feature=c_curr_feature,
+                                          c_maximum_num_enemy=c_maximum_num_enemy,
+                                          actions=actions,
+                                          n_hist_graph=n_hist_graph,
+                                          n_hist_feature=n_hist_feature,
+                                          n_curr_graph=n_curr_graph,
+                                          n_curr_feature=n_curr_feature,
+                                          n_maximum_num_enemy=n_maximum_num_enemy,
+                                          rewards=rewards,
+                                          dones=dones)
+        fit_dict.update(critic_fit_dict)
+        self.fit_steps += 1
+        return fit_dict
 
-        critic_loss = self.actor_critic.compute_critic_loss(c_graph, c_encoded_node_feature, c_maximum_num_enemy,
-                                                            actions,
-                                                            n_graph, n_encoded_node_feature, n_maximum_num_enemy,
-                                                            rewards, dones, target_critic)
+    def fit_critic(self,
+                   num_time_steps,
+                   c_hist_graph, c_hist_feature,
+                   c_curr_graph, c_curr_feature,
+                   c_maximum_num_enemy,
+                   actions,
+                   n_hist_graph, n_hist_feature,
+                   n_curr_graph, n_curr_feature,
+                   n_maximum_num_enemy,
+                   rewards,
+                   dones):
 
-        self.clip_and_optimize(self.critic_optimizer, self._critic_related_params, critic_loss, critic_clip_norm)
+        fit_dict = dict()
 
-        # update alpha
-        if self.hyper_params['auto_entropy']:
-            c_encoded_node_feature = self.link_hist_to_curr(c_num_time_steps,
-                                                            c_h_graph, c_h_node_feature, self.actor_hist_encoder,
-                                                            c_graph, c_node_feature, self.actor_curr_encoder)
-            prob_dict = self.actor_critic.actor.compute_probs(c_graph, c_encoded_node_feature, c_maximum_num_enemy)
-            log_ps = prob_dict['log_ps']
+        loss = self.compute_critic_loss(self.critic,
+                                        num_time_steps,
+                                        c_hist_graph, c_hist_feature,
+                                        c_curr_graph, c_curr_feature,
+                                        c_maximum_num_enemy,
+                                        actions,
+                                        n_hist_graph, n_hist_feature,
+                                        n_curr_graph, n_curr_feature,
+                                        n_maximum_num_enemy,
+                                        rewards,
+                                        dones,
+                                        target_net=self.critic_target)
 
-            alpha_loss = (-self.log_alpha * (log_ps * self.target_entropy).detach()).mean()
-            self.alpha_optimizer.zero_grad()
-            alpha_loss.backward()
-            self.alpha_optimizer.step()
-            alpha = self.log_alpha.exp().data.item()
-            self.actor_critic.entropy_coeff = alpha
+        self.clip_and_optimize(self.critic_optimizer, self.critic.parameters(), loss,
+                               clip_val=self.fit_conf['critic_norm_clip_val'])
 
-        # update actor
-        if self.update_steps % self.hyper_params['actor_update_freq'] == 0:
-            c_encoded_node_feature = self.link_hist_to_curr(c_num_time_steps,
-                                                            c_h_graph, c_h_node_feature, self.actor_hist_encoder,
-                                                            c_graph, c_node_feature, self.actor_curr_encoder)
+        self.update_target_network(self.fit_conf['tau'], self.critic, self.critic_target)
 
-            actor_loss = self.actor_critic.compute_actor_loss(c_graph, c_encoded_node_feature, c_maximum_num_enemy)
+        fit_dict['critic_loss'] = loss.detach().cpu().numpy()
 
-            self.clip_and_optimize(self.actor_optimizer, self._actor_related_params, actor_loss, actor_clip_norm)
+        if self.double_q:
+            loss2 = self.compute_critic_loss(self.critic2,
+                                             num_time_steps,
+                                             c_hist_graph, c_hist_feature,
+                                             c_curr_graph, c_curr_feature,
+                                             c_maximum_num_enemy,
+                                             actions,
+                                             n_hist_graph, n_hist_feature,
+                                             n_curr_graph, n_curr_feature,
+                                             n_maximum_num_enemy,
+                                             rewards,
+                                             dones,
+                                             target_net=self.critic2_target)
 
-        fit_return_dict = dict()
-        fit_return_dict['actor_loss'] = actor_loss.detach().cpu().numpy()
-        fit_return_dict['critic_loss'] = critic_loss.detach().cpu().numpy()
-        return fit_return_dict
+            self.clip_and_optimize(self.critic2_optimizer, self.critic2.parameters(), loss2,
+                                   clip_val=self.fit_conf['critic_norm_clip_val'])
+
+            self.update_target_network(self.fit_conf['tau'], self.critic2, self.critic2_target)
+            fit_dict['critic_loss2'] = loss2.detach().cpu().numpy()
+
+        return fit_dict
+
+    def compute_critic_loss(self,
+                            critic_net,
+                            num_time_steps,
+                            c_hist_graph, c_hist_feature,
+                            c_curr_graph, c_curr_feature,
+                            c_maximum_num_enemy,
+                            actions,
+                            n_hist_graph, n_hist_feature,
+                            n_curr_graph, n_curr_feature,
+                            n_maximum_num_enemy,
+                            rewards,
+                            dones,
+                            target_net=None):
+
+        if target_net is None:
+            target_net = critic_net
+
+        # cur_q : [#. current ally units x #. actions]
+        cur_q = self.get_q(critic_net,
+                           num_time_steps,
+                           c_hist_graph, c_hist_feature,
+                           c_curr_graph, c_curr_feature, c_maximum_num_enemy)
+        device = cur_q.device
+
+        # cur_q : [#. current ally units]
+        cur_q = cur_q.gather(-1, actions.unsqueeze(-1)).squeeze(dim=-1)
+
+        # The number of allies in the current (batched) graph may differ from the one of the next graph
+        target_q = torch.zeros_like(cur_q, device=device)
+
+        with torch.no_grad():
+            exp_target_q, entropy = self.get_exp_q(target_net,
+                                                   num_time_steps,
+                                                   n_hist_graph, n_hist_feature,
+                                                   n_curr_graph, n_curr_feature,
+                                                   n_maximum_num_enemy)
+
+        unsorted_target_q = exp_target_q + self.log_alpha.exp().detach().to(device) * entropy  # [#. next ally_units]
+        cur_idx, next_idx = get_index_mapper(c_curr_graph, n_curr_graph)
+        target_q[cur_idx] = unsorted_target_q[next_idx]
+        target_q = rewards + self.gamma * target_q * (1 - dones)
+        loss = torch.nn.functional.mse_loss(input=cur_q, target=target_q)
+        return loss
+
+    def fit_actor(self,
+                  num_time_steps,
+                  hist_graph, hist_feature,
+                  curr_graph, curr_feature, maximum_num_enemy):
+
+        loss = self.compute_actor_loss(num_time_steps,
+                                       hist_graph, hist_feature,
+                                       curr_graph, curr_feature, maximum_num_enemy)
+
+        self.clip_and_optimize(self.actor_optimizer, self.actor.parameters(), loss,
+                               clip_val=self.fit_conf['actor_norm_clip_val'])
+
+        fit_dict = dict()
+        fit_dict['actor_loss'] = loss.detach().cpu().numpy()
+        return fit_dict
+
+    def compute_actor_loss(self,
+                           num_time_steps,
+                           hist_graph, hist_feature,
+                           curr_graph, curr_feature, maximum_num_enemy):
+
+        with torch.no_grad():
+            qs = self.get_q(self.critic,
+                            num_time_steps,
+                            hist_graph, hist_feature,
+                            curr_graph, curr_feature, maximum_num_enemy)
+
+            if self.double_q:
+                qs2 = self.get_q(self.critic2,
+                                 num_time_steps,
+                                 hist_graph, hist_feature,
+                                 curr_graph, curr_feature, maximum_num_enemy)
+
+        prob_dict = self.actor.compute_probs(num_time_steps,
+                                             hist_graph, hist_feature,
+                                             curr_graph, curr_feature, maximum_num_enemy)
+
+        log_p_move = prob_dict['log_p_move']
+        log_p_hold = prob_dict['log_p_hold']
+        log_p_attack = prob_dict['log_p_attack']
+
+        log_ps = torch.cat([log_p_move, log_p_hold, log_p_attack], dim=1)
+        ps = prob_dict['probs']
+
+        vs = (ps * qs).sum(1).detach()
+        policy_target = qs - vs.view(-1, 1)
+
+        if self.double_q:
+            vs2 = (ps * qs2).sum(1).detach()
+            policy_target2 = qs - vs2.view(-1, 1)
+            policy_target = torch.min(policy_target, policy_target2)
+
+        device = log_ps.device
+
+        unmasked_loss = log_ps * (self.log_alpha.exp() * log_ps - policy_target)
+        loss_mask = (log_ps > torch.log(torch.tensor(VERY_SMALL_NUMBER, device=device))).float()
+        loss = (unmasked_loss * loss_mask).sum() / loss_mask.sum()
+        return loss
+
+    def fit_alpha(self,
+                  num_time_steps,
+                  hist_graph, hist_feature,
+                  curr_graph, curr_feature, maximum_num_enemy):
+
+        prob_dict = self.actor.compute_probs(num_time_steps,
+                                             hist_graph, hist_feature,
+                                             curr_graph, curr_feature, maximum_num_enemy)
+
+        log_ps = prob_dict['log_ps']
+
+        alpha_loss = (-self.log_alpha * (log_ps * self.target_alpha).detach()).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
+
+        ret_dict = dict()
+        ret_dict['alpha_loss'] = alpha_loss
+        ret_dict['alpha'] = self.log_alpha.exp().detach().cpu().numpy()
+        return ret_dict
 
     @staticmethod
-    def link_hist_to_curr(num_time_steps,
-                          h_graph, h_node_feature, h_encoder,
-                          c_graph, c_node_feature, c_encoder):
-        h_enc_out, h_enc_hidden = h_encoder(num_time_steps, h_graph, h_node_feature)
+    def get_q(critic_net,
+              num_time_steps,
+              hist_graph, hist_feature,
+              curr_graph, curr_feature, maximum_num_enemy):
 
-        # recent_hist_enc : slice of the last RNN layer's hidden
-        recent_h_enc = h_enc_out[:, -1, :]  # [Batch size x rnn hidden]
-        c_enc_out = c_encoder(c_graph, c_node_feature)
+        prob_dict = critic_net.compute_probs(num_time_steps,
+                                             hist_graph, hist_feature,
+                                             curr_graph, curr_feature, maximum_num_enemy)
 
-        if isinstance(c_graph, dgl.BatchedDGLGraph):
-            c_units = c_graph.batch_num_nodes
-            c_units = torch.Tensor(c_units).long()
-            recent_h_enc = recent_h_enc.repeat_interleave(c_units, dim=0)
-        else:
-            c_unit = c_graph.number_of_nodes()
-            recent_h_enc = recent_h_enc.repeat_interleave(c_unit, dim=0)
-        c_encoded_node_feature = torch.cat([recent_h_enc, c_enc_out], dim=1)
-        return c_encoded_node_feature
+        qs = prob_dict['unnormed_ps']
+        return qs
 
+    def get_exp_q(self, critic_net,
+                  num_time_steps,
+                  hist_graph, hist_feature,
+                  curr_graph, curr_feature, maximum_num_enemy):
 
-def get_hyper_param_dict(**kwargs):
-    hyper_params = dict()
-    hyper_params['actor_update_freq'] = 1
-    hyper_params['optimizer'] = 'adam'
-    hyper_params['actor_lr'] = 1e-4
-    hyper_params['critic_lr'] = 1e-3
-    hyper_params['auto_entropy'] = True
-    hyper_params['target_entropy'] = -(4 + 1 + 1)  # Expected minimal action dim : Move 4 + Hold 1 + Attack 1
-    hyper_params['entropy_lr'] = 1e-4
-
-    return hyper_params
+        q = self.get_q(critic_net,
+                       num_time_steps,
+                       hist_graph, hist_feature,
+                       curr_graph, curr_feature, maximum_num_enemy)
+        prob_dict = self.actor.compute_probs(num_time_steps,
+                                             hist_graph, hist_feature,
+                                             curr_graph, curr_feature, maximum_num_enemy)
+        entropy = prob_dict['ally_entropy']
+        p = prob_dict['probs']
+        exp_q = (q * p).sum(dim=1)
+        return exp_q, entropy
