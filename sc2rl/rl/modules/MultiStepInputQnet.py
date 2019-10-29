@@ -1,17 +1,17 @@
 import torch
-from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
-from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork
+from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork, MultiStepInputNetworkConfig
+from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork, MultiStepInputGraphNetworkConfig
 from sc2rl.rl.modules.QnetActor import QnetActor
 
 from sc2rl.config.ConfigBase import ConfigBase
-from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
+
 
 class MultiStepInputQnetConfig(ConfigBase):
 
     def __init__(self,
                  multi_step_input_qnet_conf=None,
-                 multi_step_input_network_conf=None,
-                 qnet_conf=None):
+                 qnet_actor_conf=None
+                 ):
         self._multi_step_input_qnet_conf = {
             'prefix': 'multi_step_input_qnet_conf',
             'use_attention': False,
@@ -20,12 +20,22 @@ class MultiStepInputQnetConfig(ConfigBase):
 
         self.set_configs(self._multi_step_input_qnet_conf, multi_step_input_qnet_conf)
 
-        self._multi_step_input_network_conf = MultiStepInputGraphNetworkConfig()
-
+        self._qnet_actor_conf = {
+            'prefix': 'qnet_actor_conf',
+            'node_input_dim': 17,
+            'out_activation': 'relu',
+            'hidden_activation': 'mish',
+            'num_neurons': [64, 64],
+        }
+        self.set_configs(self._qnet_actor_conf, qnet_actor_conf)
 
     @property
     def multi_step_input_qnet_conf(self):
         return self.get_conf(self._multi_step_input_qnet_conf)
+
+    @property
+    def qnet_actor_conf(self):
+        return self.get_conf(self._qnet_actor_conf)
 
 
 class MultiStepInputQnet(torch.nn.Module):
@@ -34,17 +44,16 @@ class MultiStepInputQnet(torch.nn.Module):
         super(MultiStepInputQnet, self).__init__()
 
         use_attention = conf.multi_step_input_qnet_conf['use_attention']
-        multi_step_input_network_conf = conf.multi_step_input_network_conf
-        qnet_conf = conf.qnet_conf
+        qnet_actor_conf = conf.qnet_actor_conf
 
         self.eps = conf.multi_step_input_qnet_conf['eps']
 
         if use_attention:
-            self.multi_step_input_net = MultiStepInputNetwork(multi_step_input_network_conf)
+            self.multi_step_input_net = MultiStepInputNetwork(MultiStepInputNetworkConfig())
         else:
-            self.multi_step_input_net = MultiStepInputGraphNetwork(multi_step_input_network_conf)
+            self.multi_step_input_net = MultiStepInputGraphNetwork(MultiStepInputGraphNetworkConfig())
 
-        self.qnet = QnetActor(qnet_conf)
+        self.qnet = QnetActor(qnet_actor_conf)
 
     def forward(self, *args):
         pass
@@ -86,3 +95,8 @@ class MultiStepInputQnet(torch.nn.Module):
         else:
             nn_actions = ally_qs.argmax(dim=1)
         return nn_actions, q_dict
+
+
+if __name__ == "__main__":
+    conf = MultiStepInputQnetConfig()
+    MultiStepInputQnet(conf)

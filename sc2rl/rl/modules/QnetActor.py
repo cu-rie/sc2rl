@@ -4,6 +4,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 
+
 class QnetActor(torch.nn.Module):
 
     def __init__(self,
@@ -12,10 +13,10 @@ class QnetActor(torch.nn.Module):
         super(QnetActor, self).__init__()
         self.conf = conf
         self.move_dim = move_dim
-        node_input_dim = self.hyper_param['node_input_dim']
-        out_activation = self.hyper_param['out_activation']
-        hidden_activation = self.hyper_param['hidden_activation']
-        num_neurons = self.hyper_param['num_neurons']
+        node_input_dim = self.conf['node_input_dim']
+        out_activation = self.conf['out_activation']
+        hidden_activation = self.conf['hidden_activation']
+        num_neurons = self.conf['num_neurons']
 
         self.move_module = MoveModule(node_dim=node_input_dim,
                                       move_dim=move_dim,

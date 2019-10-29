@@ -15,6 +15,4 @@ if __name__ == "__main__":
     buffer_conf = NstepInputMemoryConfig()
 
     init_graph = env.observe()['g']
-    history_manager = HistoryManager(
-        n_hist_steps=buffer_conf.memory_conf['N'], init_graph=init_graph)
-
+    history_manager = HistoryManager(n_hist_steps=buffer_conf.memory_conf['N'], init_graph=init_graph)

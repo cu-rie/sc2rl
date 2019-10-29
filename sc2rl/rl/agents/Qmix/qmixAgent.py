@@ -8,7 +8,7 @@ from sc2rl.memory.n_step_memory import NstepInputMemory
 
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
-from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
+from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, NODE_ALLY
 
 
 class QmixAgent(torch.nn.Module):
