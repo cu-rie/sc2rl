@@ -13,7 +13,8 @@ class QmixBrainCofig(ConfigBase):
         self._brain_conf = {
             'prefix': 'brain_conf',
             'optimizer': 'lookahead',
-            'lr': 1e-3
+            'lr': 1e-3,
+            'gamma': 0.9
         }
         self.set_configs(self._brain_conf, brain_conf)
 
@@ -31,7 +32,7 @@ class QmixBrainCofig(ConfigBase):
 
     @property
     def fit_conf(self):
-        return self.fit_conf(self._fit_conf)
+        return self.get_conf(self._fit_conf)
 
 
 class QMixBrain(BrainBase):

@@ -15,8 +15,16 @@ from sc2rl.config.ConfigBase import ConfigBase
 
 class QmixAgentConf(ConfigBase):
     def __init__(self,
+                 agent_conf=None,
                  fit_conf=None,
                  ):
+        self._agent_conf = {
+            'prefix': 'agent',
+            'use_target': True
+        }
+
+        self.set_configs(self._agent_conf, agent_conf)
+
         self._fit_conf = {
             'prefix': 'agent_fit',
             'batch_size': 256,
@@ -28,19 +36,23 @@ class QmixAgentConf(ConfigBase):
     def fit_conf(self):
         return self.get_conf(self._fit_conf)
 
+    @property
+    def agent_conf(self):
+        return self.get_conf(self._agent_conf)
+
 
 class QmixAgent(torch.nn.Module):
 
-    def __init__(self, conf, qnet_conf, mixer_conf, brain_conf, buffer_conf):
+    def __init__(self, conf, qnet_conf, brain_conf, buffer_conf):
         super(QmixAgent, self).__init__()
         self.conf = conf
 
         qnet = MultiStepInputQnet(qnet_conf)
-        mixer = QMixer(mixer_conf)
+        mixer = QMixer()
 
-        if self.agent_conf['use_target']:
+        if self.conf.agent_conf['use_target']:
             qnet_target = MultiStepInputQnet(qnet_conf)
-            mixer_target = QMixer(mixer_conf)
+            mixer_target = QMixer()
         else:
             qnet_target = None
             mixer_target = None
@@ -51,7 +63,7 @@ class QmixAgent(torch.nn.Module):
                                qnet_target=qnet_target,
                                mixer_target=mixer_target)
 
-        self.buffer = NstepInputMemory(buffer_conf.memory_conf)
+        self.buffer = NstepInputMemory(**buffer_conf.memory_conf)
 
     def get_action(self,
                    hist_graph,

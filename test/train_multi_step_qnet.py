@@ -27,7 +27,6 @@ if __name__ == "__main__":
     brain_conf = QmixBrainCofig()
 
     qnet_conf = MultiStepInputQnetConfig()
-    mixer_conf =  # TODO
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
     use_hierarchical_actor = True
@@ -40,11 +39,10 @@ if __name__ == "__main__":
     run_device = 'cpu'
     fit_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    agent = QmixAgent(agent_conf,
-                      qnet_conf,
-                      mixer_conf,
-                      brain_conf,
-                      buffer_conf
+    agent = QmixAgent(conf=agent_conf,
+                      qnet_conf=qnet_conf,
+                      brain_conf=brain_conf,
+                      buffer_conf=buffer_conf
                       )
 
     agent.to(run_device)
