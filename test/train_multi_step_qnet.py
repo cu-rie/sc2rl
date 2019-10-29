@@ -84,6 +84,7 @@ if __name__ == "__main__":
             mean_wr = np.mean(wrs)
             wandb.log(fit_return_dict, step=iters)
             wandb.log({'winning_ratio': mean_wr}, step=iters)
+            wandb.log({'epsilon', agent.brain.eps}, step=iters)
 
             if iters % 20 == 0:
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
