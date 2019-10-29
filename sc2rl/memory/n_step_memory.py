@@ -1,20 +1,20 @@
-from copy import deepcopy
 from collections import namedtuple
 
 import numpy as np
 
 from sc2rl.memory.memory_base import EpisodicMemory
 from sc2rl.memory.Trajectory import Trajectory
-from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.ConfigBase_refac import ConfigBase
 
 
 class NstepInputMemoryConfig(ConfigBase):
-    def __init__(self,
-                 memory_conf=None):
+    def __init__(self, memory_conf=None):
+        super(NstepInputMemoryConfig, self).__init__(memory_conf=memory_conf)
+
         spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done"],
                           defaults=tuple([list() for _ in range(5)]))
 
-        self._memory_conf = {
+        self.memory_conf = {
             'prefix': 'memory',
             'N': 5,
             'max_n_episodes': 3000,
@@ -22,12 +22,6 @@ class NstepInputMemoryConfig(ConfigBase):
             'gamma': 1.0,
             'max_traj_len': 30
         }
-
-        self.set_configs(self._memory_conf, memory_conf)
-
-    @property
-    def memory_conf(self):
-        return self.get_conf(self._memory_conf)
 
     def __call__(self):
         return super(NstepInputMemoryConfig, self).__call__('spec')

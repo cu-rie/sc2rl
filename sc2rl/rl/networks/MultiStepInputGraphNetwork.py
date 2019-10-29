@@ -71,6 +71,7 @@ class MultiStepInputGraphNetwork(torch.nn.Module):
 
         curr_enc_conf = conf.curr_enc_conf
         self.curr_encoder = RelationalGraphNetwork(**curr_enc_conf)
+        self.out_dim = curr_enc_conf['model_dim'] + rnn_conf['hidden_size']
 
     def forward(self, num_time_steps, hist_graph, hist_feature,
                 curr_graph, curr_feature):

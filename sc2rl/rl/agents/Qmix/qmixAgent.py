@@ -10,35 +10,23 @@ from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, NODE_ALLY
 
-from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.ConfigBase_refac import ConfigBase
 
 
 class QmixAgentConf(ConfigBase):
-    def __init__(self,
-                 agent_conf=None,
-                 fit_conf=None,
-                 ):
-        self._agent_conf = {
+    def __init__(self, agent_conf=None, fit_conf=None):
+        super(QmixAgentConf, self).__init__(agent_conf=agent_conf,
+                                            fit_conf=fit_conf)
+        self.agent_conf = {
             'prefix': 'agent',
             'use_target': True
         }
 
-        self.set_configs(self._agent_conf, agent_conf)
-
-        self._fit_conf = {
+        self.fit_conf = {
             'prefix': 'agent_fit',
             'batch_size': 256,
             'hist_num_time_steps': 5
         }
-        self.set_configs(self._fit_conf, fit_conf)
-
-    @property
-    def fit_conf(self):
-        return self.get_conf(self._fit_conf)
-
-    @property
-    def agent_conf(self):
-        return self.get_conf(self._agent_conf)
 
 
 class QmixAgent(torch.nn.Module):
@@ -113,21 +101,6 @@ class QmixAgent(torch.nn.Module):
         c_maximum_num_enemy = get_largest_number_of_enemy_nodes(c_graph)
         n_maximum_num_enemy = get_largest_number_of_enemy_nodes(n_graph)
 
-        # casting actions to one torch tensor
-        actions = torch.cat(actions).long()
-
-        # 'c_graph' is now list of graphs
-        c_ally_units = [len(get_filtered_node_index_by_type(graph, NODE_ALLY)) for graph in c_graph]
-        c_ally_units = torch.Tensor(c_ally_units).long()
-
-        # prepare rewards
-        rewards = torch.Tensor(rewards)
-        rewards = rewards.repeat_interleave(c_ally_units, dim=0)
-
-        # preparing dones
-        dones = torch.Tensor(dones)
-        dones = dones.repeat_interleave(c_ally_units, dim=0)
-
         # batching graphs
         list_c_h_graph = [g for L in c_h_graph for g in L]
         list_n_h_graph = [g for L in n_h_graph for g in L]
@@ -137,6 +110,15 @@ class QmixAgent(torch.nn.Module):
 
         c_curr_graph = dgl.batch(c_graph)
         n_curr_graph = dgl.batch(n_graph)
+
+        # casting actions to one torch tensor
+        actions = torch.cat(actions).long()
+
+        # prepare rewards
+        rewards = torch.Tensor(rewards)
+
+        # preparing dones
+        dones = torch.Tensor(dones)
 
         if device != 'cpu':
             c_hist_graph.to(torch.device('cuda'))

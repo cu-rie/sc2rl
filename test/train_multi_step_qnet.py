@@ -8,9 +8,7 @@ from time import time
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
-# from sc2rl.rl.agents.MAAC.MultiStepActorCriticAgent import MultiStepActorCriticAgent, MultiStepActorCriticAgentConfig
-# from sc2rl.rl.brains.MAAC.MultiStepActorCriticBrain import MultiStepActorCriticBrainConfig
-from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainCofig
+from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
 from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
 from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
@@ -24,14 +22,14 @@ if __name__ == "__main__":
 
     agent_conf = QmixAgentConf()
     network_conf = MultiStepInputGraphNetworkConfig()
-    brain_conf = QmixBrainCofig()
+    brain_conf = QmixBrainConfig()
 
     qnet_conf = MultiStepInputQnetConfig()
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
-    num_samples = 20
+    num_samples = 1
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
