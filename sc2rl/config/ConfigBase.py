@@ -8,7 +8,6 @@ class ConfigBase:
     def set_configs(target_conf_dict, conf):
         if conf is None:
             return
-
         for key, val in conf.items():
             if key in target_conf_dict:
                 target_conf_dict[key] = val
