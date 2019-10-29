@@ -10,6 +10,24 @@ from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, NODE_ALLY
 
+from sc2rl.config.ConfigBase import ConfigBase
+
+
+class QmixAgentConf(ConfigBase):
+    def __init__(self,
+                 fit_conf=None,
+                 ):
+        self._fit_conf = {
+            'prefix': 'agent_fit',
+            'batch_size': 256,
+            'hist_num_time_steps': 5
+        }
+        self.set_configs(self._fit_conf, fit_conf)
+
+    @property
+    def fit_conf(self):
+        return self.get_conf(self._fit_conf)
+
 
 class QmixAgent(torch.nn.Module):
 

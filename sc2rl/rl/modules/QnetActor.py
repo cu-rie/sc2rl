@@ -4,7 +4,6 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 
-
 class QnetActor(torch.nn.Module):
 
     def __init__(self,
@@ -85,7 +84,7 @@ class QnetActor(torch.nn.Module):
 
         if torch.rand(1) <= self.eps:
             raise NotImplementedError
-            #nn_actions = dist.sample()
+            # nn_actions = dist.sample()
         else:
             nn_actions = ally_qs.argmax(dim=1)
         return nn_actions, info_dict

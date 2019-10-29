@@ -2,9 +2,41 @@ import torch
 from sc2rl.optim.Radam import RAdam
 from sc2rl.rl.brains.BrainBase import BrainBase
 
+from sc2rl.config.ConfigBase import ConfigBase
+
+
+class QmixBrainCofig(ConfigBase):
+    def __init__(self,
+                 brain_conf=None,
+                 fit_conf=None
+                 ):
+        self._brain_conf = {
+            'prefix': 'brain_conf',
+            'optimizer': 'lookahead',
+            'lr': 1e-3
+        }
+        self.set_configs(self._brain_conf, brain_conf)
+
+        self._fit_conf = {
+            'prefix': 'fit_conf',
+            'norm_clip_val': 1.0,
+            'tau': 0.1
+        }
+
+        self.set_configs(self._fit_conf, fit_conf)
+
+    @property
+    def brain_conf(self):
+        return self.get_conf(self._brain_conf)
+
+    @property
+    def fit_conf(self):
+        return self.fit_conf(self._fit_conf)
+
 
 class QMixBrain(BrainBase):
     def __init__(self, conf, qnet, mixer, qnet_target=None, mixer_target=None):
+        super(QMixBrain, self).__init__()
         self.qnet = qnet
         self.mixer = mixer
 

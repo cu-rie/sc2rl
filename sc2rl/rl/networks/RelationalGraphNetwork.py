@@ -2,6 +2,7 @@ from sc2rl.nn.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.config.graph_configs import NODE_ALLY, EDGE_ALLY, EDGE_ENEMY
 
 
+
 class RelationalGraphNetwork(RelationalGraphNetwork):
 
     def forward(self, graph, node_feature):
