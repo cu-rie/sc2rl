@@ -26,8 +26,8 @@ class RelationalGraphNetwork(RelationalGraphNetwork):
 
         return update_feat
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     conf = RelationalGraphNetworkConfig()
     gn = RelationalGraphNetwork(**conf.gnn_conf)
     print("done")
