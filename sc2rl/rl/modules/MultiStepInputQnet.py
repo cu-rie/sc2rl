@@ -68,7 +68,8 @@ class MultiStepInputQnet(torch.nn.Module):
     def get_action(self,
                    num_time_steps,
                    hist_graph, hist_feature,
-                   curr_graph, curr_feature, maximum_num_enemy):
+                   curr_graph, curr_feature, maximum_num_enemy,
+                   eps):
 
         q_dict = self.compute_qs(num_time_steps,
                                  hist_graph, hist_feature,
@@ -81,7 +82,7 @@ class MultiStepInputQnet(torch.nn.Module):
         if 'enemy_tag' in curr_graph.ndata.keys():
             _ = curr_graph.ndata.pop('enemy_tag')
 
-        if torch.rand(1) <= self.eps:
+        if torch.rand(1, device=device) <= eps:
             sampling_mask = torch.ones_like(ally_qs, device=device)
             sampling_mask[ally_qs <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
             dist = torch.distributions.categorical.Categorical(logits=sampling_mask)

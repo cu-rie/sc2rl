@@ -28,8 +28,8 @@ if __name__ == "__main__":
     buffer_conf = NstepInputMemoryConfig()
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 5
-    num_samples = 20
+    num_runners = 1
+    num_samples = 1
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -77,14 +77,13 @@ if __name__ == "__main__":
             fit_return_dict = agent.fit(device=fit_device)
             agent.to(run_device)
             e_time = time()
-            print("fit time : {}".format(e_time - s_time))
+            print("[{}/ 1000000]fit time : {}".format(iters, e_time - s_time))
 
             wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
             mean_wr = np.mean(wrs)
             wandb.log(fit_return_dict, step=iters)
-            wandb.log({'winning_ratio': mean_wr}, step=iters)
-            wandb.log({'epsilon', agent.brain.eps}, step=iters)
+            wandb.log({'winning_ratio': mean_wr, 'epsilon' : agent.brain.eps}, step=iters)
 
             if iters % 20 == 0:
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))

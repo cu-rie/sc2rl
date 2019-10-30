@@ -44,9 +44,10 @@ class QMixBrain(BrainBase):
 
         self.brain_conf = conf.brain_conf
         self.gamma = self.brain_conf['gamma']
-        self.eps = self.brain_conf['eps']
+        # self.eps = self.brain_conf['eps']
+        self.register_buffer('eps', torch.ones(1, ) * self.brain_conf['eps'])
+        self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
-        self.eps_min = self.brain_conf['eps_min']
 
         optimizer = self.get_optimizer(self.brain_conf['optimizer'])
 
@@ -67,7 +68,8 @@ class QMixBrain(BrainBase):
                    maximum_num_enemy):
         nn_actions, info_dict = self.qnet.get_action(num_time_steps,
                                                      hist_graph, hist_feature,
-                                                     curr_graph, curr_feature, maximum_num_enemy)
+                                                     curr_graph, curr_feature, maximum_num_enemy,
+                                                     self.eps)
         return nn_actions, info_dict
 
     def fit(self,
@@ -120,9 +122,9 @@ class QMixBrain(BrainBase):
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
 
         # decay epsilon
-        self.eps *= self.eps_gamma
+        self.eps = self.eps * self.eps_gamma
         if self.eps <= self.eps_min:
-            self.eps = self.eps_min
+            self.eps.fill_(self.eps_min.data)
         self.qnet.eps = self.eps
 
         fit_dict = dict()
