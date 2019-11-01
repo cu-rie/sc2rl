@@ -5,7 +5,7 @@ import numpy as np
 
 from time import time
 
-from sc2rl.utils.reward_funcs import great_victor
+from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
@@ -65,8 +65,14 @@ if __name__ == "__main__":
 
     agent.to(run_device)
 
+    reward_name = 'great_victory'
+    if reward_name == 'great_victory':
+        reward_func = great_victor
+    elif reward_name == 'great_victor_with_kill_bonus':
+        reward_fun = great_victor_with_kill_bonus
+
     config = RunnerConfig(map_name=map_name,
-                          reward_func=great_victor,
+                          reward_func=reward_fun,
                           state_proc_func=process_game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps)
@@ -80,7 +86,7 @@ if __name__ == "__main__":
                          'num_samples': num_samples,
                          'use_hierarchical_actor': use_hierarchical_actor,
                          'map_name': map_name,
-                         'reward': 'great_victory'})
+                         'reward': reward_name})
     wandb.config.update(agent_conf())
     wandb.config.update(gnn_conf())
     wandb.config.update(brain_conf())
