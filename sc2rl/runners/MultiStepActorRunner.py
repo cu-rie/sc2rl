@@ -50,6 +50,8 @@ class MultiStepActorRunner(RunnerBase):
         # expected return
         # dictionary = {'name': (str), 'win': (bool), 'sum_reward': (float)}
 
+        running_wr = self.env.winning_ratio
+
         env_name = self.env.name
         traj = self.run_1_episode()
 
@@ -64,6 +66,7 @@ class MultiStepActorRunner(RunnerBase):
         eval_dict['win'] = num_allies > num_enemies
         eval_dict['sum_reward'] = sum_reward
 
+        self.env.winning_ratio = running_wr
         return eval_dict
 
     def set_train_mode(self):
