@@ -23,7 +23,8 @@ class MultiStepInputQnetConfig(ConfigBase):
             'node_input_dim': 17,
             'out_activation': None,
             'hidden_activation': 'mish',
-            'num_neurons': [64, 64]
+            'num_neurons': [64, 64],
+            'spectral_norm': False
         }
 
 

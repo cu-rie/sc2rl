@@ -16,22 +16,26 @@ class QnetActor(torch.nn.Module):
         out_activation = self.conf['out_activation']
         hidden_activation = self.conf['hidden_activation']
         num_neurons = self.conf['num_neurons']
+        spectral_norm = self.conf['spectral_norm']
 
         self.move_module = MoveModule(node_dim=node_input_dim,
                                       move_dim=move_dim,
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
-                                      out_activation=out_activation)
+                                      out_activation=out_activation,
+                                      spectral_norm=spectral_norm)
 
         self.hold_module = HoldModule(node_dim=node_input_dim,
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
-                                      out_activation=out_activation)
+                                      out_activation=out_activation,
+                                      spectral_norm=spectral_norm)
 
         self.attack_module = AttackModule(node_dim=node_input_dim,
                                           num_neurons=num_neurons,
                                           hidden_activation=hidden_activation,
-                                          out_activation=out_activation)
+                                          out_activation=out_activation,
+                                          spectral_norm=spectral_norm)
 
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
         move_argument = self.move_module(graph, node_feature)

@@ -21,7 +21,7 @@ class QmixBrainConfig(ConfigBase):
 
         self.fit_conf = {
             'prefix': 'fit_conf',
-            'norm_clip_val': 0.5,
+            'norm_clip_val': None,
             'tau': 0.1
         }
 

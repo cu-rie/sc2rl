@@ -28,6 +28,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'model_dim': 17,
             'num_relations': 3,
             'num_neurons': [128, 128],
+            'spectral_norm': False
         }
         self.set_configs(self._hist_enc_conf, hist_enc_conf)
 
@@ -37,6 +38,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'model_dim': 17,
             'num_relations': 3,
             'num_neurons': [128, 128],
+            'spectral_norm': False
         }
         self.set_configs(self._curr_enc_conf, curr_enc_conf)
 

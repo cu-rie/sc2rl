@@ -8,16 +8,16 @@ class RelationalGraphNetwork(torch.nn.Module):
                  num_layers,
                  model_dim,
                  num_relations,
-                 num_neurons
-                 ):
+                 num_neurons,
+                 spectral_norm):
         super(RelationalGraphNetwork, self).__init__()
 
         layers = []
         for _ in range(num_layers):
             layer = RelationalGraphLayer(model_dim=model_dim,
                                          num_relations=num_relations,
-                                         num_neurons=num_neurons
-                                         )
+                                         num_neurons=num_neurons,
+                                         spectral_norm=spectral_norm)
             layers.append(layer)
 
         self.layers = torch.nn.ModuleList(layers)

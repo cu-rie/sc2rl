@@ -5,7 +5,7 @@ import numpy as np
 
 from time import time
 
-from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
+from sc2rl.utils.reward_funcs import great_victor
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
-    num_samples = 1
+    num_samples = 10
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     agent.to(run_device)
 
     config = RunnerConfig(map_name=map_name,
-                          reward_func=great_victor_with_kill_bonus,
+                          reward_func=great_victor,
                           state_proc_func=process_game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps)
@@ -58,7 +58,8 @@ if __name__ == "__main__":
                          'num_runners': num_runners,
                          'num_samples': num_samples,
                          'use_hierarchical_actor': use_hierarchical_actor,
-                         'map_name': map_name})
+                         'map_name': map_name,
+                         'reward': 'great_victory'})
     wandb.config.update(agent_conf())
     wandb.config.update(network_conf())
     wandb.config.update(brain_conf())
@@ -78,11 +79,10 @@ if __name__ == "__main__":
             e_time = time()
             print("[{}/ 1000000]fit time : {}".format(iters, e_time - s_time))
 
-            wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
             mean_wr = np.mean(wrs)
             wandb.log(fit_return_dict, step=iters)
-            wandb.log({'winning_ratio': mean_wr, 'epsilon' : agent.brain.eps}, step=iters)
+            wandb.log({'winning_ratio': mean_wr, 'epsilon': agent.brain.eps}, step=iters)
 
             if iters % 20 == 0:
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))

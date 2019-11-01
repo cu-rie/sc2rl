@@ -10,19 +10,19 @@ class RelationalGraphLayer(torch.nn.Module):
                  model_dim: int,
                  num_relations: int,
                  num_neurons: list = [64, 64],
-                 ):
+                 spectral_norm: bool = False):
         super(RelationalGraphLayer, self).__init__()
         self.model_dim = model_dim
         self.num_relations = num_relations
 
         self.relational_updater = dict()
         for i in range(num_relations):
-            relational_updater = MLP(model_dim, model_dim, num_neurons)
+            relational_updater = MLP(model_dim, model_dim, num_neurons, spectral_norm)
             self.relational_updater['updater{}'.format(i)] = relational_updater
         self.relational_updater = torch.nn.ModuleDict(self.relational_updater)
 
         self.node_updater_input_dim = model_dim * (num_relations + 1)
-        self.node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons)
+        self.node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons, spectral_norm)
 
     def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
 
