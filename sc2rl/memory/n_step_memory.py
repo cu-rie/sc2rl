@@ -21,7 +21,7 @@ class NstepInputMemoryConfig(ConfigBase):
             'spec': spec,
             'gamma': 1.0,
             'max_traj_len': 30,
-            'use_return' : False,
+            'use_return': False,
         }
 
     def __call__(self):

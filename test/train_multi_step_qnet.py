@@ -25,7 +25,7 @@ if __name__ == "__main__":
     brain_conf = QmixBrainConfig()
 
     qnet_conf = MultiStepInputQnetConfig()
-    buffer_conf = NstepInputMemoryConfig()
+    buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
