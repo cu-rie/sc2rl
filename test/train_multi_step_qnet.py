@@ -22,7 +22,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 if __name__ == "__main__":
 
     map_name = "training_scenario_1"
-    spectral_norm = True
+    spectral_norm = False
 
     agent_conf = QmixAgentConf()
 
