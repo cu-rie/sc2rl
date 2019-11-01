@@ -1,9 +1,11 @@
 from collections import namedtuple
+import numpy as np
+
 from sc2rl.memory.TrajectoryBase import TrajectoryBase
 
 experience_spec = namedtuple('exp_args',
-                             ["state", "action", "reward", "next_state", "done"],
-                             defaults=tuple([list() for _ in range(5)]))
+                             ["state", "action", "reward", "next_state", "done", "ret"],
+                             defaults=tuple([list() for _ in range(6)]))
 
 
 class Trajectory(TrajectoryBase):
@@ -32,4 +34,32 @@ class Trajectory(TrajectoryBase):
                 reward = sample.reward
                 next_state = sample.next_state
                 done = True
-                self._trajectory.append(self.spec(state, action, reward, next_state, done))
+                ret = sample.ret
+                self._trajectory.append(self.spec(state, action, reward, next_state, done, ret))
+            self.compute_return()
+
+    def compute_return(self):
+        rewards = [sample.reward for sample in self._trajectory]
+        returns = np.zeros_like(rewards, dtype=float)
+
+        # set the last return as the last reward
+        returns[-1] = rewards[-1]
+
+        # Iterating over rewards to compute returns in backward
+        for i, reward in enumerate(reversed(rewards[:-1])):
+            backward_index = self.length - 1 - i
+            returns[backward_index - 1] = rewards[backward_index - 1] + self.gamma * returns[backward_index]
+
+        # Set return values to the samples
+        for i in range(self.length):
+            sample = self._trajectory.popleft()
+
+            state = sample.state
+            action = sample.action
+            reward = sample.reward
+            next_state = sample.next_state
+            done = sample.done
+            ret = returns[i]
+            self._trajectory.append(self.spec(state, action, reward, next_state, done, ret))
+
+        self.discounted = True
