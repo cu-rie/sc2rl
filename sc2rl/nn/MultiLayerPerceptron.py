@@ -1,7 +1,8 @@
 import torch
 import torch.nn.functional as F
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
-from sc2rl.nn.SpectralNorm import SpectralNorm
+from sc2rl.nn.SpectralNorm import SNLinear
+
 
 def swish(x):
     return x * torch.nn.functional.sigmoid(x)
@@ -73,25 +74,25 @@ class MultiLayerPerceptron(torch.nn.Module):
             self.layers.append(norm_layer)
 
         # input -> hidden 1
-        input_layer = Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0])
         if self.spectral_norm:
-            input_layer = SpectralNorm(input_layer)
-
+            input_layer = SNLinear(in_features=self.input_dimension, out_features=num_neurons[0])
+        else:
+            input_layer = Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0])
+        self.apply_weight_init(input_layer, self.init)
         self.layers.append(input_layer)
         for i, num_neuron in enumerate(num_neurons[:-1]):
-            hidden_layer = Linear(norm=ws, in_features=num_neuron, out_features=num_neurons[i + 1])
-            self.apply_weight_init(hidden_layer, self.init)
             if self.spectral_norm:
-                hidden_layer = SpectralNorm(hidden_layer)
+                hidden_layer = SNLinear(in_features=num_neuron, out_features=num_neurons[i + 1])
+            else:
+                hidden_layer = Linear(norm=ws, in_features=num_neuron, out_features=num_neurons[i + 1])
+            self.apply_weight_init(hidden_layer, self.init)
             self.layers.append(hidden_layer)
-
-        last_layer = Linear(norm=ws, in_features=num_neurons[-1], out_features=self.output_dimension)
-        self.apply_weight_init(last_layer, self.init)
         if self.spectral_norm:
-            last_layer = SpectralNorm(last_layer)
-
+            last_layer = SNLinear(in_features=num_neurons[-1], out_features=self.output_dimension)
+        else:
+            last_layer = Linear(norm=ws, in_features=num_neurons[-1], out_features=self.output_dimension)
+        self.apply_weight_init(last_layer, self.init)
         self.layers.append(last_layer)  # hidden_n -> output
-
 
     def forward(self, x):
         if self.input_normalization != 0:  # The first layer is not normalization layer

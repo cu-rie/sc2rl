@@ -22,13 +22,13 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 if __name__ == "__main__":
 
     map_name = "training_scenario_1"
-    spectral_norm = False
+    spectral_norm = True
 
     agent_conf = QmixAgentConf()
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 5
+    num_runners = 2
     num_samples = 10
     eval_episodes = 20
 
@@ -69,10 +69,10 @@ if __name__ == "__main__":
     if reward_name == 'great_victory':
         reward_func = great_victor
     elif reward_name == 'great_victor_with_kill_bonus':
-        reward_fun = great_victor_with_kill_bonus
+        reward_func = great_victor_with_kill_bonus
 
     config = RunnerConfig(map_name=map_name,
-                          reward_func=reward_fun,
+                          reward_func=reward_func,
                           state_proc_func=process_game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps)
