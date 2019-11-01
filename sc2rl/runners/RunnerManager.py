@@ -74,9 +74,7 @@ class RunnerManager:
 
     def evaluate(self, total_n):
         self.reset()
-
-        for runner in self.runners:
-            runner.set_eval_mode()
+        self.set_eval_mode()
 
         threads = []
         for (n, runner) in zip(self._calc_n(total_n), self.runners):
@@ -95,7 +93,16 @@ class RunnerManager:
             eval_dict = self.eval_queue.get()
             eval_dicts.append(eval_dict)
 
+        self.set_train_mode()
         return eval_dicts
+
+    def set_eval_mode(self):
+        for runner in self.runners:
+            runner.set_eval_mode()
+
+    def set_train_mode(self):
+        for runner in self.runners:
+            runner.set_train_mode()
 
     def close(self):
         for runner in self.runners:
