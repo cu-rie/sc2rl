@@ -27,8 +27,14 @@ class RunnerBase:
 
     def eval_n_episodes(self, n, queue):
         for _ in range(n):
-            eval_dict = self.run_1_episode()
+            eval_dict = self.eval_1_episode()
             queue.put(eval_dict)
+
+    def set_eval_mode(self):
+        self.agent.eval()
+
+    def set_train_mode(self):
+        self.agent.train()
 
     def reset(self):
         self.env.close()

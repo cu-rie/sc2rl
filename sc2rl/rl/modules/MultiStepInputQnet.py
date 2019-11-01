@@ -83,11 +83,14 @@ class MultiStepInputQnet(torch.nn.Module):
         if 'enemy_tag' in curr_graph.ndata.keys():
             _ = curr_graph.ndata.pop('enemy_tag')
 
-        if torch.rand(1, device=device) <= eps:
-            sampling_mask = torch.ones_like(ally_qs, device=device)
-            sampling_mask[ally_qs <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
-            dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
-            nn_actions = dist.sample()
+        if self.training:
+            if torch.rand(1, device=device) <= eps:
+                sampling_mask = torch.ones_like(ally_qs, device=device)
+                sampling_mask[ally_qs <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
+                dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
+                nn_actions = dist.sample()
+            else:
+                nn_actions = ally_qs.argmax(dim=1)
         else:
             nn_actions = ally_qs.argmax(dim=1)
         return nn_actions, q_dict

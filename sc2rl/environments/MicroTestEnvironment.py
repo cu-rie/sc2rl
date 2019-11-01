@@ -16,7 +16,7 @@ class Status(enum.Enum):
 class MicroTestEnvironment(SC2EnvironmentBase):
 
     def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=50000,
-                 winning_ratio_gamma=0.6):
+                 winning_ratio_gamma=0.1):
         """
         :param map_name:
         :param reward_func:

@@ -54,8 +54,8 @@ class MultiStepActorRunner(RunnerBase):
         traj = self.run_1_episode()
 
         last_graph = traj[-1].state
-        num_allies = get_filtered_node_index_by_type(last_graph, NODE_ALLY)
-        num_enemies = get_filtered_node_index_by_type(last_graph, NODE_ENEMY)
+        num_allies = get_filtered_node_index_by_type(last_graph, NODE_ALLY).size()
+        num_enemies = get_filtered_node_index_by_type(last_graph, NODE_ENEMY).size()
 
         sum_reward = np.sum([exp.reward for exp in traj._trajectory])
 
