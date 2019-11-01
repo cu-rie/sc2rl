@@ -5,6 +5,7 @@ from sc2rl.environments.EnvironmentBase import SC2EnvironmentBase
 from sc2rl.environments.SC2BotAI import SimpleSC2BotAI
 
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
+from sc2rl.utils.sc2_utils import get_random_action
 
 
 class Status(enum.Enum):
@@ -78,9 +79,12 @@ class MicroTestEnvironment(SC2EnvironmentBase):
 
         return done_increase or done_zero_units
 
-    def step(self, action):
+    def step(self, action=None):
         self.step_count = self.step_count + 1
         sc2_cur_state = self._observe()
+        if action is None:
+            action = get_random_action(sc2_cur_state)
+
         sc2_next_state, _ = self._step(action_args=action)
 
         # additional routine for checking done!

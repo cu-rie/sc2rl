@@ -1,6 +1,6 @@
 import torch
 
-from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.ConfigBase_refac import ConfigBase
 from sc2rl.rl.modules.Actions import MoveModule, HoldModule, AttackModule
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
@@ -12,21 +12,15 @@ class ActorModuleConfig(ConfigBase):
 
     def __init__(self,
                  actor_conf=None):
-        self._actor_conf = {
+        super(ActorModuleConfig, self).__init__(actor_conf=actor_conf)
+        self.actor_conf = {
             'prefix': 'actor_conf',
             'node_input_dim': 17,
             'out_activation': None,
             'hidden_activation': 'mish',
-            'num_neurons': [64, 64]
+            'num_neurons': [64, 64],
+            'spectral_norm': False
         }
-
-        self.set_configs(self._actor_conf, actor_conf)
-
-        self.post_process()
-
-    @property
-    def actor_conf(self):
-        return self.get_conf(self._actor_conf)
 
 
 class ActorModule(torch.nn.Module):
@@ -35,28 +29,32 @@ class ActorModule(torch.nn.Module):
                  hyper_param,
                  move_dim: int = 4):
         super(ActorModule, self).__init__()
-        self.hyper_param = hyper_param
+        self.hyper_param = hyper_param.actor_conf
         node_input_dim = self.hyper_param['node_input_dim']
         out_activation = self.hyper_param['out_activation']
         hidden_activation = self.hyper_param['hidden_activation']
         num_neurons = self.hyper_param['num_neurons']
+        spectral_norm = self.hyper_param['spectral_norm']
 
         self.move_dim = move_dim
         self.move_module = MoveModule(node_dim=node_input_dim,
                                       move_dim=move_dim,
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
-                                      out_activation=out_activation)
+                                      out_activation=out_activation,
+                                      spectral_norm=spectral_norm)
 
         self.hold_module = HoldModule(node_dim=node_input_dim,
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
-                                      out_activation=out_activation)
+                                      out_activation=out_activation,
+                                      spectral_norm=spectral_norm)
 
         self.attack_module = AttackModule(node_dim=node_input_dim,
                                           num_neurons=num_neurons,
                                           hidden_activation=hidden_activation,
-                                          out_activation=out_activation)
+                                          out_activation=out_activation,
+                                          spectral_norm=spectral_norm)
 
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
         move_argument = self.move_module(graph, node_feature)
