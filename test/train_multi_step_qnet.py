@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 2
+    num_runners = 5
     num_samples = 10
     eval_episodes = 20
 
