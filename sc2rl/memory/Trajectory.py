@@ -26,12 +26,14 @@ class Trajectory(TrajectoryBase):
             # check whether the graph actually has nodes
             # when the last frame of each episode has 0 units
             # delete the frame and set the frame before last set as new last frame
+
+            next_reward = sample.reward
             if sample.next_state.number_of_nodes() == 0:
                 self._trajectory.pop()
                 sample = self._trajectory.pop()
                 state = sample.state
                 action = sample.action
-                reward = sample.reward
+                reward = next_reward
                 next_state = sample.next_state
                 done = True
                 ret = sample.ret
