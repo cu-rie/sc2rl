@@ -111,7 +111,7 @@ if __name__ == "__main__":
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
-            if iters % 1 == 0:
+            if iters % 10 == 0:
                 eval_dicts = runner_manager.evaluate(eval_episodes)
                 wins = []
                 for eval_dict in eval_dicts:
