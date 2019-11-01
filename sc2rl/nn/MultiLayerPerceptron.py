@@ -15,12 +15,14 @@ class Linear(torch.nn.Linear):
     def __init__(self, norm=False, **kwargs):
         super(Linear, self).__init__(**kwargs)
         self.norm = norm
+
+    def forward(self, inputs):
         if self.norm:
             weight = self.weight
             weight_mean = weight.mean()
             weight_std = weight.std()
             weight = (weight - weight_mean) / weight_std
-            self.weight = torch.nn.Parameter(weight)
+        return F.linear(inputs, weight, self.bias)
 
 
 class MultiLayerPerceptron(torch.nn.Module):
@@ -34,7 +36,7 @@ class MultiLayerPerceptron(torch.nn.Module):
                  out_activation=None,
                  drop_probability=0.0,
                  init='kaiming_normal',
-                 weight_standardization=False):
+                 weight_standardization=True):
         """
         :param num_neurons: number of neurons for each layer
         :param out_activation: output layer's activation unit
