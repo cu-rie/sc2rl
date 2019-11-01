@@ -33,3 +33,18 @@ class TrajectoryBase:
                 ret_dict[field].append(val)
 
         return ret_dict
+
+    def compute_return(self):
+        rewards = self.rewards
+        returns = np.zeros_like(rewards, dtype=float)
+        # set the last return as the last reward
+        returns[-1] = rewards[-1]
+
+        # Iterating over rewards to compute returns in backward
+        for i, reward in enumerate(reversed(rewards[:-1])):
+            backward_index = self.len_trajectory - 1 - i
+            returns[backward_index - 1] = rewards[backward_index - 1] + self.gamma * returns[backward_index]
+
+        self.returns = returns
+        self.discounted = True
+

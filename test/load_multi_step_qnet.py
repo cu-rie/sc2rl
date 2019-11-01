@@ -1,9 +1,9 @@
 import os
 import torch
-import wandb
+
 import numpy as np
 
-from time import time
+import context
 
 from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
@@ -18,7 +18,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
-    map_name = "training_scenario_1"
+    map_name = "10m_vs_8_11m_all_random"
 
     agent_conf = QmixAgentConf()
     network_conf = MultiStepInputGraphNetworkConfig()
@@ -42,27 +42,33 @@ if __name__ == "__main__":
                       brain_conf=brain_conf,
                       buffer_conf=buffer_conf)
 
-    path = os.path.join(os.getcwd(), 'wandb', 'run-20191030_012953-o0jmptu3', '20.ptb')
+    agent.brain.eps.fill_(0.0001)
+
+    path = os.path.join(os.getcwd(), 'wandb', 'run-20191030_012513-l5r9goml', '300.ptb')
     agent.load_state_dict(torch.load(path))
 
     agent.to(run_device)
 
-    # config = RunnerConfig(map_name=map_name,
-    #                       reward_func=great_victor_with_kill_bonus,
-    #                       state_proc_func=process_game_state_to_dgl,
-    #                       agent=agent,
-    #                       n_hist_steps=num_hist_steps)
-    #
-    # runner_manager = RunnerManager(config, num_runners)
-    #
-    # wandb.init(project="sc2rl")
-    # wandb.watch(agent)
-    # wandb.config.update({'use_attention': use_attention,
-    #                      'num_runners': num_runners,
-    #                      'num_samples': num_samples,
-    #                      'use_hierarchical_actor': use_hierarchical_actor,
-    #                      'map_name': map_name})
-    # wandb.config.update(agent_conf())
-    # wandb.config.update(network_conf())
-    # wandb.config.update(brain_conf())
-    # wandb.config.update(buffer_conf())
+    config = RunnerConfig(map_name=map_name,
+                          reward_func=great_victor_with_kill_bonus,
+                          state_proc_func=process_game_state_to_dgl,
+                          agent=agent,
+                          n_hist_steps=num_hist_steps)
+
+    runner_manager = RunnerManager(config, num_runners)
+
+    try:
+        iters = 0
+        while iters < 1000000:
+            iters += 1
+            runner_manager.sample(num_samples)
+            runner_manager.transfer_sample()
+            wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
+            mean_wr = np.mean(wrs)
+            print("winning ratio : {} ".format(mean_wr))
+
+        runner_manager.close()
+    except KeyboardInterrupt:
+        runner_manager.close()
+    finally:
+        runner_manager.close()
