@@ -10,7 +10,9 @@ class FeedForwardConfig(ConfigBase):
         self.mlp_conf = {
             'prefix': 'mlp_conf',
             'input_dimension': 17,
-            'output_dimension': 1
+            'output_dimension': 1,
+            'num_neurons': [64, 64],
+            'spectral_norm': False
         }
 
 

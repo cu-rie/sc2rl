@@ -12,7 +12,8 @@ class RelationalGraphNetworkConfig(ConfigBase):
             'num_layers': 2,
             'model_dim': 17,
             'num_relations': 3,
-            'num_neurons': [64, 64]
+            'num_neurons': [64, 64],
+            'spectral_norm': False
         }
 
 

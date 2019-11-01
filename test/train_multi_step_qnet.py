@@ -5,13 +5,16 @@ import numpy as np
 
 from time import time
 
-from sc2rl.utils.reward_funcs import great_victor_with_kill_bonus
+from sc2rl.utils.reward_funcs import great_victor
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
 from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
 from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
+from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetworkConfig
+from sc2rl.rl.networks.FeedForward import FeedForwardConfig
+from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetworkConfig
 
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
@@ -19,17 +22,26 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 if __name__ == "__main__":
 
     map_name = "training_scenario_1"
+    spectral_norm = False
 
     agent_conf = QmixAgentConf()
-    network_conf = MultiStepInputGraphNetworkConfig()
-    brain_conf = QmixBrainConfig()
 
-    qnet_conf = MultiStepInputQnetConfig()
-    buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
-    num_samples = 1
+    num_samples = 10
+
+    qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
+    if use_attention:
+        gnn_conf = MultiStepInputNetworkConfig()
+    else:
+        gnn_conf = MultiStepInputGraphNetworkConfig(hist_enc_conf={'spectral_norm': spectral_norm},
+                                                    curr_enc_conf={'spectral_norm': spectral_norm})
+
+    qnet_conf.gnn_conf = gnn_conf
+
+    buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
+    brain_conf = QmixBrainConfig()
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -37,15 +49,23 @@ if __name__ == "__main__":
     run_device = 'cpu'
     fit_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+    if use_attention:
+        raise NotImplementedError
+    else:
+        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm})
+    mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm})
+
     agent = QmixAgent(conf=agent_conf,
                       qnet_conf=qnet_conf,
+                      mixer_gnn_conf=mixer_gnn_conf,
+                      mixer_ff_conf=mixer_ff_conf,
                       brain_conf=brain_conf,
                       buffer_conf=buffer_conf)
 
     agent.to(run_device)
 
     config = RunnerConfig(map_name=map_name,
-                          reward_func=great_victor_with_kill_bonus,
+                          reward_func=great_victor,
                           state_proc_func=process_game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps)
@@ -58,11 +78,15 @@ if __name__ == "__main__":
                          'num_runners': num_runners,
                          'num_samples': num_samples,
                          'use_hierarchical_actor': use_hierarchical_actor,
-                         'map_name': map_name})
+                         'map_name': map_name,
+                         'reward': 'great_victory'})
     wandb.config.update(agent_conf())
-    wandb.config.update(network_conf())
+    wandb.config.update(gnn_conf())
     wandb.config.update(brain_conf())
     wandb.config.update(buffer_conf())
+    wandb.config.update(qnet_conf())
+    wandb.config.update(mixer_gnn_conf())
+    wandb.config.update(mixer_ff_conf())
 
     try:
         iters = 0
@@ -78,11 +102,10 @@ if __name__ == "__main__":
             e_time = time()
             print("[{}/ 1000000]fit time : {}".format(iters, e_time - s_time))
 
-            wandb.log(fit_return_dict, step=iters)
             wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
             mean_wr = np.mean(wrs)
             wandb.log(fit_return_dict, step=iters)
-            wandb.log({'winning_ratio': mean_wr, 'epsilon' : agent.brain.eps}, step=iters)
+            wandb.log({'winning_ratio': mean_wr, 'epsilon': agent.brain.eps}, step=iters)
 
             if iters % 20 == 0:
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))

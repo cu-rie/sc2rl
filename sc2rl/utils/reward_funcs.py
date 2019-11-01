@@ -33,6 +33,23 @@ def great_victor_with_kill_bonus(state_dict,
     return reward
 
 
+def great_victor(state_dict,
+                 next_state_dict,
+                 done,
+                 victory_coeff=1.0):
+
+    next_units = next_state_dict['units']
+    num_allies_after = len(next_units.owned)
+    num_enemies_after = len(next_units.enemy)
+
+    if done:
+        reward = victory_coeff * (num_allies_after - num_enemies_after)
+    else:
+        reward = 0.0
+
+    return reward
+
+
 def kill_bonus_reward(state_dict,
                       next_state_dict,
                       done,  # for interfacing

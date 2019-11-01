@@ -1,7 +1,7 @@
 import dgl
 import torch
 
-from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.ConfigBase_refac import ConfigBase
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 
@@ -12,7 +12,10 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
                  hist_rnn_conf=None,
                  hist_enc_conf=None,
                  curr_enc_conf=None):
-        self._hist_rnn_conf = {
+        super(MultiStepInputGraphNetworkConfig, self).__init__(hist_rnn_conf=hist_rnn_conf,
+                                                               hist_enc_conf=hist_enc_conf,
+                                                               curr_enc_conf=curr_enc_conf)
+        self.hist_rnn_conf = {
             'prefix': 'hist_rnn',
             'rnn_type': 'GRU',
             'input_size': 17,
@@ -20,37 +23,24 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'num_layers': 2,
             'batch_first': True
         }
-        self.set_configs(self._hist_rnn_conf, hist_rnn_conf)
 
-        self._hist_enc_conf = {
+        self.hist_enc_conf = {
             'prefix': 'hist_enc_conf',
             'num_layers': 1,
             'model_dim': 17,
             'num_relations': 3,
             'num_neurons': [128, 128],
+            'spectral_norm': False
         }
-        self.set_configs(self._hist_enc_conf, hist_enc_conf)
 
-        self._curr_enc_conf = {
+        self.curr_enc_conf = {
             'prefix': 'curr_enc_conf',
             'num_layers': 1,
             'model_dim': 17,
             'num_relations': 3,
             'num_neurons': [128, 128],
+            'spectral_norm': False
         }
-        self.set_configs(self._curr_enc_conf, curr_enc_conf)
-
-    @property
-    def hist_rnn_conf(self):
-        return self.get_conf(self._hist_rnn_conf)
-
-    @property
-    def hist_enc_conf(self):
-        return self.get_conf(self._hist_enc_conf)
-
-    @property
-    def curr_enc_conf(self):
-        return self.get_conf(self._curr_enc_conf)
 
 
 class MultiStepInputGraphNetwork(torch.nn.Module):

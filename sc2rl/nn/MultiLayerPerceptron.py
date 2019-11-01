@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-
+from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
+from sc2rl.nn.SpectralNorm import SpectralNorm
 
 def swish(x):
     return x * torch.nn.functional.sigmoid(x)
@@ -15,25 +16,29 @@ class Linear(torch.nn.Linear):
     def __init__(self, norm=False, **kwargs):
         super(Linear, self).__init__(**kwargs)
         self.norm = norm
+
+    def forward(self, inputs):
         if self.norm:
             weight = self.weight
-            weight_mean = weight.mean()
-            weight_std = weight.std()
+            weight_mean = weight.mean().detach()
+            weight_std = weight.std().detach() + VERY_SMALL_NUMBER
             weight = (weight - weight_mean) / weight_std
-            self.weight = torch.nn.Parameter(weight)
+        else:
+            weight = self.weight
+        return F.linear(inputs, weight, self.bias)
 
 
 class MultiLayerPerceptron(torch.nn.Module):
-
     def __init__(self,
                  input_dimension,
                  output_dimension,
-                 num_neurons=[128, 128, 128],
+                 num_neurons,
+                 spectral_norm,
                  input_normalization=0,
                  hidden_activation='mish',
                  out_activation=None,
                  drop_probability=0.0,
-                 init='kaiming_normal',
+                 init=None,
                  weight_standardization=False):
         """
         :param num_neurons: number of neurons for each layer
@@ -54,6 +59,7 @@ class MultiLayerPerceptron(torch.nn.Module):
         self.drop_probability = drop_probability
         self.init = init
         self.weight_standardization = weight_standardization
+        self.spectral_norm = spectral_norm
         ws = self.weight_standardization
 
         # infer normalization layers
@@ -66,15 +72,26 @@ class MultiLayerPerceptron(torch.nn.Module):
                 norm_layer = torch.nn.LayerNorm(self.input_dimension)
             self.layers.append(norm_layer)
 
-        self.layers.append(
-            Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0]))  # input -> hidden 1
+        # input -> hidden 1
+        input_layer = Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0])
+        if self.spectral_norm:
+            input_layer = SpectralNorm(input_layer)
+
+        self.layers.append(input_layer)
         for i, num_neuron in enumerate(num_neurons[:-1]):
             hidden_layer = Linear(norm=ws, in_features=num_neuron, out_features=num_neurons[i + 1])
             self.apply_weight_init(hidden_layer, self.init)
+            if self.spectral_norm:
+                hidden_layer = SpectralNorm(hidden_layer)
             self.layers.append(hidden_layer)
+
         last_layer = Linear(norm=ws, in_features=num_neurons[-1], out_features=self.output_dimension)
         self.apply_weight_init(last_layer, self.init)
+        if self.spectral_norm:
+            last_layer = SpectralNorm(last_layer)
+
         self.layers.append(last_layer)  # hidden_n -> output
+
 
     def forward(self, x):
         if self.input_normalization != 0:  # The first layer is not normalization layer

@@ -31,16 +31,16 @@ class QmixAgentConf(ConfigBase):
 
 class QmixAgent(torch.nn.Module):
 
-    def __init__(self, conf, qnet_conf, brain_conf, buffer_conf):
+    def __init__(self, conf, qnet_conf, mixer_gnn_conf, mixer_ff_conf, brain_conf, buffer_conf):
         super(QmixAgent, self).__init__()
         self.conf = conf
 
         qnet = MultiStepInputQnet(qnet_conf)
-        mixer = QMixer()
+        mixer = QMixer(mixer_gnn_conf, mixer_ff_conf)
 
         if self.conf.agent_conf['use_target']:
             qnet_target = MultiStepInputQnet(qnet_conf)
-            mixer_target = QMixer()
+            mixer_target = QMixer(mixer_gnn_conf, mixer_ff_conf)
         else:
             qnet_target = None
             mixer_target = None
