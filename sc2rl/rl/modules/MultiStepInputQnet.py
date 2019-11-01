@@ -39,9 +39,9 @@ class MultiStepInputQnet(torch.nn.Module):
         self.eps = conf.multi_step_input_qnet_conf['eps']
 
         if use_attention:
-            self.multi_step_input_net = MultiStepInputNetwork(MultiStepInputNetworkConfig())
+            self.multi_step_input_net = MultiStepInputNetwork(conf.gnn_conf)
         else:
-            self.multi_step_input_net = MultiStepInputGraphNetwork(MultiStepInputGraphNetworkConfig())
+            self.multi_step_input_net = MultiStepInputGraphNetwork(conf.gnn_conf)
 
         qnet_actor_conf['node_input_dim'] = self.multi_step_input_net.out_dim
         self.qnet = QnetActor(qnet_actor_conf)

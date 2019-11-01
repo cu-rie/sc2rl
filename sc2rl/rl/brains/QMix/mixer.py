@@ -4,14 +4,12 @@ from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork, Rel
 from sc2rl.rl.networks.FeedForward import FeedForward, FeedForwardConfig
 from sc2rl.config.graph_configs import NODE_ALLY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
+from sc2rl.config.ConfigBase_refac import ConfigBase
 
 
 class QMixer(torch.nn.Module):
-    # def __init__(self, gnn_conf, ff_conf):
-    def __init__(self):
+    def __init__(self, gnn_conf, ff_conf):
         super(QMixer, self).__init__()
-        gnn_conf = RelationalGraphNetworkConfig()
-        ff_conf = FeedForwardConfig()
 
         self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.w_ff = FeedForward(ff_conf)
