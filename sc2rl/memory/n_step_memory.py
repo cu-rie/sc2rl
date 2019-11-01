@@ -11,8 +11,8 @@ class NstepInputMemoryConfig(ConfigBase):
     def __init__(self, memory_conf=None):
         super(NstepInputMemoryConfig, self).__init__(memory_conf=memory_conf)
 
-        spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done"],
-                          defaults=tuple([list() for _ in range(5)]))
+        spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"],
+                          defaults=tuple([list() for _ in range(6)]))
 
         self.memory_conf = {
             'prefix': 'memory',
@@ -20,7 +20,8 @@ class NstepInputMemoryConfig(ConfigBase):
             'max_n_episodes': 3000,
             'spec': spec,
             'gamma': 1.0,
-            'max_traj_len': 30
+            'max_traj_len': 30,
+            'use_return' : False,
         }
 
     def __call__(self):
@@ -29,13 +30,14 @@ class NstepInputMemoryConfig(ConfigBase):
 
 class NstepInputMemory(EpisodicMemory):
 
-    def __init__(self, N, max_n_episodes, spec, gamma, max_traj_len):
+    def __init__(self, N, max_n_episodes, spec, gamma, max_traj_len, use_return):
         super(NstepInputMemory, self).__init__(max_n_episodes=max_n_episodes,
                                                spec=spec,
                                                gamma=gamma,
                                                max_traj_len=max_traj_len)
 
         self._cur_traj = Trajectory(gamma=self.gamma, max_len=max_traj_len)
+        self.use_return = use_return
         self.N = N
 
     def push(self, sample):
@@ -50,6 +52,7 @@ class NstepInputMemory(EpisodicMemory):
             self.trajectories.append(trajectory)
 
     def sample_from_trajectory(self, trajectory_i, sampling_index):
+
         traj = self.trajectories[trajectory_i]
         i = sampling_index
 
@@ -63,7 +66,11 @@ class NstepInputMemory(EpisodicMemory):
             state = traj[j].state
             next_hist.append(state)
 
-        state, action, reward, next_state, done = traj[i]
+        state, action, reward, next_state, done, ret = traj[i]
+
+        if self.use_return:
+            reward = ret
+
         return hist, state, action, reward, next_hist, next_state, done
 
     def sample(self, sample_size):

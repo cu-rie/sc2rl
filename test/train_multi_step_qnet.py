@@ -40,8 +40,7 @@ if __name__ == "__main__":
     agent = QmixAgent(conf=agent_conf,
                       qnet_conf=qnet_conf,
                       brain_conf=brain_conf,
-                      buffer_conf=buffer_conf
-                      )
+                      buffer_conf=buffer_conf)
 
     agent.to(run_device)
 
