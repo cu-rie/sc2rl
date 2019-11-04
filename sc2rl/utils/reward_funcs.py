@@ -36,9 +36,7 @@ def great_victor_with_kill_bonus(state_dict,
 def victory(state_dict,
             next_state_dict,
             done,
-            victory_coeff=1.0,
-            ally_killed_penalty_coeff=5.0,
-            enemy_kill_bonus_coeff=5.0):
+            victory_coeff=1.0):
     next_units = next_state_dict['units']
 
     num_allies_after = len(next_units.owned)
@@ -51,6 +49,25 @@ def victory(state_dict,
             reward = victory_coeff
         else:
             reward = -victory_coeff
+    else:
+        reward = 0
+
+    return reward
+
+
+def victory_if_zero_enemy(stat_dict,
+                          next_state_dict,
+                          done):
+    next_units = next_state_dict['units']
+    num_enemies_after = len(next_units.enemy)
+
+    win = num_enemies_after != 0
+
+    if done:
+        if win:
+            reward = 1.0
+        else:
+            reward = -1.0
     else:
         reward = 0
 

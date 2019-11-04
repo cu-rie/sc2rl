@@ -7,7 +7,7 @@ import context
 
 from time import time
 
-from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory
+from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory, victory_if_zero_enemy
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
@@ -23,7 +23,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
-    map_name = "training_scenario_1"
+    map_name = "training_scenario_4"
     spectral_norm = True
 
     use_attention = False
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     num_runners = 2
     num_samples = 10
     eval_episodes = 20
-    reward_name = 'victory'
+    reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
     if use_attention:
@@ -74,6 +74,8 @@ if __name__ == "__main__":
         reward_func = great_victor_with_kill_bonus
     elif reward_name == 'victory':
         reward_func = victory
+    elif reward_name == 'victory_if_zero_enemy':
+        reward_func = victory_if_zero_enemy
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
@@ -123,7 +125,7 @@ if __name__ == "__main__":
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
-            if iters % 10 == 0:
+            if iters % 5 == 0:
                 eval_dicts = runner_manager.evaluate(eval_episodes)
                 wins = []
                 for eval_dict in eval_dicts:
