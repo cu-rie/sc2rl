@@ -1,3 +1,4 @@
+import warnings
 import torch
 from sc2rl.optim.Radam import RAdam
 from sc2rl.rl.brains.BrainBase import BrainBase
@@ -17,7 +18,7 @@ class QmixBrainConfig(ConfigBase):
             'eps': 1.0,
             'eps_gamma': 0.995,
             'eps_min': 0.01,
-            'use_double_q': False,
+            'use_double_q': True
         }
 
         self.fit_conf = {
@@ -28,7 +29,14 @@ class QmixBrainConfig(ConfigBase):
 
 
 class QMixBrain(BrainBase):
-    def __init__(self, conf, qnet, mixer, qnet_target=None, mixer_target=None):
+    def __init__(self,
+                 conf,
+                 qnet,
+                 mixer,
+                 qnet_target=None,
+                 mixer_target=None,
+                 qnet2=None,
+                 mixer2=None):
         super(QMixBrain, self).__init__()
         self.qnet = qnet
         self.mixer = mixer
@@ -36,20 +44,32 @@ class QMixBrain(BrainBase):
         self.qnet_target = qnet_target
         self.mixer_target = mixer_target
 
+        self.qnet2 = qnet2
+        self.mixer2 = mixer2
+
         if self.qnet_target is None:
             self.use_target = False
-            self.update_target_network(1.0, self.qnet, self.qnet_target)
-            self.update_target_network(1.0, self.mixer, self.mixer_target)
         else:
             self.use_target = True
+            self.update_target_network(1.0, self.qnet, self.qnet_target)
+            self.update_target_network(1.0, self.mixer, self.mixer_target)
+
+        if self.qnet2 is None:
+            self.use_clipped_q = False
+        else:
+            self.use_clipped_q = True
 
         self.brain_conf = conf.brain_conf
         self.gamma = self.brain_conf['gamma']
         self.register_buffer('eps', torch.ones(1, ) * self.brain_conf['eps'])
         self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
-
         self.use_double_q = self.brain_conf['use_double_q']
+
+        if int(self.use_double_q) + int(self.use_clipped_q) >= 2:
+            warnings.warn("Either one of 'use_double_q' or 'clipped_q' can be true. 'use_double_q' set to be false.")
+            self.use_double_q = False
+
         if self.use_double_q:
             assert self.use_target, "if 'use_double_q' true, then 'use_target' should be true."
 
@@ -61,6 +81,14 @@ class QMixBrain(BrainBase):
             self.qnet_optimizer = optimizer(qnet_base_optimzier)
         else:
             self.qnet_optimizer = optimizer(params, lr=self.brain_conf['lr'])
+
+        if self.use_clipped_q:
+            params = list(self.qnet2.parameters()) + list(self.mixer2.parameters())
+            if self.brain_conf['optimizer'] == 'lookahead':
+                qnet_base_optimzier = RAdam(params, lr=self.brain_conf['lr'])
+                self.qnet2_optimizer = optimizer(qnet_base_optimzier)
+            else:
+                self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['lr'])
 
         self.fit_conf = conf.fit_conf
 
@@ -99,6 +127,16 @@ class QMixBrain(BrainBase):
         qs = qs.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
         q_tot = self.mixer(c_curr_graph, c_curr_feature, qs)
 
+        if self.use_clipped_q:
+            q2_dict = self.qnet2.compute_qs(num_time_steps,
+                                            c_hist_graph, c_hist_feature,
+                                            c_curr_graph, c_curr_feature, c_maximum_num_enemy)
+
+            q2s = q2_dict['qs']
+
+            q2s = q2s.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
+            q_tot_2 = self.mixer2(c_curr_graph, c_curr_feature, q2s)
+
         # compute q-target:
         with torch.no_grad():
             if self.use_double_q:
@@ -116,6 +154,26 @@ class QMixBrain(BrainBase):
                 next_qs = next_q_dict['qs']
                 next_qs = next_qs.gather(-1, next_as.unsqueeze(-1).long()).squeeze(dim=-1)
                 next_q_tot = self.mixer_target(n_curr_graph, n_curr_feature, next_qs)
+
+            elif self.use_clipped_q:
+                next_q1_dict = self.qnet.compute_qs(num_time_steps,
+                                                    n_hist_graph, n_hist_feature,
+                                                    n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+
+                next_q1s = next_q1_dict['qs']
+
+                next_q1s, _ = next_q1s.max(dim=1)
+                next_q_tot_1 = self.mixer(n_curr_graph, n_curr_feature, next_q1s)
+
+                next_q2_dict = self.qnet2.compute_qs(num_time_steps,
+                                                     n_hist_graph, n_hist_feature,
+                                                     n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+
+                next_q2s = next_q2_dict['qs']
+
+                next_q2s, _ = next_q2s.max(dim=1)
+                next_q_tot_2 = self.mixer2(n_curr_graph, n_curr_feature, next_q2s)
+                next_q_tot = torch.min(next_q_tot_1, next_q_tot_2)
 
             else:
                 if self.use_target:
@@ -139,7 +197,7 @@ class QMixBrain(BrainBase):
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
 
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
-                               parameters=self.qnet.parameters(),
+                               parameters=list(self.qnet.parameters())+list(self.mixer.parameters()),
                                loss=loss,
                                clip_val=self.fit_conf['norm_clip_val'])
 
@@ -154,5 +212,13 @@ class QMixBrain(BrainBase):
 
         fit_dict = dict()
         fit_dict['loss'] = loss.detach().cpu().numpy()
+
+        if self.use_clipped_q:
+            loss2 = torch.nn.functional.mse_loss(input=q_tot_2, target=q_targets)
+            self.clip_and_optimize(optimizer=self.qnet2_optimizer,
+                                   parameters=list(self.qnet2.parameters()) + list(self.mixer2.parameters()),
+                                   loss=loss2,
+                                   clip_val=self.fit_conf['norm_clip_val'])
+            fit_dict['loss2'] = loss.detach().cpu().numpy()
 
         return fit_dict

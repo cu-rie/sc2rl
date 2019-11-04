@@ -21,7 +21,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
-    map_name = "training_scenario_1"
+    map_name = "10m_vs_7_11m_all_random"
     spectral_norm = True
 
     agent_conf = QmixAgentConf()
@@ -29,7 +29,9 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 1
-    num_samples = 20
+    num_samples = 10
+    eval_episodes = 20
+    reward_name = 'victory'
 
     qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
     if use_attention:
@@ -41,7 +43,7 @@ if __name__ == "__main__":
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
-    brain_conf = QmixBrainConfig()
+    brain_conf = QmixBrainConfig(brain_conf={'use_double_q': True})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -62,7 +64,7 @@ if __name__ == "__main__":
                       brain_conf=brain_conf,
                       buffer_conf=buffer_conf)
 
-    path = os.path.join(os.getcwd(), 'wandb', 'run-20191101_120825-gvzc3jfh', '200.ptb')
+    path = os.path.join(os.getcwd(), 'wandb', 'run-20191104_083759-c0htl9ye', '200.ptb')
     agent.load_state_dict(torch.load(path))
 
     agent.to(run_device)
