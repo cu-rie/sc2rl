@@ -1,6 +1,6 @@
 import torch
 from sc2rl.rl.modules.Actions import MoveModule, HoldModule, AttackModule
-from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY, EDGE_ENEMY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 
@@ -37,7 +37,7 @@ class QnetActor(torch.nn.Module):
                                           out_activation=out_activation,
                                           spectral_norm=spectral_norm)
 
-    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
+    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_ENEMY):
         move_argument = self.move_module(graph, node_feature)
         hold_argument = self.hold_module(graph, node_feature)
         attack_argument = self.attack_module(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
@@ -45,7 +45,7 @@ class QnetActor(torch.nn.Module):
 
     def compute_qs(self, graph, node_feature, maximum_num_enemy,
                    ally_node_type_index=NODE_ALLY,
-                   attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
+                   attack_edge_type_index=EDGE_ENEMY):
         # get logits of each action
         move_arg, hold_arg, attack_arg = self(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
         qs = torch.cat((move_arg, hold_arg, attack_arg), dim=-1)  # of all units including enemies
