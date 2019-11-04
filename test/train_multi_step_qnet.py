@@ -26,8 +26,6 @@ if __name__ == "__main__":
     map_name = "training_scenario_1"
     spectral_norm = True
 
-    agent_conf = QmixAgentConf()
-
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 2
@@ -58,6 +56,8 @@ if __name__ == "__main__":
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm})
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm})
+
+    agent_conf = QmixAgentConf(agent_conf={'use_clipped_q': True})
 
     agent = QmixAgent(conf=agent_conf,
                       qnet_conf=qnet_conf,

@@ -19,7 +19,8 @@ class QmixAgentConf(ConfigBase):
                                             fit_conf=fit_conf)
         self.agent_conf = {
             'prefix': 'agent',
-            'use_target': True
+            'use_target': True,
+            'use_clipped_q': False
         }
 
         self.fit_conf = {
@@ -45,11 +46,20 @@ class QmixAgent(torch.nn.Module):
             qnet_target = None
             mixer_target = None
 
+        if self.conf.agent_conf['use_clipped_q']:
+            qnet2 = MultiStepInputQnet(qnet_conf)
+            mixer2 = QMixer(mixer_gnn_conf, mixer_ff_conf)
+        else:
+            qnet2 = None
+            mixer2 = None
+
         self.brain = QMixBrain(conf=brain_conf,
                                qnet=qnet,
                                mixer=mixer,
                                qnet_target=qnet_target,
-                               mixer_target=mixer_target)
+                               mixer_target=mixer_target,
+                               qnet2=qnet2,
+                               mixer2=mixer2)
 
         self.buffer = NstepInputMemory(**buffer_conf.memory_conf)
 
