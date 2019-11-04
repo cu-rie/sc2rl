@@ -5,7 +5,7 @@ import numpy as np
 
 from time import time
 
-from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus
+from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
 from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
@@ -31,6 +31,7 @@ if __name__ == "__main__":
     num_runners = 5
     num_samples = 10
     eval_episodes = 20
+    reward_name = 'victory'
 
     qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
     if use_attention:
@@ -65,11 +66,14 @@ if __name__ == "__main__":
 
     agent.to(run_device)
 
-    reward_name = 'great_victory'
     if reward_name == 'great_victory':
         reward_func = great_victor
     elif reward_name == 'great_victor_with_kill_bonus':
         reward_func = great_victor_with_kill_bonus
+    elif reward_name == 'victory':
+        reward_func = victory
+    else:
+        raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
     config = RunnerConfig(map_name=map_name,
                           reward_func=reward_func,
