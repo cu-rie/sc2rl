@@ -11,3 +11,8 @@
 $ pip install --upgrade wandb
 $ wandb login a3f4300eec531db5a0c00ccc5d3c59855e9ba696
 ```
+
+## training scenario description (../Maps/) 
+
+Training Scenario 1:
+Training Scenario 2:
