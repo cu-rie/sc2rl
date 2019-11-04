@@ -3,6 +3,8 @@ import torch
 import wandb
 import numpy as np
 
+import context
+
 from time import time
 
 from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory
@@ -28,7 +30,7 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 5
+    num_runners = 2
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory'
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
-    brain_conf = QmixBrainConfig()
+    brain_conf = QmixBrainConfig(brain_conf={'use_double_q': True})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -83,7 +85,7 @@ if __name__ == "__main__":
 
     runner_manager = RunnerManager(config, num_runners)
 
-    wandb.init(project="sc2rl")
+    wandb.init(project="qmix")
     wandb.watch(agent)
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,

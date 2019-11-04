@@ -16,7 +16,8 @@ class QmixBrainConfig(ConfigBase):
             'gamma': 1.0,
             'eps': 1.0,
             'eps_gamma': 0.995,
-            'eps_min': 0.01
+            'eps_min': 0.01,
+            'use_double_q': False,
         }
 
         self.fit_conf = {
@@ -44,18 +45,22 @@ class QMixBrain(BrainBase):
 
         self.brain_conf = conf.brain_conf
         self.gamma = self.brain_conf['gamma']
-        # self.eps = self.brain_conf['eps']
         self.register_buffer('eps', torch.ones(1, ) * self.brain_conf['eps'])
         self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
 
+        self.use_double_q = self.brain_conf['use_double_q']
+        if self.use_double_q:
+            assert self.use_target, "if 'use_double_q' true, then 'use_target' should be true."
+
         optimizer = self.get_optimizer(self.brain_conf['optimizer'])
 
+        params = list(self.qnet.parameters()) + list(self.mixer.parameters())
         if self.brain_conf['optimizer'] == 'lookahead':
-            qnet_base_optimzier = RAdam(self.qnet.parameters(), lr=self.brain_conf['lr'])
+            qnet_base_optimzier = RAdam(params, lr=self.brain_conf['lr'])
             self.qnet_optimizer = optimizer(qnet_base_optimzier)
         else:
-            self.qnet_optimizer = optimizer(self.qnet.parameters(), lr=self.brain_conf['lr'])
+            self.qnet_optimizer = optimizer(params, lr=self.brain_conf['lr'])
 
         self.fit_conf = conf.fit_conf
 
@@ -96,30 +101,50 @@ class QMixBrain(BrainBase):
 
         # compute q-target:
         with torch.no_grad():
-            if self.use_target:
-                q_net = self.qnet_target
-                mixer = self.mixer_target
+            if self.use_double_q:
+                next_q_targets_dict = self.qnet_target.compute_qs(num_time_steps,
+                                                                  n_hist_graph, n_hist_feature,
+                                                                  n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+
+                next_q_targets = next_q_targets_dict['qs']
+                next_as = next_q_targets.argmax(dim=1)
+
+                next_q_dict = self.qnet.compute_qs(num_time_steps,
+                                                   n_hist_graph, n_hist_feature,
+                                                   n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+
+                next_qs = next_q_dict['qs']
+                next_qs = next_qs.gather(-1, next_as.unsqueeze(-1).long()).squeeze(dim=-1)
+                next_q_tot = self.mixer_target(n_curr_graph, n_curr_feature, next_qs)
+
             else:
-                q_net = self.qnet
-                mixer = self.mixer
+                if self.use_target:
+                    q_net = self.qnet_target
+                    mixer = self.mixer_target
+                else:
+                    q_net = self.qnet
+                    mixer = self.mixer
 
-            next_q_dict = q_net.compute_qs(num_time_steps,
-                                           n_hist_graph, n_hist_feature,
-                                           n_curr_graph, n_curr_feature, n_maximum_num_enemy)
+                next_q_dict = q_net.compute_qs(num_time_steps,
+                                               n_hist_graph, n_hist_feature,
+                                               n_curr_graph, n_curr_feature, n_maximum_num_enemy)
 
-            next_qs = next_q_dict['qs']
+                next_qs = next_q_dict['qs']
 
-            next_qs, _ = next_qs.max(dim=1)
-            next_q_tot = mixer(n_curr_graph, n_curr_feature, next_qs)
+                next_qs, _ = next_qs.max(dim=1)
+                next_q_tot = mixer(n_curr_graph, n_curr_feature, next_qs)
 
         q_targets = rewards + self.gamma * next_q_tot * (1 - dones)
 
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
+
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
                                parameters=self.qnet.parameters(),
                                loss=loss,
                                clip_val=self.fit_conf['norm_clip_val'])
+
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
+        self.update_target_network(self.fit_conf['tau'], self.mixer, self.mixer_target)
 
         # decay epsilon
         self.eps = self.eps * self.eps_gamma

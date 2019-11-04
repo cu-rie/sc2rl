@@ -1,6 +1,8 @@
+from copy import deepcopy
+
 import torch
-from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork, MultiStepInputNetworkConfig
-from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork, MultiStepInputGraphNetworkConfig
+from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
+from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork
 from sc2rl.rl.modules.QnetActor import QnetActor
 
 from sc2rl.config.ConfigBase_refac import ConfigBase
@@ -9,9 +11,12 @@ from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 
 class MultiStepInputQnetConfig(ConfigBase):
 
-    def __init__(self, multi_step_input_qnet_conf=None, qnet_actor_conf=None):
+    def __init__(self,
+                 multi_step_input_qnet_conf=None,
+                 qnet_actor_conf=None):
         super(MultiStepInputQnetConfig, self).__init__(multi_step_input_qnet_conf=multi_step_input_qnet_conf,
                                                        qnet_actor_conf=qnet_actor_conf)
+
         self.multi_step_input_qnet_conf = {
             'prefix': 'multi_step_input_qnet_conf',
             'use_attention': False,
