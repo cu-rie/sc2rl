@@ -10,22 +10,16 @@ from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
 class HierarchicalActorModuleConfig(ConfigBase):
 
-    def __init__(self,
-                 actor_conf=None):
-        self._actor_conf = {
+    def __init__(self, actor_conf=None):
+        super(HierarchicalActorModuleConfig, self).__init__(actor_conf=actor_conf)
+        self.actor_conf = {
             'prefix': 'actor_conf',
             'node_input_dim': 17,
             'out_activation': None,
-            'hidden_activation': 'relu',
+            'hidden_activation': 'mish',
             'num_neurons': [64, 64],
             'pooling_op': 'softmax'
         }
-
-        self.set_configs(self._actor_conf, actor_conf)
-
-    @property
-    def actor_conf(self):
-        return self.get_conf(self._actor_conf)
 
 
 class HierarchicalActorModule(torch.nn.Module):

@@ -5,7 +5,7 @@ from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork
 from sc2rl.rl.modules.QnetActor import QnetActor
 
-from sc2rl.config.ConfigBase_refac import ConfigBase
+from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 
 

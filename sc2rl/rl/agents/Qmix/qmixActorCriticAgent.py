@@ -1,21 +1,22 @@
 import dgl
 import torch
 
-from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnet
+from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnet, MultiStepInputQnetConfig
+from sc2rl.rl.modules.Actor import ActorModule, ActorModuleConfig
+
 from sc2rl.rl.brains.QMix.mixer import QMixer
-from sc2rl.rl.brains.QMix.qmixBrain import QMixBrain
+from sc2rl.rl.brains.QMix.qmixActorCriticBrain import QMixActorCriticBrain, QmixActorCriticBrainConfig
 from sc2rl.memory.n_step_memory import NstepInputMemory
 
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
-from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, NODE_ALLY
 
 from sc2rl.config.ConfigBase import ConfigBase
 
 
-class QmixAgentConf(ConfigBase):
+class QmixActorCriticAgentConf(ConfigBase):
     def __init__(self, agent_conf=None, fit_conf=None):
-        super(QmixAgentConf, self).__init__(agent_conf=agent_conf,
+        super(QmixActorCriticAgentConf, self).__init__(agent_conf=agent_conf,
                                             fit_conf=fit_conf)
         self.agent_conf = {
             'prefix': 'agent',
@@ -30,12 +31,13 @@ class QmixAgentConf(ConfigBase):
         }
 
 
-class QmixAgent(torch.nn.Module):
+class QmixActorCriticAgent(torch.nn.Module):
 
-    def __init__(self, conf, qnet_conf, mixer_gnn_conf, mixer_ff_conf, brain_conf, buffer_conf):
-        super(QmixAgent, self).__init__()
+    def __init__(self, conf, actor_conf, qnet_conf, mixer_gnn_conf, mixer_ff_conf, brain_conf, buffer_conf):
+        super(QmixActorCriticAgent, self).__init__()
         self.conf = conf
 
+        actor = ActorModule(actor_conf)
         qnet = MultiStepInputQnet(qnet_conf)
         mixer = QMixer(mixer_gnn_conf, mixer_ff_conf)
 
@@ -53,13 +55,14 @@ class QmixAgent(torch.nn.Module):
             qnet2 = None
             mixer2 = None
 
-        self.brain = QMixBrain(conf=brain_conf,
-                               qnet=qnet,
-                               mixer=mixer,
-                               qnet_target=qnet_target,
-                               mixer_target=mixer_target,
-                               qnet2=qnet2,
-                               mixer2=mixer2)
+        self.brain = QMixActorCriticBrain(conf=brain_conf,
+                                          qnet=qnet,
+                                          mixer=mixer,
+                                          actor=actor,
+                                          qnet_target=qnet_target,
+                                          mixer_target=mixer_target,
+                                          qnet2=qnet2,
+                                          mixer2=mixer2)
 
         self.buffer = NstepInputMemory(**buffer_conf.memory_conf)
 
@@ -161,3 +164,23 @@ class QmixAgent(torch.nn.Module):
                                          dones=dones)
 
         return fit_return_dict
+
+
+if __name__ == "__main__":
+    from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetworkConfig
+    from sc2rl.rl.networks.FeedForward import FeedForwardConfig
+    from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
+    from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
+
+    conf = QmixAgentConf()
+    actor_conf = ActorModuleConfig()
+
+    qnet_conf = MultiStepInputQnetConfig()
+    qnet_conf.gnn_conf = MultiStepInputGraphNetworkConfig()
+
+    mixer_gnn_conf = RelationalGraphNetworkConfig()
+    mixer_ff_conf = FeedForwardConfig()
+    brain_conf = QmixActorCriticBrainConfig()
+    buffer_conf = NstepInputMemoryConfig()
+
+    QmixAgent(conf, actor_conf, qnet_conf, mixer_gnn_conf, mixer_ff_conf, brain_conf, buffer_conf)

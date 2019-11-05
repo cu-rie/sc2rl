@@ -16,8 +16,12 @@ class RunnerConfig:
 
         self.agent = agent
         self.n_hist_steps = n_hist_steps
-        self.sample_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"],
-                                      defaults=tuple([list() for _ in range(6)]))
+        # python version == 3.7
+        # self.sample_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"],
+        #                               defaults=tuple([list() for _ in range(6)]))
+        # python version < 3.7
+        self.sample_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"])
+        self.sample_spec.__new__.__defaults__ = tuple([list() for _ in range(6)])
 
 
 class RunnerManagerBase:

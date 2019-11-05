@@ -1,6 +1,6 @@
 from sc2rl.nn.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.config.graph_configs import NODE_ALLY, EDGE_ALLY, EDGE_ENEMY
-from sc2rl.config.ConfigBase_refac import ConfigBase
+from sc2rl.config.ConfigBase import ConfigBase
 
 
 class RelationalGraphNetworkConfig(ConfigBase):

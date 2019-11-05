@@ -4,15 +4,21 @@ import numpy as np
 
 from sc2rl.memory.memory_base import EpisodicMemory
 from sc2rl.memory.Trajectory import Trajectory
-from sc2rl.config.ConfigBase_refac import ConfigBase
+from sc2rl.config.ConfigBase import ConfigBase
 
 
 class NstepInputMemoryConfig(ConfigBase):
     def __init__(self, memory_conf=None):
         super(NstepInputMemoryConfig, self).__init__(memory_conf=memory_conf)
 
-        spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"],
-                          defaults=tuple([list() for _ in range(6)]))
+        # python version 3.7
+        # spec = namedtuple('exp_args',
+        #                              ["state", "action", "reward", "next_state", "done", "ret"],
+        #                              defaults = tuple([list() for _ in range(6)]))
+
+        # python version < 3.7
+        spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"])
+        spec.__new__.__defaults__ = tuple([list() for _ in range(6)])
 
         self.memory_conf = {
             'prefix': 'memory',

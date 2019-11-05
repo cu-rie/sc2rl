@@ -1,6 +1,6 @@
 import torch
 
-from sc2rl.config.ConfigBase_refac import ConfigBase
+from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.rl.modules.Actions import MoveModule, HoldModule, AttackModule
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 
@@ -126,4 +126,4 @@ class ActorModule(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    ActorModule(node_input_dim=26, out_activation='relu', hidden_activation='relu')
+    ActorModule(ActorModuleConfig)

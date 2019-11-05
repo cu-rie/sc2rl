@@ -2,18 +2,19 @@ import warnings
 import torch
 from sc2rl.optim.Radam import RAdam
 from sc2rl.rl.brains.BrainBase import BrainBase
-
 from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
 
 
-class QmixBrainConfig(ConfigBase):
+class QmixActorCriticBrainConfig(ConfigBase):
     def __init__(self, brain_conf=None, fit_conf=None):
-        super(QmixBrainConfig, self).__init__(brain_conf=brain_conf,
-                                              fit_conf=fit_conf)
+        super(QmixActorCriticBrainConfig, self).__init__(brain_conf=brain_conf,
+                                                         fit_conf=fit_conf)
         self.brain_conf = {
             'prefix': 'brain_conf',
             'optimizer': 'lookahead',
-            'lr': 1e-4,
+            'critic_lr': 1e-4,
+            'actor_lr': 1e-5,
             'gamma': 1.0,
             'eps': 1.0,
             'eps_gamma': 0.995,
@@ -28,18 +29,20 @@ class QmixBrainConfig(ConfigBase):
         }
 
 
-class QMixBrain(BrainBase):
+class QMixActorCriticBrain(BrainBase):
     def __init__(self,
                  conf,
                  qnet,
                  mixer,
+                 actor,
                  qnet_target=None,
                  mixer_target=None,
                  qnet2=None,
                  mixer2=None):
-        super(QMixBrain, self).__init__()
+        super(QMixActorCriticBrain, self).__init__()
         self.qnet = qnet
         self.mixer = mixer
+        self.actor = actor
 
         self.qnet_target = qnet_target
         self.mixer_target = mixer_target
@@ -75,20 +78,24 @@ class QMixBrain(BrainBase):
 
         optimizer = self.get_optimizer(self.brain_conf['optimizer'])
 
-        params = list(self.qnet.parameters()) + list(self.mixer.parameters())
+        critic_params = list(self.qnet.parameters()) + list(self.mixer.parameters())
+        actor_params = self.actor.parameters()
         if self.brain_conf['optimizer'] == 'lookahead':
-            qnet_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
+            qnet_base_optimizer = RAdam(critic_params, lr=self.brain_conf['critic_lr'])
+            actor_base_optimizer = RAdam(actor_params, lr=self.brain_conf['actor_lr'])
             self.qnet_optimizer = optimizer(qnet_base_optimizer)
+            self.actor_optimizer = optimizer(actor_base_optimizer)
         else:
-            self.qnet_optimizer = optimizer(params, lr=self.brain_conf['lr'])
+            self.qnet_optimizer = optimizer(critic_params, lr=self.brain_conf['critic_lr'])
+            self.actor_optimizer = optimizer(actor_params, lr=self.brain_conf['actor_lr'])
 
         if self.use_clipped_q:
             params = list(self.qnet2.parameters()) + list(self.mixer2.parameters())
             if self.brain_conf['optimizer'] == 'lookahead':
-                qnet_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
+                qnet_base_optimizer = RAdam(params, lr=self.brain_conf['critic_lr'])
                 self.qnet2_optimizer = optimizer(qnet_base_optimizer)
             else:
-                self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['lr'])
+                self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['critic_lr'])
 
         self.fit_conf = conf.fit_conf
 
@@ -99,10 +106,10 @@ class QMixBrain(BrainBase):
                    curr_graph,
                    curr_feature,
                    maximum_num_enemy):
-        nn_actions, info_dict = self.qnet.get_action(num_time_steps,
-                                                     hist_graph, hist_feature,
-                                                     curr_graph, curr_feature, maximum_num_enemy,
-                                                     self.eps)
+        nn_actions, info_dict = self.actor.get_action(num_time_steps,
+                                                      hist_graph, hist_feature,
+                                                      curr_graph, curr_feature, maximum_num_enemy,
+                                                      self.eps)
         return nn_actions, info_dict
 
     def fit(self,
@@ -116,6 +123,88 @@ class QMixBrain(BrainBase):
             n_maximum_num_enemy,
             rewards,
             dones):
+
+        fit_dict = dict()
+
+        critic_fit_dict = self.fit_critic(num_time_steps,
+                                          c_hist_graph, c_hist_feature,
+                                          c_curr_graph, c_curr_feature,
+                                          c_maximum_num_enemy,
+                                          actions,
+                                          n_hist_graph, n_hist_feature,
+                                          n_curr_graph, n_curr_feature,
+                                          n_maximum_num_enemy,
+                                          rewards,
+                                          dones)
+        fit_dict.update(critic_fit_dict)
+        actor_fit_dict = self.fit_actor(num_time_steps,
+                                        c_hist_graph,
+                                        c_hist_feature,
+                                        c_curr_graph,
+                                        c_curr_feature,
+                                        c_maximum_num_enemy
+                                        )
+        fit_dict.update(actor_fit_dict)
+        return
+
+    def fit_actor(self,
+                  num_time_steps,
+                  hist_graph,
+                  hist_feature,
+                  curr_graph,
+                  curr_feature,
+                  maximum_num_enemy
+                  ):
+        with torch.no_grad:
+            qs = self.qnet.compute_qs(num_time_steps,
+                                      hist_graph, hist_feature,
+                                      curr_graph, curr_feature, maximum_num_enemy)
+            if self.use_double_q:
+                qs2 = self.qnet2.compute_qs(num_time_steps,
+                                            hist_graph, hist_feature,
+                                            curr_graph, curr_feature, maximum_num_enemy)
+
+        prob_dict = self.actor.compute_probs(num_time_steps,
+                                             hist_graph, hist_feature,
+                                             curr_graph, curr_feature, maximum_num_enemy)
+        log_p_move = prob_dict['log_p_move']
+        log_p_hold = prob_dict['log_p_hold']
+        log_p_attack = prob_dict['log_p_attack']
+
+        log_ps = torch.cat([log_p_move, log_p_hold, log_p_attack], dim=1)
+        ps = prob_dict['probs']
+
+        vs = (ps * qs).sum(1).detach()
+        policy_target = qs - vs.view(-1, 1)
+
+        if self.double_q:
+            vs2 = (ps * qs2).sum(1).detach()
+            policy_target2 = qs - vs2.view(-1, 1)
+            policy_target = torch.min(policy_target, policy_target2)
+
+        device = log_ps.device
+
+        unmasked_loss = log_ps * (self.log_alpha.exp() * log_ps - policy_target)
+        loss_mask = (log_ps > torch.log(torch.tensor(VERY_SMALL_NUMBER, device=device))).float()
+        loss = (unmasked_loss * loss_mask).sum() / loss_mask.sum()
+        self.clip_and_optimize(optimizer=self.actor_optimizer, parameters=self.actor.parameters(), loss=loss,
+                               clip_val=self.fit_conf['norm_clip_val'])
+
+        fit_dict = dict()
+        fit_dict['actor_loss'] = loss.detach().cpu().numpy()
+        return fit_dict
+
+    def fit_critic(self,
+                   num_time_steps,
+                   c_hist_graph, c_hist_feature,
+                   c_curr_graph, c_curr_feature,
+                   c_maximum_num_enemy,
+                   actions,
+                   n_hist_graph, n_hist_feature,
+                   n_curr_graph, n_curr_feature,
+                   n_maximum_num_enemy,
+                   rewards,
+                   dones):
 
         # [ # allies x # c_maximum_num_enemy]
         q_dict = self.qnet.compute_qs(num_time_steps,
@@ -197,18 +286,12 @@ class QMixBrain(BrainBase):
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
 
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
-                               parameters=list(self.qnet.parameters())+list(self.mixer.parameters()),
+                               parameters=list(self.qnet.parameters()) + list(self.mixer.parameters()),
                                loss=loss,
                                clip_val=self.fit_conf['norm_clip_val'])
 
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
         self.update_target_network(self.fit_conf['tau'], self.mixer, self.mixer_target)
-
-        # decay epsilon
-        self.eps = self.eps * self.eps_gamma
-        if self.eps <= self.eps_min:
-            self.eps.fill_(self.eps_min.data)
-        self.qnet.eps = self.eps
 
         fit_dict = dict()
         fit_dict['loss'] = loss.detach().cpu().numpy()

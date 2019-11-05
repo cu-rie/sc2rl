@@ -1,7 +1,7 @@
 import dgl
 import torch
 
-from sc2rl.config.ConfigBase_refac import ConfigBase
+from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 

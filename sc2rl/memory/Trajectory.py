@@ -3,10 +3,15 @@ import numpy as np
 
 from sc2rl.memory.TrajectoryBase import TrajectoryBase
 
-experience_spec = namedtuple('exp_args',
-                             ["state", "action", "reward", "next_state", "done", "ret"],
-                             defaults=tuple([list() for _ in range(6)]))
+# python version 3.7
+# experience_spec = namedtuple('exp_args',
+#                              ["state", "action", "reward", "next_state", "done", "ret"],
+#                              defaults = tuple([list() for _ in range(6)]))
 
+# python version < 3.7
+experience_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"])
+
+experience_spec.__new__.__defaults__ = tuple([list() for _ in range(6)])
 
 class Trajectory(TrajectoryBase):
 

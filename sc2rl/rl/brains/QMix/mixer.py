@@ -4,7 +4,7 @@ from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork, Rel
 from sc2rl.rl.networks.FeedForward import FeedForward, FeedForwardConfig
 from sc2rl.config.graph_configs import NODE_ALLY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
-from sc2rl.config.ConfigBase_refac import ConfigBase
+from sc2rl.config.ConfigBase import ConfigBase
 
 
 class QMixer(torch.nn.Module):
