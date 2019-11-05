@@ -18,7 +18,8 @@ class HierarchicalActorModuleConfig(ConfigBase):
             'out_activation': None,
             'hidden_activation': 'mish',
             'num_neurons': [64, 64],
-            'pooling_op': 'softmax'
+            'pooling_op': 'softmax',
+            'spectral_norm': True
         }
 
 
@@ -34,6 +35,7 @@ class HierarchicalActorModule(torch.nn.Module):
         hidden_activation = self.hyper_param['hidden_activation']
         num_neurons = self.hyper_param['num_neurons']
         pooling_op = self.hyper_param['pooling_op']
+        spectral_norm = self.hyper_param['spectral_norm']
 
         self.move_dim = move_dim
         self.move_module = MoveModule(node_dim=node_input_dim,
@@ -54,7 +56,8 @@ class HierarchicalActorModule(torch.nn.Module):
 
         self.diff_pool = DiffPoolLayer(node_dim=node_input_dim,
                                        num_neurons=num_neurons,
-                                       pooling_op=pooling_op)
+                                       pooling_op=pooling_op,
+                                       spectral_norm=spectral_norm)
 
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
         move_argument = self.move_module(graph, node_feature)

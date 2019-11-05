@@ -14,7 +14,7 @@ from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 from sc2rl.rl.brains.QMix.qmixActorCriticBrain import QmixActorCriticBrainConfig
 from sc2rl.rl.agents.Qmix.qmixActorCriticAgent import QmixActorCriticAgent, QmixActorCriticAgentConf
 from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
-from sc2rl.rl.modules.Actor import ActorModuleConfig
+from sc2rl.rl.modules.MultiStepInputActor import MultiStepInputActorConfig
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
 from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetworkConfig
 from sc2rl.rl.networks.FeedForward import FeedForwardConfig
@@ -30,12 +30,14 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 2
+    num_runners = 1
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
+    exp_name = 'DEBUG'
 
     qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
+    actor_conf = MultiStepInputActorConfig()
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
     else:
@@ -43,10 +45,10 @@ if __name__ == "__main__":
                                                     curr_enc_conf={'spectral_norm': spectral_norm})
 
     qnet_conf.gnn_conf = gnn_conf
+    actor_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
     brain_conf = QmixActorCriticBrainConfig(brain_conf={'use_double_q': True})
-    actor_conf = ActorModuleConfig()
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -91,7 +93,7 @@ if __name__ == "__main__":
 
     runner_manager = RunnerManager(config, num_runners)
 
-    wandb.init(project="qmix")
+    wandb.init(project="qmix", name=exp_name)
     wandb.watch(agent)
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,

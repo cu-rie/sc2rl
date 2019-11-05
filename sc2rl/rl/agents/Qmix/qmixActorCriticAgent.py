@@ -2,7 +2,8 @@ import dgl
 import torch
 
 from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnet, MultiStepInputQnetConfig
-from sc2rl.rl.modules.Actor import ActorModule, ActorModuleConfig
+# from sc2rl.rl.modules.Actor import ActorModule, ActorModuleConfig
+from sc2rl.rl.modules.MultiStepInputActor import MultiStepInputActor
 
 from sc2rl.rl.brains.QMix.mixer import QMixer
 from sc2rl.rl.brains.QMix.qmixActorCriticBrain import QMixActorCriticBrain, QmixActorCriticBrainConfig
@@ -17,7 +18,7 @@ from sc2rl.config.ConfigBase import ConfigBase
 class QmixActorCriticAgentConf(ConfigBase):
     def __init__(self, agent_conf=None, fit_conf=None):
         super(QmixActorCriticAgentConf, self).__init__(agent_conf=agent_conf,
-                                            fit_conf=fit_conf)
+                                                       fit_conf=fit_conf)
         self.agent_conf = {
             'prefix': 'agent',
             'use_target': True,
@@ -37,7 +38,7 @@ class QmixActorCriticAgent(torch.nn.Module):
         super(QmixActorCriticAgent, self).__init__()
         self.conf = conf
 
-        actor = ActorModule(actor_conf)
+        actor = MultiStepInputActor(conf=actor_conf)
         qnet = MultiStepInputQnet(qnet_conf)
         mixer = QMixer(mixer_gnn_conf, mixer_ff_conf)
 

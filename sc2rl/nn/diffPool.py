@@ -9,7 +9,8 @@ class DiffPoolLayer(torch.nn.Module):
                  node_dim,
                  num_neurons=[128, 128],
                  num_groups=3,
-                 pooling_op='softmax'):
+                 pooling_op='softmax',
+                 spectral_norm=False):
 
         super(DiffPoolLayer, self).__init__()
         assert pooling_op == 'softmax' or pooling_op == 'relu', "Supported pooling ops : ['softmax', 'relu']"
@@ -17,7 +18,8 @@ class DiffPoolLayer(torch.nn.Module):
         self.eps = 1e-10
         self.pooler = MLP(input_dimension=node_dim, num_neurons=num_neurons, output_dimension=num_groups,
                           hidden_activation='leaky_relu',
-                          out_activation='relu')
+                          out_activation='relu',
+                          spectral_norm=spectral_norm)
 
     def forward(self, graph, node_feature):
         graph.ndata['node_feature'] = node_feature

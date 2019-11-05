@@ -108,8 +108,7 @@ class QMixActorCriticBrain(BrainBase):
                    maximum_num_enemy):
         nn_actions, info_dict = self.actor.get_action(num_time_steps,
                                                       hist_graph, hist_feature,
-                                                      curr_graph, curr_feature, maximum_num_enemy,
-                                                      self.eps)
+                                                      curr_graph, curr_feature, maximum_num_enemy)
         return nn_actions, info_dict
 
     def fit(self,
