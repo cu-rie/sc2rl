@@ -32,6 +32,7 @@ if __name__ == "__main__":
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
+    exp_name = "DEBUG"
 
     qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method':'clustered_random'},
                                          qnet_actor_conf={'spectral_norm': spectral_norm})
@@ -88,7 +89,7 @@ if __name__ == "__main__":
 
     runner_manager = RunnerManager(config, num_runners)
 
-    wandb.init(project="qmix")
+    wandb.init(project="qmix", name=exp_name)
     wandb.watch(agent)
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,
