@@ -61,7 +61,7 @@ def victory_if_zero_enemy(stat_dict,
     next_units = next_state_dict['units']
     num_enemies_after = len(next_units.enemy)
 
-    win = num_enemies_after != 0
+    win = num_enemies_after == 0
 
     if done:
         if win:
