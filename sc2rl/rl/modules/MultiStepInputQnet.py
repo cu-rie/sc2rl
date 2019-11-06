@@ -1,6 +1,8 @@
 from copy import deepcopy
 
 import torch
+import numpy as np
+
 from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork
 from sc2rl.rl.modules.QnetActor import QnetActor
@@ -20,7 +22,8 @@ class MultiStepInputQnetConfig(ConfigBase):
         self.multi_step_input_qnet_conf = {
             'prefix': 'multi_step_input_qnet_conf',
             'use_attention': False,
-            'eps': 1.0
+            'eps': 1.0,
+            'exploration_method': 'clustered_random',
         }
 
         self.qnet_actor_conf = {
@@ -33,6 +36,33 @@ class MultiStepInputQnetConfig(ConfigBase):
         }
 
 
+def generate_hierarchical_sampling_mask(action_spaces):
+    n_agent = action_spaces.shape[0]
+    n_clusters = 2
+    action_start_indices = [0, 5]
+    action_end_indices = [5, None]
+
+    device = action_spaces.device
+
+    if n_agent / n_clusters >= 2.0:
+        n_agents_per_cluster = torch.randint(low=1, high=int(np.floor(n_agent / n_clusters)), size=(n_clusters - 1,))
+        _the_last_cluster_n = n_agent - torch.sum(n_agents_per_cluster).view(-1,)
+        n_agents_per_cluster = torch.cat([n_agents_per_cluster, _the_last_cluster_n], dim=0)
+        agent_indices = torch.randperm(n_agent)
+        splitted_agent_indices = torch.split(agent_indices, n_agents_per_cluster.tolist())
+
+        mask = torch.ones_like(action_spaces, device=device) * -VERY_LARGE_NUMBER
+        for agent_indices, action_start_index, action_end_index in zip(splitted_agent_indices,
+                                                                       action_start_indices,
+                                                                       action_end_indices):
+            mask[agent_indices, action_start_index:action_end_index] = 1
+    else:
+        mask = torch.ones_like(action_spaces, device=device)
+        mask[action_spaces <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
+
+    return mask
+
+
 class MultiStepInputQnet(torch.nn.Module):
 
     def __init__(self, conf):
@@ -42,6 +72,7 @@ class MultiStepInputQnet(torch.nn.Module):
         qnet_actor_conf = conf.qnet_actor_conf
 
         self.eps = conf.multi_step_input_qnet_conf['eps']
+        self.exploration_method = conf.multi_step_input_qnet_conf['exploration_method']
 
         if use_attention:
             self.multi_step_input_net = MultiStepInputNetwork(conf.gnn_conf)
@@ -89,13 +120,23 @@ class MultiStepInputQnet(torch.nn.Module):
             _ = curr_graph.ndata.pop('enemy_tag')
 
         if self.training:
-            if torch.rand(1, device=device) <= eps:
-                sampling_mask = torch.ones_like(ally_qs, device=device)
-                sampling_mask[ally_qs <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
-                dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
-                nn_actions = dist.sample()
+            if self.exploration_method == "eps_greedy":
+                if torch.rand(1, device=device) <= eps:
+                    sampling_mask = torch.ones_like(ally_qs, device=device)
+                    sampling_mask[ally_qs <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
+                    dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
+                    nn_actions = dist.sample()
+                else:
+                    nn_actions = ally_qs.argmax(dim=1)
+            elif self.exploration_method == "clustered_random":
+                if torch.rand(1, device=device) <= eps:
+                    sampling_mask = generate_hierarchical_sampling_mask(ally_qs)
+                    dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
+                    nn_actions = dist.sample()
+                else:
+                    nn_actions = ally_qs.argmax(dim=1)
             else:
-                nn_actions = ally_qs.argmax(dim=1)
+                raise RuntimeError("Not admissible exploration methods.")
         else:
             nn_actions = ally_qs.argmax(dim=1)
         return nn_actions, q_dict
