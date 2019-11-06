@@ -53,12 +53,11 @@ class RelationalGraphLayer(torch.nn.Module):
             curr_relation_mask = edge_types == i
             curr_relation_pos = torch.arange(src_node_features.shape[0])[curr_relation_mask]
             if curr_relation_mask.sum() == 0:
-                pass
+                msg_dict['msg_{}'.format(i)] = msg
             else:
                 curr_node_features = src_node_features[curr_relation_mask]
                 msg[curr_relation_pos, :] = relu(updater(curr_node_features))
-            msg_dict['msg_{}'.format(i)] = msg
-
+                msg_dict['msg_{}'.format(i)] = msg
         return msg_dict
 
     def reduce_function(self, nodes, update_edge_type_indices):
