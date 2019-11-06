@@ -7,9 +7,10 @@ from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
 
 
 class QmixActorCriticBrainConfig(ConfigBase):
-    def __init__(self, brain_conf=None, fit_conf=None):
+    def __init__(self, brain_conf=None, fit_conf=None, entropy_conf=None):
         super(QmixActorCriticBrainConfig, self).__init__(brain_conf=brain_conf,
-                                                         fit_conf=fit_conf)
+                                                         fit_conf=fit_conf,
+                                                         entropy_conf=entropy_conf)
         self.brain_conf = {
             'prefix': 'brain_conf',
             'optimizer': 'lookahead',
@@ -25,7 +26,17 @@ class QmixActorCriticBrainConfig(ConfigBase):
         self.fit_conf = {
             'prefix': 'fit_conf',
             'norm_clip_val': None,
+            'num_critic_pre_fit_steps': 5,
             'tau': 0.1
+        }
+
+        self.entropy_conf = {
+            'prefix': 'brain_entropy',
+            'optimizer': 'radam',
+            'auto_tune': True,
+            'alpha': 0.01,
+            'target_alpha': -(4 + 1 + 1),  # Expected minimal action dim : Move 4 + Hold 1 + Attack 1
+            'lr': 1e-4
         }
 
 
@@ -98,6 +109,21 @@ class QMixActorCriticBrain(BrainBase):
                 self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['critic_lr'])
 
         self.fit_conf = conf.fit_conf
+        self.entropy_conf = conf.entropy_conf
+
+        if self.entropy_conf['auto_tune']:
+            self.target_alpha = self.entropy_conf['target_alpha']
+            self.log_alpha = torch.nn.Parameter(torch.zeros(1))
+            optimizer = self.get_optimizer(self.entropy_conf['optimizer'])
+            if self.entropy_conf['optimizer'] == 'lookahead':
+                self.alpha_optimizer = optimizer(RAdam([self.log_alpha], lr=self.entropy_conf['lr']))
+            else:
+                self.alpha_optimizer = optimizer([self.log_alpha], lr=self.entropy_conf['lr'])
+
+        else:
+            self.log_alpha = torch.log(torch.ones(1) * self.entropy_conf['alpha'])
+
+        self.fit_steps = 0
 
     def get_action(self,
                    num_time_steps,
@@ -125,6 +151,23 @@ class QMixActorCriticBrain(BrainBase):
 
         fit_dict = dict()
 
+        if self.fit_steps >= self.fit_conf['num_critic_pre_fit_steps']:
+            alpha_fit_dict = self.fit_alpha(num_time_steps,
+                                            hist_graph=c_hist_graph,
+                                            hist_feature=c_hist_feature,
+                                            curr_graph=c_curr_graph,
+                                            curr_feature=c_curr_feature,
+                                            maximum_num_enemy=c_maximum_num_enemy)
+            fit_dict.update(alpha_fit_dict)
+            actor_fit_dict = self.fit_actor(num_time_steps,
+                                            c_hist_graph,
+                                            c_hist_feature,
+                                            c_curr_graph,
+                                            c_curr_feature,
+                                            c_maximum_num_enemy
+                                            )
+            fit_dict.update(actor_fit_dict)
+
         critic_fit_dict = self.fit_critic(num_time_steps,
                                           c_hist_graph, c_hist_feature,
                                           c_curr_graph, c_curr_feature,
@@ -136,15 +179,9 @@ class QMixActorCriticBrain(BrainBase):
                                           rewards,
                                           dones)
         fit_dict.update(critic_fit_dict)
-        actor_fit_dict = self.fit_actor(num_time_steps,
-                                        c_hist_graph,
-                                        c_hist_feature,
-                                        c_curr_graph,
-                                        c_curr_feature,
-                                        c_maximum_num_enemy
-                                        )
-        fit_dict.update(actor_fit_dict)
-        return
+        self.fit_steps += 1
+
+        return fit_dict
 
     def fit_actor(self,
                   num_time_steps,
@@ -154,14 +191,16 @@ class QMixActorCriticBrain(BrainBase):
                   curr_feature,
                   maximum_num_enemy
                   ):
-        with torch.no_grad:
-            qs = self.qnet.compute_qs(num_time_steps,
-                                      hist_graph, hist_feature,
-                                      curr_graph, curr_feature, maximum_num_enemy)
+        with torch.no_grad():
+            qs_dict = self.qnet.compute_qs(num_time_steps,
+                                           hist_graph, hist_feature,
+                                           curr_graph, curr_feature, maximum_num_enemy)
+            qs = qs_dict['qs']
             if self.use_double_q:
-                qs2 = self.qnet2.compute_qs(num_time_steps,
-                                            hist_graph, hist_feature,
-                                            curr_graph, curr_feature, maximum_num_enemy)
+                qs2_dict = self.qnet2.compute_qs(num_time_steps,
+                                                 hist_graph, hist_feature,
+                                                 curr_graph, curr_feature, maximum_num_enemy)
+                qs2 = qs2_dict['qs']
 
         prob_dict = self.actor.compute_probs(num_time_steps,
                                              hist_graph, hist_feature,
@@ -176,7 +215,7 @@ class QMixActorCriticBrain(BrainBase):
         vs = (ps * qs).sum(1).detach()
         policy_target = qs - vs.view(-1, 1)
 
-        if self.double_q:
+        if self.use_double_q:
             vs2 = (ps * qs2).sum(1).detach()
             policy_target2 = qs - vs2.view(-1, 1)
             policy_target = torch.min(policy_target, policy_target2)
@@ -304,3 +343,24 @@ class QMixActorCriticBrain(BrainBase):
             fit_dict['loss2'] = loss.detach().cpu().numpy()
 
         return fit_dict
+
+    def fit_alpha(self,
+                  num_time_steps,
+                  hist_graph, hist_feature,
+                  curr_graph, curr_feature, maximum_num_enemy):
+
+        prob_dict = self.actor.compute_probs(num_time_steps,
+                                             hist_graph, hist_feature,
+                                             curr_graph, curr_feature, maximum_num_enemy)
+
+        log_ps = prob_dict['log_ps']
+
+        alpha_loss = (-self.log_alpha * (log_ps * self.target_alpha).detach()).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
+
+        ret_dict = dict()
+        ret_dict['alpha_loss'] = alpha_loss
+        ret_dict['alpha'] = self.log_alpha.exp().detach().cpu().numpy()
+        return ret_dict
