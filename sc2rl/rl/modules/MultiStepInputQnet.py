@@ -23,7 +23,7 @@ class MultiStepInputQnetConfig(ConfigBase):
             'prefix': 'multi_step_input_qnet_conf',
             'use_attention': False,
             'eps': 1.0,
-            'exploration_method': 'clustered_random',
+            'exploration_method': 'eps_greedy',
         }
 
         self.qnet_actor_conf = {

@@ -33,7 +33,8 @@ if __name__ == "__main__":
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
 
-    qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
+    qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method':'clustered_random'},
+                                         qnet_actor_conf={'spectral_norm': spectral_norm})
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
     else:
