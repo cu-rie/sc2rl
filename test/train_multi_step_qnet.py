@@ -24,7 +24,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 if __name__ == "__main__":
 
     map_name = "training_scenario_4"
-    spectral_norm = True
+    spectral_norm = False
 
     use_attention = False
     use_hierarchical_actor = True
@@ -32,9 +32,9 @@ if __name__ == "__main__":
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "DEBUG"
+    exp_name = "[S4]: No SN, tau=0.9"
 
-    qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method':'clustered_random'},
+    qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
                                          qnet_actor_conf={'spectral_norm': spectral_norm})
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
@@ -45,7 +45,8 @@ if __name__ == "__main__":
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
-    brain_conf = QmixBrainConfig(brain_conf={'use_double_q': True})
+    brain_conf = QmixBrainConfig(brain_conf={'use_double_q': True},
+                                 fit_conf={'tau': 0.9})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
