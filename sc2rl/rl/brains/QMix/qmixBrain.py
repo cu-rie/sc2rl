@@ -207,7 +207,7 @@ class QMixBrain(BrainBase):
         # decay epsilon
         self.eps = self.eps * self.eps_gamma
         if self.eps <= self.eps_min:
-            self.eps.fill_(self.eps_min.data)
+            self.eps.fill_(self.eps_min.data[0])
         self.qnet.eps = self.eps
 
         fit_dict = dict()
