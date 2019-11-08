@@ -32,7 +32,7 @@ if __name__ == "__main__":
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "[S4]: No SN, tau=0.9"
+    exp_name = "[S4] scheduler"
 
     qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
                                          qnet_actor_conf={'spectral_norm': spectral_norm})

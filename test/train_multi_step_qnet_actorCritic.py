@@ -34,7 +34,7 @@ if __name__ == "__main__":
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
-    exp_name = 'DEBUG'
+    exp_name = '[S4] scheduler'
 
     qnet_conf = MultiStepInputQnetConfig(qnet_actor_conf={'spectral_norm': spectral_norm})
     actor_conf = MultiStepInputActorConfig()
