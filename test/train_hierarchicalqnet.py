@@ -10,13 +10,15 @@ from time import time
 from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory, victory_if_zero_enemy
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
-from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
-from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
-from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
+from sc2rl.rl.agents.Qmix.HierarchicalqmixAgent import HierarchicalQmixAgent, HierarchicalQmixAgentConf
+from sc2rl.rl.brains.QMix.HierarchicalqmixBrain import HierarchicalQmixBrainConfig
+
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetworkConfig
 from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetworkConfig
 from sc2rl.rl.networks.FeedForward import FeedForwardConfig
+from sc2rl.rl.modules.HierarchicalMultiStepQnet import HierarchicalMultiStepInputQnetConfig
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetworkConfig
+from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
@@ -28,14 +30,15 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 2
-    num_samples = 10
-    eval_episodes = 20
+    num_runners = 1
+    num_samples = 2
+    eval_episodes = 1
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "[S4]: No SN, tau=0.9, residual"
+    exp_name = "DEBUG"
 
-    qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
-                                         qnet_actor_conf={'spectral_norm': spectral_norm})
+    qnet_conf = HierarchicalMultiStepInputQnetConfig(
+        multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
+        qnet_actor_conf={'spectral_norm': spectral_norm})
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
     else:
@@ -45,8 +48,8 @@ if __name__ == "__main__":
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
-    brain_conf = QmixBrainConfig(brain_conf={'use_double_q': True},
-                                 fit_conf={'tau': 0.9})
+    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': True},
+                                             fit_conf={'tau': 0.9})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -59,15 +62,17 @@ if __name__ == "__main__":
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm})
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm})
+    sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm})
 
-    agent_conf = QmixAgentConf(agent_conf={'use_clipped_q': True})
+    agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': True})
 
-    agent = QmixAgent(conf=agent_conf,
-                      qnet_conf=qnet_conf,
-                      mixer_gnn_conf=mixer_gnn_conf,
-                      mixer_ff_conf=mixer_ff_conf,
-                      brain_conf=brain_conf,
-                      buffer_conf=buffer_conf)
+    agent = HierarchicalQmixAgent(conf=agent_conf,
+                                  qnet_conf=qnet_conf,
+                                  mixer_gnn_conf=mixer_gnn_conf,
+                                  mixer_ff_conf=mixer_ff_conf,
+                                  sup_mixer_conf=sup_mixer_conf,
+                                  brain_conf=brain_conf,
+                                  buffer_conf=buffer_conf)
 
     agent.to(run_device)
 

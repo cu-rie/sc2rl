@@ -57,6 +57,29 @@ def get_filtered_node_index_by_type(graph, ntype_idx):
     return node_idx
 
 
+def filter_by_node_assignment(nodes, assignment):
+    return nodes.data['assignment'] == assignment
+
+
+def get_filtered_node_index_by_assignment(graph, assignment):
+    filter_func = partial(filter_by_node_assignment, assignment=assignment)
+    node_idx = graph.filter_nodes(filter_func)
+    return node_idx
+
+
+def filter_by_node_index_by_type_and_assignment(nodes, ntype_idx, assignment):
+    node_type_cond = nodes.data['node_type'] == ntype_idx
+    assignment_cond = nodes.data['assignment'] == assignment
+    return node_type_cond * assignment_cond
+
+
+def get_filtered_node_index_by_type_and_assignment(graph, ntype_idx, assignment):
+    filter_func = partial(filter_by_node_index_by_type_and_assignment,
+                          ntype_idx=ntype_idx, assignment=assignment)
+    node_idx = graph.filter_nodes(filter_func)
+    return node_idx
+
+
 def get_largest_number_of_enemy_nodes(graphs):
     max_num_enemy = 0
     for graph in graphs:
