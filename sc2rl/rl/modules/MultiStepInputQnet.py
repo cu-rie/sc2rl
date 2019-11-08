@@ -32,7 +32,7 @@ class MultiStepInputQnetConfig(ConfigBase):
             'out_activation': None,
             'hidden_activation': 'mish',
             'num_neurons': [64, 64],
-            'spectral_norm': False
+            'spectral_norm': False,
         }
 
 
@@ -46,7 +46,7 @@ def generate_hierarchical_sampling_mask(action_spaces):
 
     if n_agent / n_clusters >= 2.0:
         n_agents_per_cluster = torch.randint(low=1, high=int(np.floor(n_agent / n_clusters)), size=(n_clusters - 1,))
-        _the_last_cluster_n = n_agent - torch.sum(n_agents_per_cluster).view(-1,)
+        _the_last_cluster_n = n_agent - torch.sum(n_agents_per_cluster).view(-1, )
         n_agents_per_cluster = torch.cat([n_agents_per_cluster, _the_last_cluster_n], dim=0)
         agent_indices = torch.randperm(n_agent)
         splitted_agent_indices = torch.split(agent_indices, n_agents_per_cluster.tolist())

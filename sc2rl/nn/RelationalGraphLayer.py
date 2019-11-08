@@ -37,7 +37,7 @@ class RelationalGraphLayer(torch.nn.Module):
 
         updated_node_feature = graph.ndata.pop('node_feature')
         _ = graph.ndata.pop('aggregated_node_feature')
-        return updated_node_feature + node_feature
+        return updated_node_feature
 
     def message_function(self, edges, update_edge_type_indices):
         src_node_features = edges.src['node_feature']

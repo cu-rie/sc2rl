@@ -1,6 +1,8 @@
 import functools
 import torch
 from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
+from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
+from sc2rl.config.graph_configs import NODE_ALLY
 
 
 class DiffPoolLayer(torch.nn.Module):
@@ -16,16 +18,24 @@ class DiffPoolLayer(torch.nn.Module):
         assert pooling_op == 'softmax' or pooling_op == 'relu', "Supported pooling ops : ['softmax', 'relu']"
         self.pooling_op = pooling_op
         self.eps = 1e-10
-        self.pooler = MLP(input_dimension=node_dim, num_neurons=num_neurons, output_dimension=num_groups,
-                          hidden_activation='leaky_relu',
-                          out_activation='relu',
+        self.pooler = MLP(input_dimension=node_dim,
+                          num_neurons=num_neurons,
+                          output_dimension=num_groups,
+                          hidden_activation='mish',
+                          out_activation=None,
                           spectral_norm=spectral_norm)
 
     def forward(self, graph, node_feature):
+        device = node_feature.device
+
         graph.ndata['node_feature'] = node_feature
         graph.apply_nodes(func=self.apply_node_function)
         prob = graph.ndata.pop('prob')
-        return prob
+        _assignment = graph.ndata.pop('assignment')
+        ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
+        assignment = torch.ones_like(_assignment, device=device) * -1  # masking out enemy assignments as -1
+        assignment[ally_indices] = _assignment[ally_indices]
+        return prob, assignment
 
     def apply_node_function(self, nodes):
         input_node_feature = nodes.data['node_feature']
@@ -40,4 +50,5 @@ class DiffPoolLayer(torch.nn.Module):
         else:
             raise RuntimeError("Not supported pooling mode : {}".format(self.pooling_op))
 
-        return {'prob': normalized_score}
+        assignment = normalized_score.argmax(dim=-1)
+        return {'prob': normalized_score, 'assignment': assignment}
