@@ -1,6 +1,7 @@
 import warnings
 import torch
 from sc2rl.optim.Radam import RAdam
+from torch.optim.lr_scheduler import StepLR
 from sc2rl.rl.brains.BrainBase import BrainBase
 from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
@@ -20,7 +21,9 @@ class QmixActorCriticBrainConfig(ConfigBase):
             'eps': 1.0,
             'eps_gamma': 0.995,
             'eps_min': 0.01,
-            'use_double_q': True
+            'use_double_q': True,
+            'scheduler_step_size': 30,
+            'scheduler_gamma': 0.5
         }
 
         self.fit_conf = {
@@ -79,6 +82,8 @@ class QMixActorCriticBrain(BrainBase):
         self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
         self.use_double_q = self.brain_conf['use_double_q']
+        self.scheduler_step_size = self.brain_conf['scheduler_step_size']
+        self.scheduler_gamma = self.brain_conf['scheduler_gamma']
 
         if int(self.use_double_q) + int(self.use_clipped_q) >= 2:
             warnings.warn("Either one of 'use_double_q' or 'clipped_q' can be true. 'use_double_q' set to be false.")
@@ -95,18 +100,31 @@ class QMixActorCriticBrain(BrainBase):
             qnet_base_optimizer = RAdam(critic_params, lr=self.brain_conf['critic_lr'])
             actor_base_optimizer = RAdam(actor_params, lr=self.brain_conf['actor_lr'])
             self.qnet_optimizer = optimizer(qnet_base_optimizer)
+            self.qnet_scheduler = StepLR(qnet_base_optimizer, step_size=self.scheduler_step_size,
+                                         gamma=self.scheduler_gamma)
+
             self.actor_optimizer = optimizer(actor_base_optimizer)
+            self.actor_scheduler = StepLR(actor_base_optimizer, step_size=self.scheduler_step_size,
+                                          gamma=self.scheduler_gamma)
         else:
             self.qnet_optimizer = optimizer(critic_params, lr=self.brain_conf['critic_lr'])
+            self.qnet_scheduler = StepLR(self.qnet_optimizer, step_size=self.scheduler_step_size,
+                                         gamma=self.scheduler_gamma)
             self.actor_optimizer = optimizer(actor_params, lr=self.brain_conf['actor_lr'])
+            self.actor_scheduler = StepLR(self.actor_optimizer, step_size=self.scheduler_step_size,
+                                          gamma=self.scheduler_gamma)
 
         if self.use_clipped_q:
             params = list(self.qnet2.parameters()) + list(self.mixer2.parameters())
             if self.brain_conf['optimizer'] == 'lookahead':
                 qnet_base_optimizer = RAdam(params, lr=self.brain_conf['critic_lr'])
                 self.qnet2_optimizer = optimizer(qnet_base_optimizer)
+                self.qnet2_scheduler = StepLR(qnet_base_optimizer, step_size=self.scheduler_step_size,
+                                              gamma=self.scheduler_gamma)
             else:
                 self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['critic_lr'])
+                self.qnet2_scheduler = StepLR(self.qnet2_optimizer, step_size=self.scheduler_step_size,
+                                              gamma=self.scheduler_gamma)
 
         self.fit_conf = conf.fit_conf
         self.entropy_conf = conf.entropy_conf
@@ -116,9 +134,14 @@ class QMixActorCriticBrain(BrainBase):
             self.log_alpha = torch.nn.Parameter(torch.zeros(1))
             optimizer = self.get_optimizer(self.entropy_conf['optimizer'])
             if self.entropy_conf['optimizer'] == 'lookahead':
-                self.alpha_optimizer = optimizer(RAdam([self.log_alpha], lr=self.entropy_conf['lr']))
+                alpha_base_optimizer = RAdam([self.log_alpha], lr=self.entropy_conf['lr'])
+                self.alpha_optimizer = optimizer(alpha_base_optimizer)
+                self.alpha_scheduler = StepLR(alpha_base_optimizer, step_size=self.scheduler_step_size,
+                                              gamma=self.scheduler_gamma)
             else:
                 self.alpha_optimizer = optimizer([self.log_alpha], lr=self.entropy_conf['lr'])
+                self.alpha_scheduler = StepLR(self.alpha_optimizer, step_size=self.scheduler_step_size,
+                                              gamma=self.scheduler_gamma)
 
         else:
             self.log_alpha = torch.log(torch.ones(1) * self.entropy_conf['alpha'])
@@ -226,7 +249,7 @@ class QMixActorCriticBrain(BrainBase):
         loss_mask = (log_ps > torch.log(torch.tensor(VERY_SMALL_NUMBER, device=device))).float()
         loss = (unmasked_loss * loss_mask).sum() / loss_mask.sum()
         self.clip_and_optimize(optimizer=self.actor_optimizer, parameters=self.actor.parameters(), loss=loss,
-                               clip_val=self.fit_conf['norm_clip_val'])
+                               clip_val=self.fit_conf['norm_clip_val'], scheduler=self.actor_scheduler)
 
         fit_dict = dict()
         fit_dict['actor_loss'] = loss.detach().cpu().numpy()
@@ -326,7 +349,8 @@ class QMixActorCriticBrain(BrainBase):
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
                                parameters=list(self.qnet.parameters()) + list(self.mixer.parameters()),
                                loss=loss,
-                               clip_val=self.fit_conf['norm_clip_val'])
+                               clip_val=self.fit_conf['norm_clip_val'],
+                               scheduler=self.qnet_scheduler)
 
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
         self.update_target_network(self.fit_conf['tau'], self.mixer, self.mixer_target)
@@ -339,7 +363,8 @@ class QMixActorCriticBrain(BrainBase):
             self.clip_and_optimize(optimizer=self.qnet2_optimizer,
                                    parameters=list(self.qnet2.parameters()) + list(self.mixer2.parameters()),
                                    loss=loss2,
-                                   clip_val=self.fit_conf['norm_clip_val'])
+                                   clip_val=self.fit_conf['norm_clip_val'],
+                                   scheduler=self.qnet2_scheduler)
             fit_dict['loss2'] = loss.detach().cpu().numpy()
 
         return fit_dict
@@ -359,6 +384,7 @@ class QMixActorCriticBrain(BrainBase):
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
+        self.alpha_scheduler.step()
 
         ret_dict = dict()
         ret_dict['alpha_loss'] = alpha_loss
