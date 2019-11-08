@@ -230,6 +230,6 @@ class QMixBrain(BrainBase):
                                    loss=loss2,
                                    clip_val=self.fit_conf['norm_clip_val'],
                                    scheduler=self.qnet2_scheduler)
-            fit_dict['loss2'] = loss.detach().cpu().numpy()
+            fit_dict['loss2'] = loss2.detach().cpu().numpy()
 
         return fit_dict
