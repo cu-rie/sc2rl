@@ -21,7 +21,7 @@ class QmixBrainConfig(ConfigBase):
             'eps_min': 0.01,
             'use_double_q': True,
             'scheduler_step_size': 30,
-            'scheduler_gamma': 0.5
+            'scheduler_gamma': 0.9
         }
 
         self.fit_conf = {

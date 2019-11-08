@@ -236,6 +236,7 @@ class HierarchicalQmixBrain(BrainBase):
                                    loss=loss2,
                                    clip_val=self.fit_conf['norm_clip_val'])
             fit_dict['loss2'] = loss2.detach().cpu().numpy()
+        return fit_dict
 
     def gather_sub_qs(self, submixers, supmixer, curr_graph, curr_feature, qs):
         sub_q_tots = []

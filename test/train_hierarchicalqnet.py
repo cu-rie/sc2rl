@@ -30,11 +30,11 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 1
-    num_samples = 2
-    eval_episodes = 1
+    num_runners = 2
+    num_samples = 20
+    eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "DEBUG"
+    exp_name = "[S4]:hierarchical"
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
         multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
