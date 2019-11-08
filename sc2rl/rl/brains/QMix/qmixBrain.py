@@ -85,8 +85,8 @@ class QMixBrain(BrainBase):
         if self.use_clipped_q:
             params = list(self.qnet2.parameters()) + list(self.mixer2.parameters())
             if self.brain_conf['optimizer'] == 'lookahead':
-                qnet_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
-                self.qnet2_optimizer = optimizer(qnet_base_optimizer)
+                qnet2_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
+                self.qnet2_optimizer = optimizer(qnet2_base_optimizer)
             else:
                 self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['lr'])
 
@@ -219,6 +219,6 @@ class QMixBrain(BrainBase):
                                    parameters=list(self.qnet2.parameters()) + list(self.mixer2.parameters()),
                                    loss=loss2,
                                    clip_val=self.fit_conf['norm_clip_val'])
-            fit_dict['loss2'] = loss.detach().cpu().numpy()
+            fit_dict['loss2'] = loss2.detach().cpu().numpy()
 
         return fit_dict

@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    num_runners = 2
+    num_runners = 1
     num_samples = 10
     eval_episodes = 20
     reward_name = 'victory_if_zero_enemy'
@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     runner_manager = RunnerManager(config, num_runners)
 
-    wandb.init(project="qmix", name=exp_name)
+    wandb.init(project="qmix2", name=exp_name)
     wandb.watch(agent)
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,
