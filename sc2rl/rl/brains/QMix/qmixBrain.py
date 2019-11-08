@@ -1,5 +1,6 @@
 import warnings
 import torch
+from torch.optim.lr_scheduler import StepLR
 from sc2rl.optim.Radam import RAdam
 from sc2rl.rl.brains.BrainBase import BrainBase
 
@@ -18,7 +19,9 @@ class QmixBrainConfig(ConfigBase):
             'eps': 1.0,
             'eps_gamma': 0.995,
             'eps_min': 0.01,
-            'use_double_q': True
+            'use_double_q': True,
+            'scheduler_step_size': 30,
+            'scheduler_gamma': 0.5
         }
 
         self.fit_conf = {
@@ -65,6 +68,8 @@ class QMixBrain(BrainBase):
         self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
         self.use_double_q = self.brain_conf['use_double_q']
+        self.scheduler_step_size = self.brain_conf['scheduler_step_size']
+        self.scheduler_gamma = self.brain_conf['scheduler_gamma']
 
         if int(self.use_double_q) + int(self.use_clipped_q) >= 2:
             warnings.warn("Either one of 'use_double_q' or 'clipped_q' can be true. 'use_double_q' set to be false.")
@@ -79,16 +84,20 @@ class QMixBrain(BrainBase):
         if self.brain_conf['optimizer'] == 'lookahead':
             qnet_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
             self.qnet_optimizer = optimizer(qnet_base_optimizer)
+            self.qnet_scheduler = StepLR(qnet_base_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
         else:
             self.qnet_optimizer = optimizer(params, lr=self.brain_conf['lr'])
+            self.qnet_scheduler = StepLR(self.qnet_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
 
         if self.use_clipped_q:
             params = list(self.qnet2.parameters()) + list(self.mixer2.parameters())
             if self.brain_conf['optimizer'] == 'lookahead':
-                qnet_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
-                self.qnet2_optimizer = optimizer(qnet_base_optimizer)
+                qnet2_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
+                self.qnet2_optimizer = optimizer(qnet2_base_optimizer)
+                self.qnet2_scheduler = StepLR(qnet2_base_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
             else:
                 self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['lr'])
+                self.qnet2_scheduler = StepLR(self.qnet2_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
 
         self.fit_conf = conf.fit_conf
 
@@ -199,7 +208,8 @@ class QMixBrain(BrainBase):
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
                                parameters=list(self.qnet.parameters())+list(self.mixer.parameters()),
                                loss=loss,
-                               clip_val=self.fit_conf['norm_clip_val'])
+                               clip_val=self.fit_conf['norm_clip_val'],
+                               scheduler=self.qnet_scheduler)
 
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
         self.update_target_network(self.fit_conf['tau'], self.mixer, self.mixer_target)
@@ -218,7 +228,8 @@ class QMixBrain(BrainBase):
             self.clip_and_optimize(optimizer=self.qnet2_optimizer,
                                    parameters=list(self.qnet2.parameters()) + list(self.mixer2.parameters()),
                                    loss=loss2,
-                                   clip_val=self.fit_conf['norm_clip_val'])
+                                   clip_val=self.fit_conf['norm_clip_val'],
+                                   scheduler=self.qnet2_scheduler)
             fit_dict['loss2'] = loss.detach().cpu().numpy()
 
         return fit_dict
