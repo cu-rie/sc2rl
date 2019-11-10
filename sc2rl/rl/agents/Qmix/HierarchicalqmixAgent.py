@@ -31,22 +31,22 @@ class HierarchicalQmixAgentConf(ConfigBase):
 
 class HierarchicalQmixAgent(torch.nn.Module):
 
-    def __init__(self, conf, qnet_conf, mixer_gnn_conf, mixer_ff_conf, sup_mixer_conf, brain_conf, buffer_conf):
+    def __init__(self, conf, qnet_conf, mixer_gnn_conf, mixer_ff_conf, sup_mixer_conf, brain_conf, buffer_conf, soft_assignment=False):
         super(HierarchicalQmixAgent, self).__init__()
         self.conf = conf
 
-        qnet = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf, soft_assignment=True)
+        qnet = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf, soft_assignment=soft_assignment)
         mixer = SupQmixer(input_dim=qnet_conf.qnet_actor_conf['node_input_dim'], conf=sup_mixer_conf)
 
         if self.conf.agent_conf['use_target']:
-            qnet_target = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf)
+            qnet_target = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf, soft_assignment=soft_assignment)
             mixer_target = SupQmixer(input_dim=qnet_conf.qnet_actor_conf['node_input_dim'], conf=sup_mixer_conf)
         else:
             qnet_target = None
             mixer_target = None
 
         if self.conf.agent_conf['use_clipped_q']:
-            qnet2 = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf)
+            qnet2 = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf, soft_assignment=soft_assignment)
             mixer2 = SupQmixer(input_dim=qnet_conf.qnet_actor_conf['node_input_dim'], conf=sup_mixer_conf)
         else:
             qnet2 = None

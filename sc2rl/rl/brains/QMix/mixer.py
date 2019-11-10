@@ -103,6 +103,7 @@ class SubQmixer(torch.nn.Module):
         q_tot = q_tot + v
         return q_tot.view(-1)
 
+
 class Soft_SubQmixer(torch.nn.Module):
     def __init__(self, gnn_conf, ff_conf, target_assignment):
         super(Soft_SubQmixer, self).__init__()
@@ -121,15 +122,13 @@ class Soft_SubQmixer(torch.nn.Module):
 
         # Curee's trick
         ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
-        target_assignment_weight = graph.ndata['normalized_score'][ally_indices]
-        # target_allies = allies_assignment == self.target_assignment
-        # target_indices = torch.arange(target_allies.size(0))[target_allies]
+        target_assignment_weight = graph.ndata['normalized_score'][ally_indices][:, self.target_assignment]
 
         device = w_emb.device
 
         _qs = torch.zeros(size=(graph.number_of_nodes(), 1), device=device)
         w = w[ally_indices, :]  # [# assignments x 1]
-        _qs[ally_indices, :] = w * qs[ally_indices].view(-1, 1)
+        _qs[ally_indices, :] = w * qs.view(-1, 1) * target_assignment_weight.view(-1, 1)
         graph.ndata['node_feature'] = _qs
         q_tot = dgl.sum_nodes(graph, 'node_feature')
         _ = graph.ndata.pop('node_feature')

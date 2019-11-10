@@ -31,11 +31,12 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     use_double_q = False
-    num_runners = 1
-    num_samples = 1
+    soft_assignment = True
+    num_runners = 2
+    num_samples = 20
     eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "DEBUG"
+    exp_name = "soft_sub_Q"
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
         multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
@@ -73,7 +74,8 @@ if __name__ == "__main__":
                                   mixer_ff_conf=mixer_ff_conf,
                                   sup_mixer_conf=sup_mixer_conf,
                                   brain_conf=brain_conf,
-                                  buffer_conf=buffer_conf)
+                                  buffer_conf=buffer_conf,
+                                  soft_assignment=soft_assignment)
 
     agent.to(run_device)
 
