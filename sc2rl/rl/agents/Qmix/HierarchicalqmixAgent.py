@@ -2,7 +2,7 @@ import dgl
 import torch
 
 from sc2rl.rl.modules.HierarchicalMultiStepQnet import HierarchicalMultiStepInputQnet
-from sc2rl.rl.brains.QMix.mixer import SubQmixer, SupQmixer
+from sc2rl.rl.brains.QMix.mixer import SupQmixer
 from sc2rl.rl.brains.QMix.HierarchicalqmixBrain import HierarchicalQmixBrain
 from sc2rl.memory.n_step_memory import NstepInputMemory
 
@@ -25,7 +25,7 @@ class HierarchicalQmixAgentConf(ConfigBase):
         self.fit_conf = {
             'prefix': 'agent_fit',
             'batch_size': 256,
-            'hist_num_time_steps': 1
+            'hist_num_time_steps': 5
         }
 
 
@@ -35,7 +35,7 @@ class HierarchicalQmixAgent(torch.nn.Module):
         super(HierarchicalQmixAgent, self).__init__()
         self.conf = conf
 
-        qnet = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf)
+        qnet = HierarchicalMultiStepInputQnet(qnet_conf, mixer_gnn_conf, mixer_ff_conf, soft_assignment=True)
         mixer = SupQmixer(input_dim=qnet_conf.qnet_actor_conf['node_input_dim'], conf=sup_mixer_conf)
 
         if self.conf.agent_conf['use_target']:

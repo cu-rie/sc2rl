@@ -5,7 +5,7 @@ import numpy as np
 
 from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnet
 from sc2rl.rl.modules.HierarchicalQnetActor import HierarchicalQnetActor
-from sc2rl.rl.brains.QMix.mixer import SubQmixer
+from sc2rl.rl.brains.QMix.mixer import SubQmixer, Soft_SubQmixer
 
 from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
@@ -43,13 +43,18 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
 
 class HierarchicalMultiStepInputQnet(MultiStepInputQnet):
 
-    def __init__(self, conf, mixer_gnn_conf, mixer_ff_conf):
+    def __init__(self, conf, mixer_gnn_conf, mixer_ff_conf, soft_assignment=False):
         super(HierarchicalMultiStepInputQnet, self).__init__(conf=conf)
         qnet_actor_conf = conf.qnet_actor_conf
         qnet_actor_conf['node_input_dim'] = self.multi_step_input_net.out_dim
         self.qnet = HierarchicalQnetActor(qnet_actor_conf)
 
         self.mixers = torch.nn.ModuleDict()
-        for i in range(conf.qnet_actor_conf['num_groups']):
-            mixer = SubQmixer(mixer_gnn_conf, mixer_ff_conf, i)
-            self.mixers['mixer_{}'.format(i)] = mixer
+        if soft_assignment:
+            for i in range(conf.qnet_actor_conf['num_groups']):
+                mixer = Soft_SubQmixer(mixer_gnn_conf, mixer_ff_conf, i)
+                self.mixers['mixer_{}'.format(i)] = mixer
+        else:
+            for i in range(conf.qnet_actor_conf['num_groups']):
+                mixer = SubQmixer(mixer_gnn_conf, mixer_ff_conf, i)
+                self.mixers['mixer_{}'.format(i)] = mixer
