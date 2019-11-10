@@ -19,7 +19,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'prefix': 'hist_rnn',
             'rnn_type': 'GRU',
             'input_size': 17,
-            'hidden_size': 32,
+            'hidden_size': 3,
             'num_layers': 2,
             'batch_first': True
         }
@@ -29,7 +29,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'num_layers': 1,
             'model_dim': 17,
             'num_relations': 3,
-            'num_neurons': [128, 128],
+            'num_neurons': [64, 64],
             'spectral_norm': False
         }
 
@@ -38,7 +38,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'num_layers': 1,
             'model_dim': 17,
             'num_relations': 3,
-            'num_neurons': [128, 128],
+            'num_neurons': [64, 64],
             'spectral_norm': False
         }
 

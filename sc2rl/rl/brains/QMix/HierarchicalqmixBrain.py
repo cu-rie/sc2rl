@@ -123,8 +123,7 @@ class HierarchicalQmixBrain(BrainBase):
                                       c_curr_graph, c_curr_feature, c_maximum_num_enemy)
 
         qs = q_dict['qs']
-        assignment = q_dict['assignment']
-        c_curr_graph.ndata['assignment'] = assignment
+        c_curr_graph.ndata['assignment'] = q_dict['assignment']
 
         qs = qs.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
 
@@ -136,8 +135,7 @@ class HierarchicalQmixBrain(BrainBase):
                                             c_curr_graph, c_curr_feature, c_maximum_num_enemy)
 
             q2s = q2_dict['qs']
-            next_assignment = q2_dict['assignment']
-            c_curr_graph.ndata['assignment'] = next_assignment
+            c_curr_graph.ndata['assignment'] = q2_dict['assignment']
 
             q2s = q2s.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
             q_tot_2 = self.gather_sub_qs(self.qnet2.mixers, self.mixer2, c_curr_graph, c_curr_feature, q2s)
@@ -157,8 +155,7 @@ class HierarchicalQmixBrain(BrainBase):
                                                    n_curr_graph, n_curr_feature, n_maximum_num_enemy)
 
                 next_qs = next_q_dict['qs']
-                next_assignment = next_q_dict['assignment']
-                n_curr_graph.ndata['assignment'] = next_assignment
+                n_curr_graph.ndata['assignment'] = next_q_dict['assignment']
 
                 next_qs = next_qs.gather(-1, next_as.unsqueeze(-1).long()).squeeze(dim=-1)
 
@@ -170,8 +167,7 @@ class HierarchicalQmixBrain(BrainBase):
                                                     n_curr_graph, n_curr_feature, n_maximum_num_enemy)
 
                 next_q1s = next_q1_dict['qs']
-                next_assignment = next_q1_dict['assignment']
-                n_curr_graph.ndata['assignment'] = next_assignment
+                n_curr_graph.ndata['assignment'] = next_q1_dict['assignment']
 
                 next_q1s, _ = next_q1s.max(dim=1)
                 next_q_tot_1 = self.gather_sub_qs(self.qnet.mixers, self.mixer, n_curr_graph, n_curr_feature, next_q1s)
@@ -181,8 +177,7 @@ class HierarchicalQmixBrain(BrainBase):
                                                      n_curr_graph, n_curr_feature, n_maximum_num_enemy)
 
                 next_q2s = next_q2_dict['qs']
-                next_assignment = next_q2_dict['assignment']
-                n_curr_graph.ndata['assignment'] = next_assignment
+                n_curr_graph.ndata['assignment'] = next_q2_dict['assignment']
 
                 next_q2s, _ = next_q2s.max(dim=1)
                 next_q_tot_2 = self.gather_sub_qs(self.qnet2.mixers, self.mixer2, n_curr_graph, n_curr_feature,
@@ -202,8 +197,7 @@ class HierarchicalQmixBrain(BrainBase):
                                                n_curr_graph, n_curr_feature, n_maximum_num_enemy)
 
                 next_qs = next_q_dict['qs']
-                next_assignment = next_q_dict['assignment']
-                n_curr_graph.ndata['assignment'] = next_assignment
+                n_curr_graph.ndata['assignment'] = next_q_dict['assignment']
 
                 next_qs, _ = next_qs.max(dim=1)
                 next_q_tot = self.gather_sub_qs(q_net.mixers, mixer, n_curr_graph, n_curr_feature, next_qs)

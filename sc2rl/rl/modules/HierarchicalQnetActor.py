@@ -52,16 +52,16 @@ class HierarchicalQnetActor(torch.nn.Module):
         move_argument = self.move_module(graph, node_feature)
         hold_argument = self.hold_module(graph, node_feature)
         attack_argument = self.attack_module(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
-        _, assignment = self.grouping_module(graph, node_feature)
+        _, assignment, normalized_score = self.grouping_module(graph, node_feature)
 
-        return move_argument, hold_argument, attack_argument, assignment
+        return move_argument, hold_argument, attack_argument, assignment, normalized_score
 
     def compute_qs(self, graph, node_feature, maximum_num_enemy,
                    ally_node_type_index=NODE_ALLY,
                    attack_edge_type_index=EDGE_ENEMY):
 
-        move_arg, hold_arg, attack_arg, assignment = self(graph, node_feature, maximum_num_enemy,
-                                                          attack_edge_type_index)
+        move_arg, hold_arg, attack_arg, assignment, normalized_score = self(graph, node_feature, maximum_num_enemy,
+                                                                            attack_edge_type_index)
         qs = torch.cat((move_arg, hold_arg, attack_arg), dim=-1)  # of all units including enemies
 
         ally_node_indices = get_filtered_node_index_by_type(graph, ally_node_type_index)
@@ -80,6 +80,7 @@ class HierarchicalQnetActor(torch.nn.Module):
         # for RL training
         return_dict['qs'] = qs
         return_dict['assignment'] = assignment
+        return_dict['normalized_score'] = normalized_score
 
         # for SC2 interfacing
         return_dict['ally_tags'] = ally_tags

@@ -12,7 +12,9 @@ class DiffPoolLayer(torch.nn.Module):
                  num_neurons=[128, 128],
                  num_groups=3,
                  pooling_op='softmax',
-                 spectral_norm=False):
+                 spectral_norm=False,
+                 # soft_assignment=False
+                 ):
 
         super(DiffPoolLayer, self).__init__()
         assert pooling_op == 'softmax' or pooling_op == 'relu', "Supported pooling ops : ['softmax', 'relu']"
@@ -31,11 +33,17 @@ class DiffPoolLayer(torch.nn.Module):
         graph.ndata['node_feature'] = node_feature
         graph.apply_nodes(func=self.apply_node_function)
         prob = graph.ndata.pop('prob')
-        _assignment = graph.ndata.pop('assignment')
         ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
+
+        _assignment = graph.ndata.pop('assignment')
         assignment = torch.ones_like(_assignment, device=device) * -1  # masking out enemy assignments as -1
         assignment[ally_indices] = _assignment[ally_indices]
-        return prob, assignment
+
+        _normalized_score = graph.ndata.pop('normalized_score')
+        normalized_score = torch.ones_like(_normalized_score, device=device) * -1
+        normalized_score[ally_indices] = _normalized_score[ally_indices]
+
+        return prob, assignment, normalized_score
 
     def apply_node_function(self, nodes):
         input_node_feature = nodes.data['node_feature']
@@ -51,4 +59,6 @@ class DiffPoolLayer(torch.nn.Module):
             raise RuntimeError("Not supported pooling mode : {}".format(self.pooling_op))
 
         assignment = normalized_score.argmax(dim=-1)
-        return {'prob': normalized_score, 'assignment': assignment}
+        # if self.soft_assignment:
+        #     assignment = torch.distributions.Categorical(probs=normalized_score).sample()
+        return {'prob': normalized_score, 'assignment': assignment, 'normalized_score': normalized_score}

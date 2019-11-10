@@ -5,6 +5,7 @@ import numpy as np
 
 from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetwork
 from sc2rl.rl.networks.MultiStepInputGraphNetwork import MultiStepInputGraphNetwork
+from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.rl.modules.QnetActor import QnetActor
 
 from sc2rl.config.ConfigBase import ConfigBase
@@ -78,6 +79,7 @@ class MultiStepInputQnet(torch.nn.Module):
             self.multi_step_input_net = MultiStepInputNetwork(conf.gnn_conf)
         else:
             self.multi_step_input_net = MultiStepInputGraphNetwork(conf.gnn_conf)
+            # self.multi_step_input_net = RelationalGraphNetwork(conf.gnn_conf)
 
         qnet_actor_conf['node_input_dim'] = self.multi_step_input_net.out_dim
         self.qnet = QnetActor(qnet_actor_conf)

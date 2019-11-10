@@ -25,7 +25,7 @@ class HierarchicalQmixAgentConf(ConfigBase):
         self.fit_conf = {
             'prefix': 'agent_fit',
             'batch_size': 256,
-            'hist_num_time_steps': 5
+            'hist_num_time_steps': 1
         }
 
 
