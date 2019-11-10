@@ -32,6 +32,7 @@ if __name__ == "__main__":
     use_hierarchical_actor = True
     use_double_q = False
     soft_assignment = True
+    clipped_q = False
     num_runners = 2
     num_samples = 20
     eval_episodes = 10
@@ -66,7 +67,7 @@ if __name__ == "__main__":
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm})
     sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm})
 
-    agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': True})
+    agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q})
 
     agent = HierarchicalQmixAgent(conf=agent_conf,
                                   qnet_conf=qnet_conf,
