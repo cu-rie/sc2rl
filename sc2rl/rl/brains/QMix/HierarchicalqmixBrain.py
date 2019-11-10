@@ -24,7 +24,7 @@ class HierarchicalQmixBrainConfig(ConfigBase):
         self.fit_conf = {
             'prefix': 'fit_conf',
             'norm_clip_val': None,
-            'tau': 0.1
+            'tau': 0.9
         }
 
 
