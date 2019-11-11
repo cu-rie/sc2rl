@@ -13,7 +13,6 @@ class DiffPoolLayer(torch.nn.Module):
                  num_groups=3,
                  pooling_op='softmax',
                  spectral_norm=False,
-                 # soft_assignment=False
                  ):
 
         super(DiffPoolLayer, self).__init__()

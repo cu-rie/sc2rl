@@ -27,6 +27,7 @@ if __name__ == "__main__":
 
     map_name = "training_scenario_4"
     spectral_norm = False
+    test = False
 
     use_attention = False
     use_hierarchical_actor = True
@@ -79,6 +80,9 @@ if __name__ == "__main__":
                                   soft_assignment=soft_assignment)
 
     agent.to(run_device)
+    if test:
+        load_path = './wandb/run-20191110_subQ/1580.ptb'
+        agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
         reward_func = great_victor
