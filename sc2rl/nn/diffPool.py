@@ -59,6 +59,4 @@ class DiffPoolLayer(torch.nn.Module):
             raise RuntimeError("Not supported pooling mode : {}".format(self.pooling_op))
 
         assignment = normalized_score.argmax(dim=-1)
-        # if self.soft_assignment:
-        #     assignment = torch.distributions.Categorical(probs=normalized_score).sample()
         return {'prob': normalized_score, 'assignment': assignment, 'normalized_score': normalized_score}
