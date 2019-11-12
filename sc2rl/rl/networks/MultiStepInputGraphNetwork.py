@@ -19,7 +19,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'prefix': 'hist_rnn',
             'rnn_type': 'GRU',
             'input_size': 17,
-            'hidden_size': 3,
+            'hidden_size': 32,
             'num_layers': 2,
             'batch_first': True
         }
