@@ -46,7 +46,7 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     use_double_q = False
-    clipped_q = False
+    clipped_q = True
 
     num_runners = 1
     num_samples = 2
