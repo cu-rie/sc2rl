@@ -12,8 +12,8 @@ from sc2rl.config.ConfigBase import ConfigBase
 class SupQmixerConf(ConfigBase):
     def __init__(self, nn_conf=None):
         super(SupQmixerConf, self).__init__(nn_conf=nn_conf)
-        self.nn_conf = {"input_dimension": 17,
-                        "output_dimension": 1,
+        self.nn_conf = {'input_dimension': 17,
+                        'output_dimension': 1,
                         'num_neurons': [64, 64],
                         'spectral_norm': False
                         }

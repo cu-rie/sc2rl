@@ -24,7 +24,7 @@ class SC2EnvironmentBase:
         Reinforcement Learning friendly python-sc2 wrapper
     """
 
-    def __init__(self, map_name, allies, realtime=False):
+    def __init__(self, map_name, allies, realtime=False, frame_skip_rate=1):
         self.name = map_name
         self.map = sc2.maps.get(map_name)
         self.allies = allies
@@ -41,6 +41,8 @@ class SC2EnvironmentBase:
         self.allies_game_data = None
         self.allies_game_info = None
         self.allies_game_state = None
+
+        self.frame_skip_rate = frame_skip_rate
 
         self.t = 0
         _ = self._reset()
@@ -146,7 +148,8 @@ class SC2EnvironmentBase:
         # current game_state
         self._loop_run(self.allies.ai.issue_events())
         self._loop_run(self.allies.ai.on_step(action_args))
-        self._loop_run(self.allies_client.step())
+        for _ in range(self.frame_skip_rate):
+            self._loop_run(self.allies_client.step())
 
         allies_state = self._loop_run(self.allies_client.observation())
         next_game_state = GameState(allies_state.observation, self.allies_game_data)

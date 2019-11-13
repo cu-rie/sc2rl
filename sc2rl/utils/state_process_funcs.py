@@ -19,7 +19,7 @@ from sc2rl.utils.state_to_graph_utils import (get_one_hot_node_type,
 from sc2rl.utils.graph_utils import curie_initializer
 
 
-def process_game_state_to_dgl(game_state: GameState):
+def process_game_state_to_dgl(game_state: GameState, use_absolute_pos: False):
     # TODO 1 : Find a better way for managing input features and related constants!
 
     units = game_state.units
@@ -66,6 +66,8 @@ def process_game_state_to_dgl(game_state: GameState):
             one_hot_type_id = get_one_hot_unit_type(allies_unit.type_id.value)
             node_feature.extend(one_hot_type_id)
             node_feature.extend(list(allies_center_pos - allies_unit.position))
+            if use_absolute_pos:
+                node_feature.extend(list(allies_unit.position))
             node_feature.append(allies_unit.health_max)
             node_feature.append(allies_unit.health_percentage)
             node_feature.append(allies_unit.weapon_cooldown)
@@ -100,6 +102,8 @@ def process_game_state_to_dgl(game_state: GameState):
             one_hot_type_id = get_one_hot_unit_type(enemy_unit.type_id.value)
             node_feature.extend(one_hot_type_id)
             node_feature.extend(list(enemy_center_pos - enemy_unit.position))
+            if use_absolute_pos:
+                node_feature.extend(list(enemy_unit.position))
             node_feature.append(enemy_unit.health_max)
             node_feature.append(enemy_unit.health_percentage)
             node_feature.append(enemy_unit.weapon_cooldown)

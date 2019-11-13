@@ -15,8 +15,8 @@ class Status(enum.Enum):
 
 class MicroTestEnvironment(SC2EnvironmentBase):
 
-    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=50000,
-                 winning_ratio_gamma=0.1):
+    def __init__(self, map_name, reward_func, state_proc_func, realtime=False, max_steps=25000,
+                 winning_ratio_gamma=0.1, frame_skip_rate=1):
         """
         :param map_name:
         :param reward_func:
@@ -28,7 +28,8 @@ class MicroTestEnvironment(SC2EnvironmentBase):
         allies = Bot(Race.Terran, SimpleSC2BotAI())
         super(MicroTestEnvironment, self).__init__(map_name=map_name,
                                                    allies=allies,
-                                                   realtime=realtime)
+                                                   realtime=realtime,
+                                                   frame_skip_rate=frame_skip_rate)
         self.max_steps = max_steps
         self._step_count = 0
         self.status = Status.RUNNING

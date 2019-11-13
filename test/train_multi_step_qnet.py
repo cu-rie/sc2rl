@@ -1,4 +1,5 @@
 import os
+from functools import partial
 import torch
 import wandb
 import numpy as np
@@ -23,24 +24,40 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
+    # experiment variables
+    exp_name = "DEBUG"
+
+    frame_skip_rate = 2
+    use_absolute_pos = True
+
+    if use_absolute_pos:
+        node_input_dim = 19
+    else:
+        node_input_dim = 17
+
     map_name = "training_scenario_4"
     spectral_norm = False
+
+
 
     use_attention = False
     use_hierarchical_actor = True
     num_runners = 2
-    num_samples = 10
-    eval_episodes = 20
+    num_samples = 20
+    eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "[S4]: No SN, tau=0.9, residual"
 
     qnet_conf = MultiStepInputQnetConfig(multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
-                                         qnet_actor_conf={'spectral_norm': spectral_norm})
+                                         qnet_actor_conf={'spectral_norm': spectral_norm,
+                                                          'node_input_dim': node_input_dim})
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
     else:
-        gnn_conf = MultiStepInputGraphNetworkConfig(hist_enc_conf={'spectral_norm': spectral_norm},
-                                                    curr_enc_conf={'spectral_norm': spectral_norm})
+        gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
+                                                    hist_enc_conf={'spectral_norm': spectral_norm,
+                                                                   'model_dim': node_input_dim},
+                                                    curr_enc_conf={'spectral_norm': spectral_norm,
+                                                                   'model_dim': node_input_dim})
 
     qnet_conf.gnn_conf = gnn_conf
 
@@ -57,8 +74,10 @@ if __name__ == "__main__":
     if use_attention:
         raise NotImplementedError
     else:
-        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm})
-    mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm})
+        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
+                                                                'model_dim': node_input_dim})
+    mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
+                                                'input_dimension': node_input_dim})
 
     agent_conf = QmixAgentConf(agent_conf={'use_clipped_q': True})
 
@@ -82,11 +101,13 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
+    game_state_to_dgl = partial(process_game_state_to_dgl, use_absolute_pos=use_absolute_pos)
     config = RunnerConfig(map_name=map_name,
                           reward_func=reward_func,
-                          state_proc_func=process_game_state_to_dgl,
+                          state_proc_func=game_state_to_dgl,
                           agent=agent,
-                          n_hist_steps=num_hist_steps)
+                          n_hist_steps=num_hist_steps,
+                          frame_skip_rate=frame_skip_rate)
 
     runner_manager = RunnerManager(config, num_runners)
 
@@ -97,7 +118,10 @@ if __name__ == "__main__":
                          'num_samples': num_samples,
                          'use_hierarchical_actor': use_hierarchical_actor,
                          'map_name': map_name,
-                         'reward': reward_name})
+                         'reward': reward_name,
+                         'frame_skip_rate': frame_skip_rate,
+                         'use_absolute_pos': use_absolute_pos})
+
     wandb.config.update(agent_conf())
     wandb.config.update(gnn_conf())
     wandb.config.update(brain_conf())
