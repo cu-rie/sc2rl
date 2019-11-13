@@ -1,4 +1,6 @@
 import os
+from functools import partial
+
 import torch
 import wandb
 import numpy as np
@@ -25,6 +27,18 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 if __name__ == "__main__":
 
+    # experiment variables
+    exp_name = "DEBUG"
+
+    frame_skip_rate = 2
+    use_absolute_pos = True
+    soft_assignment = True
+
+    if use_absolute_pos:
+        node_input_dim = 19
+    else:
+        node_input_dim = 17
+
     map_name = "training_scenario_4"
     spectral_norm = False
     test = False
@@ -32,27 +46,29 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     use_double_q = False
-    soft_assignment = True
-    clipped_q = False
-    num_runners = 2
-    num_samples = 20
-    eval_episodes = 10
+    clipped_q = True
+
+    num_runners = 1
+    num_samples = 2
+    eval_episodes = 1
     reward_name = 'victory_if_zero_enemy'
-    exp_name = "soft_sub_Q"
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
         multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
-        qnet_actor_conf={'spectral_norm': spectral_norm})
+        qnet_actor_conf={'spectral_norm': spectral_norm,
+                         'node_input_dim': node_input_dim})
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
     else:
-        gnn_conf = MultiStepInputGraphNetworkConfig(hist_enc_conf={'spectral_norm': spectral_norm},
-                                                    curr_enc_conf={'spectral_norm': spectral_norm})
-
+        gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
+                                                    hist_enc_conf={'spectral_norm': spectral_norm,
+                                                                   'model_dim': node_input_dim},
+                                                    curr_enc_conf={'spectral_norm': spectral_norm,
+                                                                   'model_dim': node_input_dim})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
-    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': True},
+    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q},
                                              fit_conf={'tau': 0.9})
 
     sample_spec = buffer_conf.memory_conf['spec']
@@ -64,9 +80,13 @@ if __name__ == "__main__":
     if use_attention:
         raise NotImplementedError
     else:
-        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm})
-    mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm})
-    sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm})
+        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
+                                                                'model_dim': node_input_dim})
+    mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
+                                                'input_dimension': node_input_dim})
+
+    sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm,
+                                            'input_dimension': node_input_dim})
 
     agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q})
 
@@ -95,9 +115,10 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
+    game_state_to_dgl = partial(process_game_state_to_dgl, use_absolute_pos=use_absolute_pos)
     config = RunnerConfig(map_name=map_name,
                           reward_func=reward_func,
-                          state_proc_func=process_game_state_to_dgl,
+                          state_proc_func=game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps)
 
@@ -110,7 +131,10 @@ if __name__ == "__main__":
                          'num_samples': num_samples,
                          'use_hierarchical_actor': use_hierarchical_actor,
                          'map_name': map_name,
-                         'reward': reward_name})
+                         'reward': reward_name,
+                         'frame_skip_rate': frame_skip_rate,
+                         'use_absolute_pos': use_absolute_pos})
+
     wandb.config.update(agent_conf())
     wandb.config.update(gnn_conf())
     wandb.config.update(brain_conf())
