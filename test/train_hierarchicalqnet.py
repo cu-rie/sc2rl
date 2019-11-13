@@ -45,12 +45,12 @@ if __name__ == "__main__":
 
     use_attention = False
     use_hierarchical_actor = True
-    use_double_q = False
-    clipped_q = True
+    use_double_q = True
+    clipped_q = False
 
-    num_runners = 1
-    num_samples = 2
-    eval_episodes = 1
+    num_runners = 2
+    num_samples = 20
+    eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
@@ -120,7 +120,8 @@ if __name__ == "__main__":
                           reward_func=reward_func,
                           state_proc_func=game_state_to_dgl,
                           agent=agent,
-                          n_hist_steps=num_hist_steps)
+                          n_hist_steps=num_hist_steps,
+                          frame_skip_rate=frame_skip_rate)
 
     runner_manager = RunnerManager(config, num_runners)
 
