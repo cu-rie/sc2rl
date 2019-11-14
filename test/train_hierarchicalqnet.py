@@ -30,6 +30,8 @@ if __name__ == "__main__":
     # experiment variables
     exp_name = "DEBUG"
 
+    num_hist_time_steps = 5
+
     frame_skip_rate = 2
     use_absolute_pos = True
     soft_assignment = True
@@ -73,7 +75,8 @@ if __name__ == "__main__":
                                                                    'model_dim': node_input_dim})
     qnet_conf.gnn_conf = gnn_conf
 
-    buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True})
+    buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
+                                                      'N': num_hist_time_steps})
     brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q},
                                              fit_conf={'tau': 0.9})
 
@@ -95,7 +98,8 @@ if __name__ == "__main__":
                                             'input_dimension': node_input_dim},
                                    mixer_conf={'rectifier': mixer_rectifier})
 
-    agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q})
+    agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
+                                           fit_conf={'hist_num_time_steps': num_hist_time_steps})
 
     agent = HierarchicalQmixAgent(conf=agent_conf,
                                   qnet_conf=qnet_conf,

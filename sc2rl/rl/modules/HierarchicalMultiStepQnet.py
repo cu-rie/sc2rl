@@ -41,6 +41,7 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
         }
 
         self.mixer_conf = {
+            'prefix': 'mixer_conf',
             'rectifier': 'abs'
         }
 
