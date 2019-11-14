@@ -1,5 +1,6 @@
 import dgl
 import torch
+import torch.nn.functional as F
 from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.rl.networks.FeedForward import FeedForward
@@ -10,13 +11,15 @@ from sc2rl.config.ConfigBase import ConfigBase
 
 
 class SupQmixerConf(ConfigBase):
-    def __init__(self, nn_conf=None):
-        super(SupQmixerConf, self).__init__(nn_conf=nn_conf)
+    def __init__(self, nn_conf=None, mixer_conf=None):
+        super(SupQmixerConf, self).__init__(nn_conf=nn_conf, mixer_conf=mixer_conf)
         self.nn_conf = {'input_dimension': 17,
                         'output_dimension': 1,
                         'num_neurons': [64, 64],
                         'spectral_norm': False
                         }
+
+        self.mixer_conf = {'rectifier': 'abs'}
 
 
 class QMixer(torch.nn.Module):
@@ -60,20 +63,26 @@ class QMixer(torch.nn.Module):
 
 
 class SubQmixer(torch.nn.Module):
-    def __init__(self, gnn_conf, ff_conf, target_assignment):
+    def __init__(self, gnn_conf, ff_conf, target_assignment, rectifier='abs'):
         super(SubQmixer, self).__init__()
         self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.w_ff = FeedForward(ff_conf)
         self.v_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.v_ff = FeedForward(ff_conf)
         self.target_assignment = target_assignment
+        self.rectifier = rectifier
 
     def forward(self, graph, node_feature, qs,
                 ally_node_type_index=NODE_ALLY):
         assert isinstance(graph, dgl.BatchedDGLGraph)
 
         w_emb = self.w_gn(graph, node_feature)  # [# nodes x # node_dim]
-        w = torch.abs(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        if self.rectifier == 'abs':
+            w = torch.abs(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        elif self.rectifier == 'softplus':
+            w = F.softplus(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        else:
+            raise RuntimeError("Not supported rectifier")
 
         # Curee's trick
         ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
@@ -105,20 +114,24 @@ class SubQmixer(torch.nn.Module):
 
 
 class Soft_SubQmixer(torch.nn.Module):
-    def __init__(self, gnn_conf, ff_conf, target_assignment):
+    def __init__(self, gnn_conf, ff_conf, target_assignment, rectifier='abs'):
         super(Soft_SubQmixer, self).__init__()
         self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.w_ff = FeedForward(ff_conf)
         self.v_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.v_ff = FeedForward(ff_conf)
         self.target_assignment = target_assignment
+        self.rectifier = rectifier
 
     def forward(self, graph, node_feature, qs,
                 ally_node_type_index=NODE_ALLY):
         assert isinstance(graph, dgl.BatchedDGLGraph)
 
         w_emb = self.w_gn(graph, node_feature)  # [# nodes x # node_dim]
-        w = torch.abs(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        if self.rectifier == 'abs':
+            w = torch.abs(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        elif self.rectifier == 'softplus':
+            w = F.softplus(self.w_ff(graph, w_emb))  # [# nodes x # 1]
 
         # Curee's trick
         ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
@@ -152,8 +165,11 @@ class SupQmixer(torch.nn.Module):
         super(SupQmixer, self).__init__()
         nn_conf = conf.nn_conf
         nn_conf['input_dimension'] = input_dim
+
         self.w = MLP(**nn_conf)
         self.v = MLP(**nn_conf)
+
+        self.rectifier = conf.mixer_conf['rectifier']
 
     def forward(self, graph, node_feature, sub_q_tots):
         graph.ndata['node_feature'] = node_feature
@@ -167,7 +183,12 @@ class SupQmixer(torch.nn.Module):
 
             graph.ndata['masked_node_feature'] = graph.ndata['node_feature'] * mask
             w_input = dgl.sum_nodes(graph, 'masked_node_feature')
-            q_tot = q_tot + torch.abs(self.w(w_input)).view(-1) * sub_q_tot
+            if self.rectifier == 'abs':
+                q_tot = q_tot + torch.abs(self.w(w_input)).view(-1) * sub_q_tot
+            elif self.rectifier == 'softplus':
+                q_tot = q_tot + F.softplus(self.w(w_input)).view(-1) * sub_q_tot
+            else:
+                raise RuntimeError("Not implemented rectifier")
             _ = graph.ndata.pop('masked_node_feature')
 
         v = self.v(dgl.sum_nodes(graph, 'node_feature')).view(-1)

@@ -39,6 +39,9 @@ if __name__ == "__main__":
     else:
         node_input_dim = 17
 
+    mixer_rectifier = 'softplus'
+    pooling_op = None
+
     map_name = "training_scenario_4"
     spectral_norm = False
     test = False
@@ -56,7 +59,10 @@ if __name__ == "__main__":
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
         multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
         qnet_actor_conf={'spectral_norm': spectral_norm,
-                         'node_input_dim': node_input_dim})
+                         'node_input_dim': node_input_dim,
+                         'pooling_op': pooling_op},
+        mixer_conf={'rectifier': mixer_rectifier}
+    )
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig()
     else:
@@ -86,7 +92,8 @@ if __name__ == "__main__":
                                                 'input_dimension': node_input_dim})
 
     sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm,
-                                            'input_dimension': node_input_dim})
+                                            'input_dimension': node_input_dim},
+                                   mixer_conf={'rectifier': mixer_rectifier})
 
     agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q})
 
@@ -100,8 +107,12 @@ if __name__ == "__main__":
                                   soft_assignment=soft_assignment)
 
     agent.to(run_device)
+
     if test:
-        load_path = './wandb/run-20191110_subQ/1580.ptb'
+        if use_absolute_pos:
+            load_path = 'abs_pos.ptb'
+        else:
+            load_path = 'no_abs_pos.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
@@ -121,7 +132,7 @@ if __name__ == "__main__":
                           state_proc_func=game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps,
-                          frame_skip_rate=frame_skip_rate)
+                          realtime=False)
 
     runner_manager = RunnerManager(config, num_runners)
 

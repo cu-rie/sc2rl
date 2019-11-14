@@ -16,14 +16,21 @@ class DiffPoolLayer(torch.nn.Module):
                  ):
 
         super(DiffPoolLayer, self).__init__()
-        assert pooling_op == 'softmax' or pooling_op == 'relu', "Supported pooling ops : ['softmax', 'relu']"
+        assert pooling_op == 'softmax' or pooling_op == 'relu' or pooling_op is None, \
+            "Supported pooling ops : ['softmax', 'relu', None]"
         self.pooling_op = pooling_op
         self.eps = 1e-10
+
+        if self.pooling_op is None:
+            pooler_out_act = 'softplus'
+        else:
+            pooler_out_act = None
+
         self.pooler = MLP(input_dimension=node_dim,
                           num_neurons=num_neurons,
                           output_dimension=num_groups,
                           hidden_activation='mish',
-                          out_activation=None,
+                          out_activation=pooler_out_act,
                           spectral_norm=spectral_norm)
 
     def forward(self, graph, node_feature):
@@ -54,6 +61,8 @@ class DiffPoolLayer(torch.nn.Module):
             numer = torch.nn.functional.relu(unnormalized_score).pow(2)
             denom = numer.sum(dim=-1, keepdim=True) + self.eps
             normalized_score = numer / denom
+        elif self.pooling_op is None:
+            normalized_score = unnormalized_score
         else:
             raise RuntimeError("Not supported pooling mode : {}".format(self.pooling_op))
 
