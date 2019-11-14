@@ -12,6 +12,10 @@ def mish(x):
     return x * torch.tanh(F.softplus(x))
 
 
+def softplus(x):
+    return F.softplus(x)
+
+
 class Linear(torch.nn.Linear):
 
     def __init__(self, norm=False, **kwargs):
@@ -152,6 +156,8 @@ class MultiLayerPerceptron(torch.nn.Module):
             ret = torch.nn.Tanh()
         elif activation == 'mish':
             ret = mish
+        elif activation == 'softplus':
+            ret = softplus
         else:
             raise RuntimeError("Given {} activation is not supported".format(self.out_activation))
         return ret

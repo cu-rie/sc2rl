@@ -7,12 +7,13 @@ from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 
 
 class RunnerConfig:
-    def __init__(self, map_name, reward_func, state_proc_func, agent, n_hist_steps, frame_skip_rate=1):
+    def __init__(self, map_name, reward_func, state_proc_func, agent, n_hist_steps, frame_skip_rate=1, realtime=False):
         self.env_config = {
             "map_name": map_name,
             "reward_func": reward_func,
             "state_proc_func": state_proc_func,
-            "frame_skip_rate": frame_skip_rate
+            "frame_skip_rate": frame_skip_rate,
+            "realtime": realtime
         }
 
         self.agent = agent

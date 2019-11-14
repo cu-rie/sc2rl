@@ -40,6 +40,10 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
             'pooling_op': 'softmax'
         }
 
+        self.mixer_conf = {
+            'rectifier': 'abs'
+        }
+
 
 class HierarchicalMultiStepInputQnet(MultiStepInputQnet):
 
@@ -49,12 +53,14 @@ class HierarchicalMultiStepInputQnet(MultiStepInputQnet):
         qnet_actor_conf['node_input_dim'] = self.multi_step_input_net.out_dim
         self.qnet = HierarchicalQnetActor(qnet_actor_conf)
 
+        mixer_rectifier = conf.mixer_conf['rectifier']
+
         self.mixers = torch.nn.ModuleDict()
         if soft_assignment:
             for i in range(conf.qnet_actor_conf['num_groups']):
-                mixer = Soft_SubQmixer(mixer_gnn_conf, mixer_ff_conf, i)
+                mixer = Soft_SubQmixer(mixer_gnn_conf, mixer_ff_conf, i, mixer_rectifier)
                 self.mixers['mixer_{}'.format(i)] = mixer
         else:
             for i in range(conf.qnet_actor_conf['num_groups']):
-                mixer = SubQmixer(mixer_gnn_conf, mixer_ff_conf, i)
+                mixer = SubQmixer(mixer_gnn_conf, mixer_ff_conf, i, mixer_rectifier)
                 self.mixers['mixer_{}'.format(i)] = mixer

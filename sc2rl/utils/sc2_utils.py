@@ -2,7 +2,7 @@ import math
 import numpy as np
 
 
-def get_move_position(unit_position, move_dir, cardinal_points=4, radius=10):
+def get_move_position(unit_position, move_dir, cardinal_points=4, radius=2):
     # when cardinal_points = 4:
     # move_dir = 0 -> RIGHT
     # move_dir = 1 -> UP
