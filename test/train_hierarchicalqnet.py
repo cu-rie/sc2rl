@@ -30,11 +30,12 @@ if __name__ == "__main__":
     # experiment variables
     exp_name = "DEBUG"
 
-    num_hist_time_steps = 5
+    num_hist_time_steps = 2
 
     frame_skip_rate = 2
     use_absolute_pos = True
     soft_assignment = True
+    use_concat_input = True
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -62,7 +63,9 @@ if __name__ == "__main__":
         multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
         qnet_actor_conf={'spectral_norm': spectral_norm,
                          'node_input_dim': node_input_dim,
-                         'pooling_op': pooling_op},
+                         'pooling_op': pooling_op,
+                         'use_concat_input': use_concat_input,
+                         'init_node_dim': node_input_dim},
         mixer_conf={'rectifier': mixer_rectifier}
     )
     if use_attention:
@@ -113,10 +116,11 @@ if __name__ == "__main__":
     agent.to(run_device)
 
     if test:
-        if use_absolute_pos:
-            load_path = 'abs_pos.ptb'
-        else:
-            load_path = 'no_abs_pos.ptb'
+        # if use_absolute_pos:
+        #     load_path = 'abs_pos.ptb'
+        # else:
+        #     load_path = 'no_abs_pos.ptb'
+        load_path = '2820.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':

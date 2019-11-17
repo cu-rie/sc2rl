@@ -37,7 +37,9 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
             'num_neurons': [64, 64],
             'spectral_norm': False,
             'num_groups': 3,
-            'pooling_op': 'softmax'
+            'pooling_op': 'softmax',
+            'use_concat_input': False,
+            'init_node_dim': 17
         }
 
         self.mixer_conf = {

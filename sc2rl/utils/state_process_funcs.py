@@ -134,7 +134,8 @@ def process_game_state_to_dgl(game_state: GameState, use_absolute_pos: False):
         g.add_nodes(num_nodes, {'node_feature': node_features,
                                 'node_type': node_types,
                                 'tag': tags_tensor,
-                                'node_index': unit_indices})
+                                'node_index': unit_indices,
+                                'init_node_feature': node_features})
 
         if num_allies >= 2:
             # Add allies edges

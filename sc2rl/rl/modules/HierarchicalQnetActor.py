@@ -13,7 +13,12 @@ class HierarchicalQnetActor(torch.nn.Module):
         super(HierarchicalQnetActor, self).__init__()
         self.conf = conf
         self.move_dim = move_dim
+        self.use_concat_input = self.conf['use_concat_input']
         node_input_dim = self.conf['node_input_dim']
+        if self.use_concat_input:
+            node_input_dim = self.conf['node_input_dim'] + self.conf['init_node_dim']
+            # self.ln = torch.nn.LayerNorm(node_input_dim)
+
         out_activation = self.conf['out_activation']
         hidden_activation = self.conf['hidden_activation']
         num_neurons = self.conf['num_neurons']
@@ -48,7 +53,11 @@ class HierarchicalQnetActor(torch.nn.Module):
                                              num_groups=num_groups,
                                              spectral_norm=spectral_norm)
 
-    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_ENEMY):
+    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
+        if self.use_concat_input:
+            node_feature = torch.cat([node_feature, graph.ndata['init_node_feature']], dim=1)
+            # node_feature = self.ln(node_feature)
+
         move_argument = self.move_module(graph, node_feature)
         hold_argument = self.hold_module(graph, node_feature)
         attack_argument = self.attack_module(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
