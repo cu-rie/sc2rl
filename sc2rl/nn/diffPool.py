@@ -13,6 +13,7 @@ class DiffPoolLayer(torch.nn.Module):
                  num_groups=3,
                  pooling_op='softmax',
                  spectral_norm=False,
+                 pooling_init='xavier'
                  ):
 
         super(DiffPoolLayer, self).__init__()
@@ -31,7 +32,8 @@ class DiffPoolLayer(torch.nn.Module):
                           output_dimension=num_groups,
                           hidden_activation='mish',
                           out_activation=pooler_out_act,
-                          spectral_norm=spectral_norm)
+                          spectral_norm=spectral_norm,
+                          init=pooling_init)
 
     def forward(self, graph, node_feature):
         device = node_feature.device

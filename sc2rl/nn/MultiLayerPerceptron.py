@@ -140,6 +140,10 @@ class MultiLayerPerceptron(torch.nn.Module):
                 torch.nn.init.constant_(tensor.bias, 0.0)
             else:
                 pass
+        elif init_method == "xavier":
+            torch.nn.init.xavier_uniform_(tensor.weight)
+        else:
+            raise NotImplementedError("MLP initializer {} is not supported".format(init_method))
 
     def infer_activation(self, activation):
         if activation == 'relu':

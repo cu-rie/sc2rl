@@ -44,6 +44,7 @@ if __name__ == "__main__":
 
     mixer_rectifier = 'softplus'
     pooling_op = None
+    pooling_init = 'xavier'
 
     map_name = "training_scenario_4"
     spectral_norm = False
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     use_double_q = True
     clipped_q = False
 
-    num_runners = 2
+    num_runners = 1
     num_samples = 20
     eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
@@ -65,7 +66,8 @@ if __name__ == "__main__":
                          'node_input_dim': node_input_dim,
                          'pooling_op': pooling_op,
                          'use_concat_input': use_concat_input,
-                         'init_node_dim': node_input_dim},
+                         'init_node_dim': node_input_dim,
+                         'pooling_init': pooling_init},
         mixer_conf={'rectifier': mixer_rectifier}
     )
     if use_attention:
