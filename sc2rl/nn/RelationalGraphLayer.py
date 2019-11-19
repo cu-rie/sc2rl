@@ -10,23 +10,35 @@ class RelationalGraphLayer(torch.nn.Module):
                  model_dim: int,
                  num_relations: int,
                  num_neurons: list = [64, 64],
-                 spectral_norm: bool = False):
+                 spectral_norm: bool = False,
+                 use_concat: bool = False):
         super(RelationalGraphLayer, self).__init__()
         self.model_dim = model_dim
         self.num_relations = num_relations
 
         self.relational_updater = dict()
+
+        self.use_concat = use_concat
+        if self.use_concat:
+            relational_encoder_input_dim = 2 * model_dim
+            node_updater_input_dim = model_dim * (num_relations + 2)
+        else:
+            relational_encoder_input_dim = model_dim
+            node_updater_input_dim = model_dim * (num_relations + 1)
+
         for i in range(num_relations):
-            relational_updater = MLP(model_dim, model_dim, num_neurons, spectral_norm)
+            relational_updater = MLP(relational_encoder_input_dim, model_dim, num_neurons, spectral_norm)
             self.relational_updater['updater{}'.format(i)] = relational_updater
         self.relational_updater = torch.nn.ModuleDict(self.relational_updater)
 
-        self.node_updater_input_dim = model_dim * (num_relations + 1)
+        self.node_updater_input_dim = node_updater_input_dim
         self.node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons, spectral_norm)
 
     def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
-
-        graph.ndata['node_feature'] = node_feature
+        if self.use_concat:
+            graph.ndata['node_feature'] = torch.cat([node_feature, graph.ndata['init_node_feature']], dim=1)
+        else:
+            graph.ndata['node_feature'] = node_feature
 
         message_func = partial(self.message_function, update_edge_type_indices=update_edge_type_indices)
         reduce_func = partial(self.reduce_function, update_edge_type_indices=update_edge_type_indices)
@@ -35,8 +47,9 @@ class RelationalGraphLayer(torch.nn.Module):
             node_indices = get_filtered_node_index_by_type(graph, ntype_idx)
             graph.apply_nodes(self.apply_node_function, v=node_indices)
 
-        updated_node_feature = graph.ndata.pop('node_feature')
+        updated_node_feature = graph.ndata.pop('updated_node_feature')
         _ = graph.ndata.pop('aggregated_node_feature')
+        _ = graph.ndata.pop('node_feature')
         return updated_node_feature
 
     def message_function(self, edges, update_edge_type_indices):
@@ -65,16 +78,21 @@ class RelationalGraphLayer(torch.nn.Module):
         device = node_feature.device
 
         node_enc_input = torch.zeros(node_feature.shape[0], self.node_updater_input_dim, device=device)
-        node_enc_input[:, :self.model_dim] = relu(node_feature)
+        if self.use_concat:
+            node_enc_input[:, :self.model_dim*2] = relu(node_feature)
+            start_index = 2
+        else:
+            node_enc_input[:, :self.model_dim] = relu(node_feature)
+            start_index = 1
 
         for i in update_edge_type_indices:
             msg = nodes.mailbox['msg_{}'.format(i)]
             reduced_msg = msg.sum(dim=1)
-            node_enc_input[:, self.model_dim * (i + 1):self.model_dim * (i + 2)] = reduced_msg
+            node_enc_input[:, self.model_dim * (i + start_index):self.model_dim * (i + start_index+1)] = reduced_msg
 
         return {'aggregated_node_feature': node_enc_input}
 
     def apply_node_function(self, nodes):
         aggregated_node_feature = nodes.data['aggregated_node_feature']
         out = self.node_updater(aggregated_node_feature)
-        return {'node_feature': out}
+        return {'updated_node_feature': out}
