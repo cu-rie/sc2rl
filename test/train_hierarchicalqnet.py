@@ -36,6 +36,7 @@ if __name__ == "__main__":
     use_absolute_pos = True
     soft_assignment = True
     use_concat_input = True
+    use_concat_input_gnn = True
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -75,9 +76,11 @@ if __name__ == "__main__":
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
-                                                                   'model_dim': node_input_dim},
+                                                                   'model_dim': node_input_dim,
+                                                                   'use_concat': use_concat_input_gnn},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
-                                                                   'model_dim': node_input_dim})
+                                                                   'model_dim': node_input_dim,
+                                                                   'use_concat': use_concat_input_gnn})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
@@ -95,7 +98,8 @@ if __name__ == "__main__":
         raise NotImplementedError
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
-                                                                'model_dim': node_input_dim})
+                                                                'model_dim': node_input_dim,
+                                                                'use_concat': use_concat_input_gnn})
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
                                                 'input_dimension': node_input_dim})
 
