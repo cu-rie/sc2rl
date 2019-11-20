@@ -34,7 +34,7 @@ class MultiStepInputNetworkConfig(ConfigBase):
             'num_head': 2,
             'use_norm': True,
             'neighbor_degree': 0,
-            'num_neurons': [128, 128],
+            'num_neurons': [64, 64],
             'pooling_op': 'relu'
         }
 
@@ -48,7 +48,7 @@ class MultiStepInputNetworkConfig(ConfigBase):
             'num_head': 2,
             'use_norm': True,
             'neighbor_degree': 0,
-            'num_neurons': [128, 128],
+            'num_neurons': [64, 64],
             'pooling_op': 'relu'
         }
 

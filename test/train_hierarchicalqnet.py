@@ -37,6 +37,7 @@ if __name__ == "__main__":
     soft_assignment = True
     use_concat_input = True
     use_concat_input_gnn = True
+    num_neurons = [128, 64, 32]
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     clipped_q = False
 
     num_runners = 1
-    num_samples = 20
+    num_samples = 5
     eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
 
@@ -68,7 +69,8 @@ if __name__ == "__main__":
                          'pooling_op': pooling_op,
                          'use_concat_input': use_concat_input,
                          'init_node_dim': node_input_dim,
-                         'pooling_init': pooling_init},
+                         'pooling_init': pooling_init,
+                         'num_neurons': num_neurons},
         mixer_conf={'rectifier': mixer_rectifier}
     )
     if use_attention:
@@ -77,10 +79,12 @@ if __name__ == "__main__":
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
                                                                    'model_dim': node_input_dim,
-                                                                   'use_concat': use_concat_input_gnn},
+                                                                   'use_concat': use_concat_input_gnn,
+                                                                   'num_neurons': num_neurons},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
                                                                    'model_dim': node_input_dim,
-                                                                   'use_concat': use_concat_input_gnn})
+                                                                   'use_concat': use_concat_input_gnn,
+                                                                   'num_neurons': num_neurons})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
@@ -99,12 +103,15 @@ if __name__ == "__main__":
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
                                                                 'model_dim': node_input_dim,
-                                                                'use_concat': use_concat_input_gnn})
+                                                                'use_concat': use_concat_input_gnn,
+                                                                'num_neurons': num_neurons})
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
-                                                'input_dimension': node_input_dim})
+                                                'input_dimension': node_input_dim,
+                                                'num_neurons': num_neurons})
 
     sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm,
-                                            'input_dimension': node_input_dim},
+                                            'input_dimension': node_input_dim,
+                                            'num_neurons': num_neurons},
                                    mixer_conf={'rectifier': mixer_rectifier})
 
     agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
@@ -191,15 +198,15 @@ if __name__ == "__main__":
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
-            if iters % 5 == 0:
-                eval_dicts = runner_manager.evaluate(eval_episodes)
-                wins = []
-                for eval_dict in eval_dicts:
-                    win = eval_dict['win']
-                    wins.append(win)
-
-                wr = np.mean(np.array(wins))
-                wandb.log({'eval_winning_ratio': wr}, step=iters)
+            # if iters % 5 == 0:
+            #     eval_dicts = runner_manager.evaluate(eval_episodes)
+            #     wins = []
+            #     for eval_dict in eval_dicts:
+            #         win = eval_dict['win']
+            #         wins.append(win)
+            #
+            #     wr = np.mean(np.array(wins))
+            #     wandb.log({'eval_winning_ratio': wr}, step=iters)
 
         runner_manager.close()
     except KeyboardInterrupt:
