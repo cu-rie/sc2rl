@@ -37,7 +37,7 @@ if __name__ == "__main__":
     soft_assignment = True
     use_concat_input = True
     use_concat_input_gnn = True
-    num_neurons = [128, 64, 32]
+    num_neurons = [128, 128]
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -57,8 +57,8 @@ if __name__ == "__main__":
     use_double_q = True
     clipped_q = False
 
-    num_runners = 1
-    num_samples = 5
+    num_runners = 2
+    num_samples = 20
     eval_episodes = 10
     reward_name = 'victory_if_zero_enemy'
 
@@ -90,7 +90,8 @@ if __name__ == "__main__":
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
                                                       'N': num_hist_time_steps})
     brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q},
-                                             fit_conf={'tau': 0.9})
+                                             fit_conf={'tau': 0.9,
+                                                       'eps_gamma': 0.999})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -198,15 +199,15 @@ if __name__ == "__main__":
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
-            # if iters % 5 == 0:
-            #     eval_dicts = runner_manager.evaluate(eval_episodes)
-            #     wins = []
-            #     for eval_dict in eval_dicts:
-            #         win = eval_dict['win']
-            #         wins.append(win)
-            #
-            #     wr = np.mean(np.array(wins))
-            #     wandb.log({'eval_winning_ratio': wr}, step=iters)
+            if iters % 20 == 0:
+                eval_dicts = runner_manager.evaluate(eval_episodes)
+                wins = []
+                for eval_dict in eval_dicts:
+                    win = eval_dict['win']
+                    wins.append(win)
+
+                wr = np.mean(np.array(wins))
+                wandb.log({'eval_winning_ratio': wr}, step=iters)
 
         runner_manager.close()
     except KeyboardInterrupt:
