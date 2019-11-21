@@ -35,7 +35,7 @@ if __name__ == "__main__":
     frame_skip_rate = 2
     use_absolute_pos = True
     soft_assignment = True
-    use_concat_input = True
+    use_concat_input = False
     use_concat_input_gnn = False
     num_neurons = [64, 64]
 
