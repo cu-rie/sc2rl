@@ -8,7 +8,7 @@ from sc2rl.rl.modules.HierarchicalQnetActor import HierarchicalQnetActor
 from sc2rl.rl.brains.QMix.mixer import SubQmixer, Soft_SubQmixer
 
 from sc2rl.config.ConfigBase import ConfigBase
-from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 
 
 class HierarchicalMultiStepInputQnetConfig(ConfigBase):
@@ -40,7 +40,8 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
             'pooling_op': 'softmax',
             'use_concat_input': False,
             'init_node_dim': 17,
-            'pooling_init': None
+            'pooling_init': None,
+            'attack_edge_type_index': EDGE_ENEMY
         }
 
         self.mixer_conf = {

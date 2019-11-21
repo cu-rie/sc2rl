@@ -1,5 +1,6 @@
 from sc2rl.nn.RelationalGraphNetwork import RelationalGraphNetwork
-from sc2rl.config.graph_configs import NODE_ALLY, EDGE_ALLY, EDGE_ENEMY
+from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
+                                        EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY)
 from sc2rl.config.ConfigBase import ConfigBase
 
 
@@ -11,7 +12,7 @@ class RelationalGraphNetworkConfig(ConfigBase):
             'prefix': 'gnn',
             'num_layers': 2,
             'model_dim': 17,
-            'num_relations': 3,
+            'num_relations': 4,
             'num_neurons': [64, 64],
             'spectral_norm': False,
             'use_concat': False,
@@ -23,8 +24,8 @@ class RelationalGraphNetwork(RelationalGraphNetwork):
     def forward(self, graph, node_feature):
         update_feat = super().forward(graph=graph,
                                       node_feature=node_feature,
-                                      update_node_type_indices=[NODE_ALLY],
-                                      update_edge_type_indices=[EDGE_ALLY, EDGE_ENEMY])
+                                      update_node_type_indices=[NODE_ALLY, NODE_ENEMY],
+                                      update_edge_type_indices=[EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY])
 
         return update_feat
 

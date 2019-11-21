@@ -8,7 +8,8 @@ from sc2rl.config.graph_configs import (NODE_ALLY,
                                         NODE_ENEMY,
                                         EDGE_ALLY,
                                         EDGE_ENEMY,
-                                        EDGE_IN_ATTACK_RANGE)
+                                        EDGE_IN_ATTACK_RANGE,
+                                        EDGE_ALLY_TO_ENEMY)
 
 from sc2rl.utils.state_to_graph_utils import (get_one_hot_node_type,
                                               get_one_hot_unit_type,
@@ -19,7 +20,7 @@ from sc2rl.utils.state_to_graph_utils import (get_one_hot_node_type,
 from sc2rl.utils.graph_utils import curie_initializer
 
 
-def process_game_state_to_dgl(game_state: GameState, use_absolute_pos: False):
+def process_game_state_to_dgl(game_state: GameState, use_absolute_pos=False, edge_ally_to_enemy=False):
     # TODO 1 : Find a better way for managing input features and related constants!
 
     units = game_state.units
@@ -155,6 +156,7 @@ def process_game_state_to_dgl(game_state: GameState, use_absolute_pos: False):
 
             bipartite_edges = cartesian_product(enemies_indices, ally_indices, return_1d=True)
 
+            # the edges from enemies to the allies
             # To support hyper network encoder, we keep two edge_types
             inter_army_edge_type = torch.Tensor(data=(EDGE_ENEMY,))
             inter_army_edge_type_one_hot = torch.Tensor(data=get_one_hot_edge_type(EDGE_ENEMY))
@@ -163,6 +165,17 @@ def process_game_state_to_dgl(game_state: GameState, use_absolute_pos: False):
             g.add_edges(bipartite_edges[0], bipartite_edges[1],
                         {'edge_type_one_hot': inter_army_edge_type_one_hot.repeat(num_inter_army_edges, 1),
                          'edge_type': inter_army_edge_type.repeat(num_inter_army_edges)})
+
+            if edge_ally_to_enemy:
+
+                # the edges from allies to the enemies
+                inter_army_edge_type = torch.Tensor(data=(EDGE_ALLY_TO_ENEMY,))
+                inter_army_edge_type_one_hot = torch.Tensor(data=get_one_hot_edge_type(EDGE_ALLY_TO_ENEMY))
+                num_inter_army_edges = len(bipartite_edges[0])
+
+                g.add_edges(bipartite_edges[1], bipartite_edges[0],
+                            {'edge_type_one_hot': inter_army_edge_type_one_hot.repeat(num_inter_army_edges, 1),
+                             'edge_type': inter_army_edge_type.repeat(num_inter_army_edges)})
 
             for ally_unit in ally_units:
                 # get all in-attack-range units. include allies units

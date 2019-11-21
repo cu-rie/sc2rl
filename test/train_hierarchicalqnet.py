@@ -25,6 +25,8 @@ from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE
+
 if __name__ == "__main__":
 
     # experiment variables
@@ -37,15 +39,23 @@ if __name__ == "__main__":
     soft_assignment = True
     use_concat_input = True
     use_concat_input_gnn = True
-    num_neurons = [64, 64]
+    num_neurons = [128, 64, 32]
+
+    edge_ally_to_enemy = True
+    if edge_ally_to_enemy:
+        num_relations = 4
+    else:
+        num_relations = 3
 
     mixer_num_layer = 1
-    enc_gnn_num_layer = 2
+    enc_gnn_num_layer = 1
 
     if use_absolute_pos:
         node_input_dim = 19
     else:
         node_input_dim = 17
+
+    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
 
     mixer_rectifier = 'softplus'
     pooling_op = None
@@ -60,9 +70,9 @@ if __name__ == "__main__":
     use_double_q = True
     clipped_q = False
 
-    num_runners = 2
-    num_samples = 20
-    eval_episodes = 10
+    num_runners = 1
+    num_samples = 2
+    eval_episodes = 1
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
@@ -73,7 +83,8 @@ if __name__ == "__main__":
                          'use_concat_input': use_concat_input,
                          'init_node_dim': node_input_dim,
                          'pooling_init': pooling_init,
-                         'num_neurons': num_neurons},
+                         'num_neurons': num_neurons,
+                         'attack_edge_type_index': attack_edge_type_index},
         mixer_conf={'rectifier': mixer_rectifier}
     )
     if use_attention:
@@ -81,22 +92,24 @@ if __name__ == "__main__":
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
-                                                                   'num_layer': enc_gnn_num_layer,
+                                                                   'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
-                                                                   'num_neurons': num_neurons},
+                                                                   'num_neurons': num_neurons,
+                                                                   'num_relations': num_relations},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
-                                                                   'num_layer': enc_gnn_num_layer,
+                                                                   'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
-                                                                   'num_neurons': num_neurons})
+                                                                   'num_neurons': num_neurons,
+                                                                   'num_relations': num_relations})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
                                                       'N': num_hist_time_steps})
-    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q},
-                                             fit_conf={'tau': 0.9,
-                                                       'eps_gamma': 0.995})
+    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q,
+                                                         'eps_gamma': 0.995},
+                                             fit_conf={'tau': 0.9})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -154,7 +167,9 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
-    game_state_to_dgl = partial(process_game_state_to_dgl, use_absolute_pos=use_absolute_pos)
+    game_state_to_dgl = partial(process_game_state_to_dgl,
+                                use_absolute_pos=use_absolute_pos,
+                                edge_ally_to_enemy=edge_ally_to_enemy)
     config = RunnerConfig(map_name=map_name,
                           reward_func=reward_func,
                           state_proc_func=game_state_to_dgl,
