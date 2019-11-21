@@ -137,7 +137,7 @@ class MultiStepInputQnet(torch.nn.Module):
                 if torch.rand(1, device=device) <= eps:
                     q_mask = torch.ones_like(ally_qs, device=device)
                     q_mask[ally_qs <= -VERY_LARGE_NUMBER] = 0
-                    sampling_mask = generate_hierarchical_sampling_mask(ally_qs ,q_mask)
+                    sampling_mask = generate_hierarchical_sampling_mask(ally_qs)
                     dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
                     nn_actions = dist.sample()
                 else:
