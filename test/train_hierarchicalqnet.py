@@ -39,6 +39,9 @@ if __name__ == "__main__":
     use_concat_input_gnn = True
     num_neurons = [64, 64]
 
+    mixer_num_layer = 1
+    enc_gnn_num_layer = 2
+
     if use_absolute_pos:
         node_input_dim = 19
     else:
@@ -78,10 +81,12 @@ if __name__ == "__main__":
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
+                                                                   'num_layer': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
+                                                                   'num_layer': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons})
@@ -104,6 +109,7 @@ if __name__ == "__main__":
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
                                                                 'model_dim': node_input_dim,
+                                                                'num_layers': mixer_num_layer,
                                                                 'use_concat': use_concat_input_gnn,
                                                                 'num_neurons': num_neurons})
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
