@@ -25,6 +25,8 @@ from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE
+
 if __name__ == "__main__":
 
     # experiment variables
@@ -53,6 +55,8 @@ if __name__ == "__main__":
     else:
         node_input_dim = 17
 
+    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
+
     mixer_rectifier = 'softplus'
     pooling_op = None
     pooling_init = None
@@ -79,7 +83,8 @@ if __name__ == "__main__":
                          'use_concat_input': use_concat_input,
                          'init_node_dim': node_input_dim,
                          'pooling_init': pooling_init,
-                         'num_neurons': num_neurons},
+                         'num_neurons': num_neurons,
+                         'attack_edge_type_index': attack_edge_type_index},
         mixer_conf={'rectifier': mixer_rectifier}
     )
     if use_attention:
@@ -162,7 +167,9 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
-    game_state_to_dgl = partial(process_game_state_to_dgl, use_absolute_pos=use_absolute_pos)
+    game_state_to_dgl = partial(process_game_state_to_dgl,
+                                use_absolute_pos=use_absolute_pos,
+                                edge_ally_to_enemy=edge_ally_to_enemy)
     config = RunnerConfig(map_name=map_name,
                           reward_func=reward_func,
                           state_proc_func=game_state_to_dgl,

@@ -37,7 +37,7 @@ class QnetActor(torch.nn.Module):
                                           out_activation=out_activation,
                                           spectral_norm=spectral_norm)
 
-    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
+    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index):
         move_argument = self.move_module(graph, node_feature)
         hold_argument = self.hold_module(graph, node_feature)
         attack_argument = self.attack_module(graph, node_feature, maximum_num_enemy, attack_edge_type_index)
