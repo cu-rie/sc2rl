@@ -37,10 +37,10 @@ if __name__ == "__main__":
     soft_assignment = True
     use_concat_input = True
     use_concat_input_gnn = True
-    num_neurons = [64, 64]
+    num_neurons = [128, 64, 32]
 
     mixer_num_layer = 1
-    enc_gnn_num_layer = 2
+    enc_gnn_num_layer = 1
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -60,9 +60,9 @@ if __name__ == "__main__":
     use_double_q = True
     clipped_q = False
 
-    num_runners = 2
-    num_samples = 20
-    eval_episodes = 10
+    num_runners = 1
+    num_samples = 2
+    eval_episodes = 1
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
@@ -81,12 +81,12 @@ if __name__ == "__main__":
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
-                                                                   'num_layer': enc_gnn_num_layer,
+                                                                   'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
-                                                                   'num_layer': enc_gnn_num_layer,
+                                                                   'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons})
@@ -94,9 +94,9 @@ if __name__ == "__main__":
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
                                                       'N': num_hist_time_steps})
-    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q},
-                                             fit_conf={'tau': 0.9,
-                                                       'eps_gamma': 0.995})
+    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q,
+                                                         'eps_gamma': 0.995},
+                                             fit_conf={'tau': 0.9})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']

@@ -37,7 +37,7 @@ class MultiStepInputQnetConfig(ConfigBase):
         }
 
 
-def generate_hierarchical_sampling_mask(action_spaces):
+def generate_hierarchical_sampling_mask(action_spaces, q_mask=None):
     n_agent = action_spaces.shape[0]
     n_clusters = 2
     action_start_indices = [0, 5]
@@ -60,6 +60,9 @@ def generate_hierarchical_sampling_mask(action_spaces):
     else:
         mask = torch.ones_like(action_spaces, device=device)
         mask[action_spaces <= -VERY_LARGE_NUMBER] = -VERY_LARGE_NUMBER
+
+    if q_mask is not None:
+        mask = mask * q_mask
 
     return mask
 
@@ -132,7 +135,9 @@ class MultiStepInputQnet(torch.nn.Module):
                     nn_actions = ally_qs.argmax(dim=1)
             elif self.exploration_method == "clustered_random":
                 if torch.rand(1, device=device) <= eps:
-                    sampling_mask = generate_hierarchical_sampling_mask(ally_qs)
+                    q_mask = torch.ones_like(ally_qs, device=device)
+                    q_mask[ally_qs <= -VERY_LARGE_NUMBER] = 0
+                    sampling_mask = generate_hierarchical_sampling_mask(ally_qs ,q_mask)
                     dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
                     nn_actions = dist.sample()
                 else:
