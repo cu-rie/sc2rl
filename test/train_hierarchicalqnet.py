@@ -39,6 +39,12 @@ if __name__ == "__main__":
     use_concat_input_gnn = True
     num_neurons = [128, 64, 32]
 
+    edge_ally_to_enemy = False
+    if edge_ally_to_enemy:
+        num_relations = 4
+    else:
+        num_relations = 3
+
     mixer_num_layer = 1
     enc_gnn_num_layer = 1
 
@@ -84,12 +90,14 @@ if __name__ == "__main__":
                                                                    'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
-                                                                   'num_neurons': num_neurons},
+                                                                   'num_neurons': num_neurons,
+                                                                   'num_relations': num_relations},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
                                                                    'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
-                                                                   'num_neurons': num_neurons})
+                                                                   'num_neurons': num_neurons,
+                                                                   'num_relations': num_relations})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,

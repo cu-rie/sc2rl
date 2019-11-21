@@ -5,8 +5,8 @@ NODE_ENEMY = 1
 # Edge relationships
 EDGE_ALLY = 0
 EDGE_ENEMY = 1
-EDGE_IN_ATTACK_RANGE = 2
-EDGE_ALLY_TO_ENEMY = 3
+EDGE_ALLY_TO_ENEMY = 2
+EDGE_IN_ATTACK_RANGE = 3
 
 # whenever you edit 'node relationships', 'edge relationships' please make sure to update
 # 'NUM_NODE_TYPES', 'NUM_EDGE_TYPES' variable
