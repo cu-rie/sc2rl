@@ -28,7 +28,7 @@ from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = "DEBUG"
+    exp_name = "[GOLDEN TICKET]"
 
     num_hist_time_steps = 2
 
