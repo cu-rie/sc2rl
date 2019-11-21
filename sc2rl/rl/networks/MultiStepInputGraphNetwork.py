@@ -28,7 +28,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'prefix': 'hist_enc_conf',
             'num_layers': 1,
             'model_dim': 17,
-            'num_relations': 3,
+            'num_relations': 4,
             'num_neurons': [64, 64],
             'spectral_norm': False,
             'use_concat': False
@@ -38,7 +38,7 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'prefix': 'curr_enc_conf',
             'num_layers': 1,
             'model_dim': 17,
-            'num_relations': 3,
+            'num_relations': 4,
             'num_neurons': [64, 64],
             'spectral_norm': False,
             'use_concat': False
