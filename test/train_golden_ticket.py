@@ -36,7 +36,7 @@ if __name__ == "__main__":
     use_absolute_pos = True
     soft_assignment = True
     use_concat_input = True
-    use_concat_input_gnn = True
+    use_concat_input_gnn = False
     num_neurons = [64, 64]
 
     if use_absolute_pos:
