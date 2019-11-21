@@ -9,7 +9,8 @@
 ## wandb (Weight AND Bias) setup 
 ```
 $ pip install --upgrade wandb
-$ wandb login a3f4300eec531db5a0c00ccc5d3c59855e9ba696
+$ wandb login eae3a2bffdf3f5cf9980f47b2232247823d8d5b5
+
 ```
 
 ## training scenario description (../Maps/) 

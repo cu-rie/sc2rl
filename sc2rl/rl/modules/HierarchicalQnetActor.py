@@ -24,6 +24,8 @@ class HierarchicalQnetActor(torch.nn.Module):
         num_neurons = self.conf['num_neurons']
         spectral_norm = self.conf['spectral_norm']
 
+        self.attack_edge_type_index = self.conf['attack_edge_type_index']
+
         # hierarchical pooling
         num_groups = self.conf['num_groups']
         pooling_op = self.conf['pooling_op']
@@ -56,7 +58,7 @@ class HierarchicalQnetActor(torch.nn.Module):
                                              spectral_norm=spectral_norm,
                                              pooling_init=pooling_init)
 
-    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
+    def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index):
         if self.use_concat_input:
             node_feature = torch.cat([node_feature, graph.ndata['init_node_feature']], dim=1)
             # node_feature = self.ln(node_feature)
@@ -70,7 +72,10 @@ class HierarchicalQnetActor(torch.nn.Module):
 
     def compute_qs(self, graph, node_feature, maximum_num_enemy,
                    ally_node_type_index=NODE_ALLY,
-                   attack_edge_type_index=EDGE_ENEMY):
+                   attack_edge_type_index=None):
+
+        if attack_edge_type_index is None:
+            attack_edge_type_index = self.attack_edge_type_index
 
         move_arg, hold_arg, attack_arg, assignment, normalized_score = self(graph, node_feature, maximum_num_enemy,
                                                                             attack_edge_type_index)
