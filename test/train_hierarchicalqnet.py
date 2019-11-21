@@ -39,7 +39,7 @@ if __name__ == "__main__":
     use_concat_input_gnn = True
     num_neurons = [128, 64, 32]
 
-    edge_ally_to_enemy = False
+    edge_ally_to_enemy = True
     if edge_ally_to_enemy:
         num_relations = 4
     else:
