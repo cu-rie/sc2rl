@@ -30,16 +30,16 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = "DEBUG"
+    exp_name = "Attention hopefully is all we need"
 
     num_hist_time_steps = 2
 
     frame_skip_rate = 2
     use_absolute_pos = True
     soft_assignment = True
-    use_concat_input = False
-    use_concat_input_gnn = True
-    num_neurons = [128, 64, 32]
+    use_concat_input = True
+    use_concat_input_gnn = False
+    num_neurons = [128, 128]
 
     edge_ally_to_enemy = True
     if edge_ally_to_enemy:
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         num_relations = 3
 
     mixer_num_layer = 1
-    enc_gnn_num_layer = 1
+    enc_gnn_num_layer = 3
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -65,10 +65,10 @@ if __name__ == "__main__":
     spectral_norm = False
     test = False
 
-    use_attention = False
+    use_attention = True
     use_hierarchical_actor = True
     use_double_q = True
-    clipped_q = True
+    clipped_q = False
 
     # num_runners = 1
     # num_samples = 2
@@ -81,7 +81,8 @@ if __name__ == "__main__":
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
-        multi_step_input_qnet_conf={'exploration_method': 'clustered_random'},
+        multi_step_input_qnet_conf={'exploration_method': 'clustered_random',
+                                    'use_attention': use_attention},
         qnet_actor_conf={'spectral_norm': spectral_norm,
                          'node_input_dim': node_input_dim,
                          'pooling_op': pooling_op,
@@ -93,7 +94,15 @@ if __name__ == "__main__":
         mixer_conf={'rectifier': mixer_rectifier}
     )
     if use_attention:
-        gnn_conf = MultiStepInputNetworkConfig()
+        gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
+                                               hist_enc_conf={'num_layers': enc_gnn_num_layer,
+                                                              'model_dim': node_input_dim,
+                                                              'num_neurons': num_neurons,
+                                                              'num_relations': num_relations},
+                                               curr_enc_conf={'num_layers': enc_gnn_num_layer,
+                                                              'model_dim': node_input_dim,
+                                                              'num_neurons': num_neurons,
+                                                              'num_relations': num_relations})
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
@@ -123,13 +132,18 @@ if __name__ == "__main__":
     fit_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if use_attention:
-        raise NotImplementedError
+        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
+                                                                'model_dim': node_input_dim,
+                                                                'num_layers': mixer_num_layer,
+                                                                'use_concat': use_concat_input_gnn,
+                                                                'num_neurons': num_neurons})
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
                                                                 'model_dim': node_input_dim,
                                                                 'num_layers': mixer_num_layer,
                                                                 'use_concat': use_concat_input_gnn,
                                                                 'num_neurons': num_neurons})
+
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
                                                 'input_dimension': node_input_dim,
                                                 'num_neurons': num_neurons})
@@ -175,6 +189,7 @@ if __name__ == "__main__":
     game_state_to_dgl = partial(process_game_state_to_dgl,
                                 use_absolute_pos=use_absolute_pos,
                                 edge_ally_to_enemy=edge_ally_to_enemy)
+
     config = RunnerConfig(map_name=map_name,
                           reward_func=reward_func,
                           state_proc_func=game_state_to_dgl,
