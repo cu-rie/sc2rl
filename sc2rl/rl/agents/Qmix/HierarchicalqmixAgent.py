@@ -10,6 +10,7 @@ from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 
 from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.utils.graph_utils import curie_initializer
 
 
 class HierarchicalQmixAgentConf(ConfigBase):
@@ -119,6 +120,11 @@ class HierarchicalQmixAgent(torch.nn.Module):
 
         c_curr_graph = dgl.batch(c_graph)
         n_curr_graph = dgl.batch(n_graph)
+
+        c_hist_graph.set_n_initializer(curie_initializer)
+        n_hist_graph.set_n_initializer(curie_initializer)
+        c_curr_graph.set_n_initializer(curie_initializer)
+        n_curr_graph.set_n_initializer(curie_initializer)
 
         # casting actions to one torch tensor
         actions = torch.cat(actions).long()

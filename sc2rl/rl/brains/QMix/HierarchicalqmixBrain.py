@@ -4,6 +4,7 @@ from sc2rl.optim.Radam import RAdam
 from sc2rl.rl.brains.BrainBase import BrainBase
 
 from sc2rl.config.ConfigBase import ConfigBase
+from sc2rl.utils.debug_utils import dn
 
 
 class HierarchicalQmixBrainConfig(ConfigBase):

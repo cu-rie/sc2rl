@@ -3,6 +3,7 @@ import torch
 from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 from sc2rl.config.graph_configs import NODE_ALLY
+from sc2rl.utils.debug_utils import dn
 
 
 class DiffPoolLayer(torch.nn.Module):

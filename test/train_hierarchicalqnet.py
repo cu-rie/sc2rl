@@ -37,7 +37,7 @@ if __name__ == "__main__":
     frame_skip_rate = 2
     use_absolute_pos = True
     soft_assignment = True
-    use_concat_input = True
+    use_concat_input = False
     use_concat_input_gnn = True
     num_neurons = [128, 64, 32]
 
@@ -68,11 +68,16 @@ if __name__ == "__main__":
     use_attention = False
     use_hierarchical_actor = True
     use_double_q = True
-    clipped_q = False
+    clipped_q = True
 
-    num_runners = 1
-    num_samples = 2
-    eval_episodes = 1
+    # num_runners = 1
+    # num_samples = 2
+    # eval_episodes = 1
+
+    num_runners = 2
+    num_samples = 20
+    eval_episodes = 10
+
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
@@ -153,7 +158,7 @@ if __name__ == "__main__":
         #     load_path = 'abs_pos.ptb'
         # else:
         #     load_path = 'no_abs_pos.ptb'
-        load_path = '2820.ptb'
+        load_path = '880.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
