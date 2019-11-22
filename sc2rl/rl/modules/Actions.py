@@ -5,6 +5,7 @@ from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
 from sc2rl.utils.graph_utils import get_filtered_edge_index_by_type
 
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
+from sc2rl.utils.debug_utils import dn
 
 
 class MoveModule(torch.nn.Module):
@@ -66,7 +67,7 @@ class AttackModule(torch.nn.Module):
         attack_argument[:, :mailbox_attack_argument.shape[1]] = mailbox_attack_argument.squeeze(dim=-1)
 
         mailbox_enemy_tag = nodes.mailbox['enemy_tag']
-        enemy_tag = torch.zeros(size=(len(nodes), num_enemy_units), dtype=torch.long, device=device)
+        enemy_tag = torch.ones(size=(len(nodes), num_enemy_units), dtype=torch.long, device=device)
         enemy_tag[:, :mailbox_enemy_tag.shape[1]] = mailbox_enemy_tag
         return {'attack_argument': attack_argument, 'enemy_tag': enemy_tag}
 

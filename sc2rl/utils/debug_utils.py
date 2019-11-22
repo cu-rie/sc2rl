@@ -2,4 +2,4 @@ import torch
 
 
 def dn(tensor: torch.Tensor):
-    return tensor.detach().numpy()
+    return tensor.cpu().detach().numpy()

@@ -3,6 +3,7 @@ from sc2rl.rl.modules.Actions import MoveModule, HoldModule, AttackModule
 from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, NODE_ALLY, EDGE_ENEMY
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 from sc2rl.nn.diffPool import DiffPoolLayer
+from sc2rl.utils.debug_utils import dn
 
 
 class HierarchicalQnetActor(torch.nn.Module):
@@ -61,7 +62,7 @@ class HierarchicalQnetActor(torch.nn.Module):
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index):
         if self.use_concat_input:
             node_feature = torch.cat([node_feature, graph.ndata['init_node_feature']], dim=1)
-            # node_feature = self.ln(node_feature)
+            # node_feature_grouping = graph.ndata['init_node_feature']
 
         move_argument = self.move_module(graph, node_feature)
         hold_argument = self.hold_module(graph, node_feature)
