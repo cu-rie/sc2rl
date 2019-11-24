@@ -204,6 +204,7 @@ class HierarchicalQmixBrain(BrainBase):
 
                 next_qs = next_q_dict['qs']
                 n_curr_graph.ndata['assignment'] = next_q_dict['assignment']
+                n_curr_graph.ndata['normalized_score'] = next_q_dict['normalized_score']
 
                 next_qs, _ = next_qs.max(dim=1)
                 next_q_tot = self.gather_sub_qs(q_net.mixers, mixer, n_curr_graph, n_curr_feature, next_qs)
@@ -245,5 +246,6 @@ class HierarchicalQmixBrain(BrainBase):
             sub_q_tots.append(sub_q_tot)
         q_tot = supmixer(curr_graph, curr_feature, sub_q_tots)
         _ = curr_graph.ndata.pop('assignment')
+        _ = curr_graph.ndata.pop('normalized_score')
 
         return q_tot

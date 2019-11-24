@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from sc2rl.nn.MultiLayerPerceptron import MultiLayerPerceptron as MLP
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork
+from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.networks.FeedForward import FeedForward
 from sc2rl.config.graph_configs import NODE_ALLY
 from sc2rl.utils.graph_utils import (get_filtered_node_index_by_type,
@@ -63,11 +64,16 @@ class QMixer(torch.nn.Module):
 
 
 class SubQmixer(torch.nn.Module):
-    def __init__(self, gnn_conf, ff_conf, target_assignment, rectifier='abs'):
+    def __init__(self, gnn_conf, ff_conf, target_assignment, rectifier='abs', use_attention=False):
         super(SubQmixer, self).__init__()
-        self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+        if use_attention:
+            self.w_gn = RelationalNetwork(**gnn_conf.gnn_conf)
+            self.v_gn = RelationalNetwork(**gnn_conf.gnn_conf)
+        else:
+            self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+            self.v_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+
         self.w_ff = FeedForward(ff_conf)
-        self.v_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.v_ff = FeedForward(ff_conf)
         self.target_assignment = target_assignment
         self.rectifier = rectifier
@@ -114,11 +120,16 @@ class SubQmixer(torch.nn.Module):
 
 
 class Soft_SubQmixer(torch.nn.Module):
-    def __init__(self, gnn_conf, ff_conf, target_assignment, rectifier='abs'):
+    def __init__(self, gnn_conf, ff_conf, target_assignment, rectifier='abs', use_attention=False):
         super(Soft_SubQmixer, self).__init__()
-        self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+        if use_attention:
+            self.w_gn = RelationalNetwork(**gnn_conf.gnn_conf)
+            self.v_gn = RelationalNetwork(**gnn_conf.gnn_conf)
+        else:
+            self.w_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+            self.v_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
+
         self.w_ff = FeedForward(ff_conf)
-        self.v_gn = RelationalGraphNetwork(**gnn_conf.gnn_conf)
         self.v_ff = FeedForward(ff_conf)
         self.target_assignment = target_assignment
         self.rectifier = rectifier

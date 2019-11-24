@@ -20,6 +20,7 @@ from sc2rl.rl.networks.MultiStepInputNetwork import MultiStepInputNetworkConfig
 from sc2rl.rl.networks.FeedForward import FeedForwardConfig
 from sc2rl.rl.modules.HierarchicalMultiStepQnet import HierarchicalMultiStepInputQnetConfig
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetworkConfig
+from sc2rl.rl.networks.RelationalNetwork import RelationalNetworkConfig
 from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
@@ -30,12 +31,12 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'DEBUG' #"Attention hopefully is all we need"
+    exp_name = 'DEBUG'  # "Attention hopefully is all we need"
 
     num_hist_time_steps = 2
     victory_coeff = 10.0
-    frame_skip_rate = 3
-    gamma = 0.95
+    frame_skip_rate = 2
+    gamma = 1.0
 
     use_absolute_pos = True
     soft_assignment = True
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     attack_edge_type_index = EDGE_IN_ATTACK_RANGE
 
     mixer_rectifier = 'softplus'
-    pooling_op = None
+    pooling_op = 'softmax'
     pooling_init = None
 
     map_name = "training_scenario_4"
@@ -68,12 +69,13 @@ if __name__ == "__main__":
     test = False
 
     use_attention = True
+    num_attn_head = 3
     use_hierarchical_actor = True
     use_double_q = True
     clipped_q = True
 
     num_runners = 1
-    num_samples = 2
+    num_samples = 1
     eval_episodes = 1
 
     # num_runners = 2
@@ -93,18 +95,21 @@ if __name__ == "__main__":
                          'pooling_init': pooling_init,
                          'num_neurons': num_neurons,
                          'attack_edge_type_index': attack_edge_type_index},
-        mixer_conf={'rectifier': mixer_rectifier}
+        mixer_conf={'rectifier': mixer_rectifier,
+                    'use_attention': use_attention}
     )
     if use_attention:
         gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                hist_enc_conf={'num_layers': enc_gnn_num_layer,
                                                               'model_dim': node_input_dim,
                                                               'num_neurons': num_neurons,
-                                                              'num_relations': num_relations},
+                                                              'num_relations': num_relations,
+                                                              'num_head': num_attn_head},
                                                curr_enc_conf={'num_layers': enc_gnn_num_layer,
                                                               'model_dim': node_input_dim,
                                                               'num_neurons': num_neurons,
-                                                              'num_relations': num_relations})
+                                                              'num_relations': num_relations,
+                                                              'num_head': num_attn_head})
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
@@ -136,11 +141,11 @@ if __name__ == "__main__":
     fit_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if use_attention:
-        mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
-                                                                'model_dim': node_input_dim,
-                                                                'num_layers': mixer_num_layer,
-                                                                'use_concat': use_concat_input_gnn,
-                                                                'num_neurons': num_neurons})
+        mixer_gnn_conf = RelationalNetworkConfig(gnn_conf={'model_dim': node_input_dim,
+                                                           'num_layers': mixer_num_layer,
+                                                           'num_neurons': num_neurons,
+                                                           'num_relations': num_relations,
+                                                           'num_head': num_attn_head})
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
                                                                 'model_dim': node_input_dim,
