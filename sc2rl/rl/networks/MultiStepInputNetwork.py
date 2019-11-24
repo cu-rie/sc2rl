@@ -5,6 +5,8 @@ from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 
+from sc2rl.utils.debug_utils import dn
+
 
 class MultiStepInputNetworkConfig(ConfigBase):
 

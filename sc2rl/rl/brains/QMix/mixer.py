@@ -191,8 +191,10 @@ class SupQmixer(torch.nn.Module):
                 raise RuntimeError("Not implemented rectifier")
             _ = graph.ndata.pop('masked_node_feature')
 
-        v = self.v(dgl.sum_nodes(graph, 'node_feature')).view(-1)
-        q_tot = q_tot + v
+        #v = self.v(dgl.sum_nodes(graph, 'node_feature')).view(-1)
+        #q_tot = q_tot + v
+
+        _ = graph.ndata.pop('node_feature')
         return q_tot
 
 

@@ -30,11 +30,13 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = "Attention hopefully is all we need"
+    exp_name = 'DEBUG' #"Attention hopefully is all we need"
 
     num_hist_time_steps = 2
+    victory_coeff = 10.0
+    frame_skip_rate = 3
+    gamma = 0.95
 
-    frame_skip_rate = 2
     use_absolute_pos = True
     soft_assignment = True
     use_concat_input = True
@@ -68,15 +70,15 @@ if __name__ == "__main__":
     use_attention = True
     use_hierarchical_actor = True
     use_double_q = True
-    clipped_q = False
+    clipped_q = True
 
-    # num_runners = 1
-    # num_samples = 2
-    # eval_episodes = 1
+    num_runners = 1
+    num_samples = 2
+    eval_episodes = 1
 
-    num_runners = 2
-    num_samples = 20
-    eval_episodes = 10
+    # num_runners = 2
+    # num_samples = 20
+    # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
@@ -120,8 +122,10 @@ if __name__ == "__main__":
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
-                                                      'N': num_hist_time_steps})
+                                                      'N': num_hist_time_steps,
+                                                      'gamma': gamma})
     brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q,
+                                                         'gamma': gamma,
                                                          'eps_gamma': 0.995},
                                              fit_conf={'tau': 0.9})
 
@@ -182,7 +186,7 @@ if __name__ == "__main__":
     elif reward_name == 'victory':
         reward_func = victory
     elif reward_name == 'victory_if_zero_enemy':
-        reward_func = victory_if_zero_enemy
+        reward_func = partial(victory_if_zero_enemy, victory_coeff=victory_coeff)
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 
@@ -208,7 +212,8 @@ if __name__ == "__main__":
                          'map_name': map_name,
                          'reward': reward_name,
                          'frame_skip_rate': frame_skip_rate,
-                         'use_absolute_pos': use_absolute_pos})
+                         'use_absolute_pos': use_absolute_pos,
+                         'victory_coeff': victory_coeff})
 
     wandb.config.update(agent_conf())
     wandb.config.update(gnn_conf())
