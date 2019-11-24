@@ -42,7 +42,9 @@ if __name__ == "__main__":
     soft_assignment = True
     use_concat_input = True
     use_concat_input_gnn = False
-    num_neurons = [128, 128]
+    num_neurons = [64, 64]
+    rnn_hidden_size = 32
+    use_mixer_hidden = False
 
     edge_ally_to_enemy = True
     if edge_ally_to_enemy:
@@ -57,6 +59,11 @@ if __name__ == "__main__":
         node_input_dim = 19
     else:
         node_input_dim = 17
+
+    if use_mixer_hidden:
+        mixer_input_dim = node_input_dim + rnn_hidden_size
+    else:
+        mixer_input_dim = node_input_dim
 
     attack_edge_type_index = EDGE_IN_ATTACK_RANGE
 
@@ -99,7 +106,8 @@ if __name__ == "__main__":
                     'use_attention': use_attention}
     )
     if use_attention:
-        gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
+        gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim,
+                                                              'hidden_size': rnn_hidden_size},
                                                hist_enc_conf={'num_layers': enc_gnn_num_layer,
                                                               'model_dim': node_input_dim,
                                                               'num_neurons': num_neurons,
@@ -131,7 +139,8 @@ if __name__ == "__main__":
                                                       'gamma': gamma})
     brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q,
                                                          'gamma': gamma,
-                                                         'eps_gamma': 0.995},
+                                                         'eps_gamma': 0.995,
+                                                         'use_mixer_hidden': use_mixer_hidden},
                                              fit_conf={'tau': 0.9})
 
     sample_spec = buffer_conf.memory_conf['spec']
@@ -141,24 +150,24 @@ if __name__ == "__main__":
     fit_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if use_attention:
-        mixer_gnn_conf = RelationalNetworkConfig(gnn_conf={'model_dim': node_input_dim,
+        mixer_gnn_conf = RelationalNetworkConfig(gnn_conf={'model_dim': mixer_input_dim,
                                                            'num_layers': mixer_num_layer,
                                                            'num_neurons': num_neurons,
                                                            'num_relations': num_relations,
                                                            'num_head': num_attn_head})
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
-                                                                'model_dim': node_input_dim,
+                                                                'model_dim': mixer_input_dim,
                                                                 'num_layers': mixer_num_layer,
                                                                 'use_concat': use_concat_input_gnn,
                                                                 'num_neurons': num_neurons})
 
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
-                                                'input_dimension': node_input_dim,
+                                                'input_dimension': mixer_input_dim,
                                                 'num_neurons': num_neurons})
 
     sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm,
-                                            'input_dimension': node_input_dim,
+                                            'input_dimension': mixer_input_dim,
                                             'num_neurons': num_neurons},
                                    mixer_conf={'rectifier': mixer_rectifier})
 

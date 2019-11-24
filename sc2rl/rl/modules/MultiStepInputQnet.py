@@ -13,6 +13,7 @@ from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 
 from sc2rl.utils.debug_utils import dn
 
+
 class MultiStepInputQnetConfig(ConfigBase):
 
     def __init__(self,
@@ -146,6 +147,8 @@ class MultiStepInputQnet(torch.nn.Module):
         q_dict = self.qnet.compute_qs(curr_graph,
                                       hist_current_encoded_node_feature,
                                       maximum_num_enemy)
+
+        q_dict['hidden_feat'] = hist_current_encoded_node_feature
 
         return q_dict
 
