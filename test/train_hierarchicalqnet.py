@@ -31,7 +31,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'PSEUDO GOLDEN TICKET'
+    exp_name = 'DEBUG'
 
     num_hist_time_steps = 2
     victory_coeff = 1.0
@@ -44,20 +44,20 @@ if __name__ == "__main__":
     use_concat_input_gnn = False
     num_neurons = [64, 64]
     rnn_hidden_size = 32
-    use_mixer_hidden = True
-    batch_size = 128
+    use_mixer_hidden = False
+    batch_size = 256
 
     use_attention = False
     use_hypernet = False
 
-    edge_ally_to_enemy = True
+    edge_ally_to_enemy = False
     if edge_ally_to_enemy:
         num_relations = 4
     else:
         num_relations = 3
 
-    mixer_num_layer = 2
-    enc_gnn_num_layer = 2
+    mixer_num_layer = 1
+    enc_gnn_num_layer = 1
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -84,13 +84,13 @@ if __name__ == "__main__":
     use_double_q = True
     clipped_q = False
 
-    # num_runners = 1
-    # num_samples = 4
-    # eval_episodes = 1
+    num_runners = 1
+    num_samples = 4
+    eval_episodes = 1
 
-    num_runners = 2
-    num_samples = 20
-    eval_episodes = 10
+    # num_runners = 2
+    # num_samples = 20
+    # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 

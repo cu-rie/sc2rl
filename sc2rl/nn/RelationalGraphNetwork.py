@@ -1,6 +1,7 @@
 import torch
 from sc2rl.nn.RelationalGraphLayer import RelationalGraphLayer
 
+from sc2rl.utils.debug_utils import dn
 
 class RelationalGraphNetwork(torch.nn.Module):
     def __init__(self,
