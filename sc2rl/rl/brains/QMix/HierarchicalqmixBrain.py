@@ -19,7 +19,8 @@ class HierarchicalQmixBrainConfig(ConfigBase):
             'eps': 1.0,
             'eps_gamma': 0.995,
             'eps_min': 0.01,
-            'use_double_q': True
+            'use_double_q': True,
+            'use_mixer_hidden': False
         }
 
         self.fit_conf = {
@@ -66,6 +67,7 @@ class HierarchicalQmixBrain(BrainBase):
         self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
         self.use_double_q = self.brain_conf['use_double_q']
+        self.use_mixer_hidden = self.brain_conf['use_mixer_hidden']
 
         if int(self.use_double_q) + int(self.use_clipped_q) >= 2:
             warnings.warn("Either one of 'use_double_q' or 'clipped_q' can be true. 'use_double_q' set to be false.")
@@ -129,7 +131,12 @@ class HierarchicalQmixBrain(BrainBase):
 
         qs = qs.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
 
-        q_tot = self.gather_sub_qs(self.qnet.mixers, self.mixer, c_curr_graph, c_curr_feature, qs)
+        if self.use_mixer_hidden:
+            mixer_input = q_dict['hidden_feat']
+        else:
+            mixer_input = c_curr_feature
+
+        q_tot = self.gather_sub_qs(self.qnet.mixers, self.mixer, c_curr_graph, mixer_input, qs)
 
         if self.use_clipped_q:
             q2_dict = self.qnet2.compute_qs(num_time_steps,
@@ -141,7 +148,13 @@ class HierarchicalQmixBrain(BrainBase):
             c_curr_graph.ndata['normalized_score'] = q2_dict['normalized_score']
 
             q2s = q2s.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
-            q_tot_2 = self.gather_sub_qs(self.qnet2.mixers, self.mixer2, c_curr_graph, c_curr_feature, q2s)
+
+            if self.use_mixer_hidden:
+                mixer_input = q2_dict['hidden_feat']
+            else:
+                mixer_input = c_curr_feature
+
+            q_tot_2 = self.gather_sub_qs(self.qnet2.mixers, self.mixer2, c_curr_graph, mixer_input, q2s)
 
         # compute q-target:
         with torch.no_grad():
@@ -163,7 +176,12 @@ class HierarchicalQmixBrain(BrainBase):
 
                 next_qs = next_qs.gather(-1, next_as.unsqueeze(-1).long()).squeeze(dim=-1)
 
-                next_q_tot = self.gather_sub_qs(self.qnet.mixers, self.mixer, n_curr_graph, n_curr_feature, next_qs)
+                if self.use_mixer_hidden:
+                    mixer_input = next_q_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot = self.gather_sub_qs(self.qnet.mixers, self.mixer, n_curr_graph, mixer_input, next_qs)
 
             elif self.use_clipped_q:
                 next_q1_dict = self.qnet.compute_qs(num_time_steps,
@@ -175,7 +193,13 @@ class HierarchicalQmixBrain(BrainBase):
                 n_curr_graph.ndata['normalized_score'] = next_q1_dict['normalized_score']
 
                 next_q1s, _ = next_q1s.max(dim=1)
-                next_q_tot_1 = self.gather_sub_qs(self.qnet.mixers, self.mixer, n_curr_graph, n_curr_feature, next_q1s)
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q1_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot_1 = self.gather_sub_qs(self.qnet.mixers, self.mixer, n_curr_graph, mixer_input, next_q1s)
 
                 next_q2_dict = self.qnet2.compute_qs(num_time_steps,
                                                      n_hist_graph, n_hist_feature,
@@ -186,7 +210,13 @@ class HierarchicalQmixBrain(BrainBase):
                 n_curr_graph.ndata['normalized_score'] = next_q2_dict['normalized_score']
 
                 next_q2s, _ = next_q2s.max(dim=1)
-                next_q_tot_2 = self.gather_sub_qs(self.qnet2.mixers, self.mixer2, n_curr_graph, n_curr_feature,
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q2_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot_2 = self.gather_sub_qs(self.qnet2.mixers, self.mixer2, n_curr_graph, mixer_input,
                                                   next_q2s)
                 next_q_tot = torch.min(next_q_tot_1, next_q_tot_2)
 
@@ -204,9 +234,16 @@ class HierarchicalQmixBrain(BrainBase):
 
                 next_qs = next_q_dict['qs']
                 n_curr_graph.ndata['assignment'] = next_q_dict['assignment']
+                n_curr_graph.ndata['normalized_score'] = next_q_dict['normalized_score']
 
                 next_qs, _ = next_qs.max(dim=1)
-                next_q_tot = self.gather_sub_qs(q_net.mixers, mixer, n_curr_graph, n_curr_feature, next_qs)
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot = self.gather_sub_qs(q_net.mixers, mixer, n_curr_graph, mixer_input, next_qs)
 
         q_targets = rewards + self.gamma * next_q_tot * (1 - dones)
 
@@ -245,5 +282,6 @@ class HierarchicalQmixBrain(BrainBase):
             sub_q_tots.append(sub_q_tot)
         q_tot = supmixer(curr_graph, curr_feature, sub_q_tots)
         _ = curr_graph.ndata.pop('assignment')
+        _ = curr_graph.ndata.pop('normalized_score')
 
         return q_tot

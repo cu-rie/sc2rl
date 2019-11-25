@@ -57,7 +57,8 @@ def victory(state_dict,
 
 def victory_if_zero_enemy(stat_dict,
                           next_state_dict,
-                          done):
+                          done,
+                          victory_coeff=1.0):
     next_units = next_state_dict['units']
     num_enemies_after = len(next_units.enemy)
 
@@ -65,9 +66,9 @@ def victory_if_zero_enemy(stat_dict,
 
     if done:
         if win:
-            reward = 1.0
+            reward = 1.0 * victory_coeff
         else:
-            reward = -1.0
+            reward = -1.0 * victory_coeff
     else:
         reward = 0
 
