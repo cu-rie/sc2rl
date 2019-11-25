@@ -69,7 +69,7 @@ class MultiStepInputQnetConfig(ConfigBase):
 #     return mask
 
 
-def generate_hierarchical_sampling_mask(q_mask):
+def generate_hierarchical_sampling_mask(q_mask, use_hold):
     n_agent = q_mask.shape[0]
     n_clusters = 2  # Consider (Move & Hold) cluster and Attack cluster
     action_start_indices = [0, 5]
@@ -84,6 +84,7 @@ def generate_hierarchical_sampling_mask(q_mask):
         should_move_hold = (~can_attacks).nonzero()
 
         mask = torch.ones_like(q_mask, device=q_mask.device)
+
 
         perm = torch.randperm(len(can_attack_agent_indices))
         attack_idx = perm[:n_agent_in_attack]
@@ -107,6 +108,9 @@ def generate_hierarchical_sampling_mask(q_mask):
         mask = torch.ones_like(q_mask, device=q_mask.device)
         mask[q_mask <= 0] = -VERY_LARGE_NUMBER
 
+    if not use_hold:
+        mask[:, 4] = -VERY_LARGE_NUMBER
+
     return mask
 
 
@@ -129,6 +133,7 @@ class MultiStepInputQnet(torch.nn.Module):
 
         qnet_actor_conf['node_input_dim'] = self.multi_step_input_net.out_dim
         self.qnet = QnetActor(qnet_actor_conf)
+        self.use_hold = qnet_actor_conf['use_hold']
 
     def forward(self, *args):
         pass
@@ -182,7 +187,7 @@ class MultiStepInputQnet(torch.nn.Module):
                 if torch.rand(1, device=device) <= eps:
                     q_mask = torch.ones_like(ally_qs, device=device)
                     q_mask[ally_qs <= -VERY_LARGE_NUMBER] = 0
-                    sampling_mask = generate_hierarchical_sampling_mask(q_mask)
+                    sampling_mask = generate_hierarchical_sampling_mask(q_mask, self.use_hold)
                     dist = torch.distributions.categorical.Categorical(logits=sampling_mask)
                     nn_actions = dist.sample()
                 else:

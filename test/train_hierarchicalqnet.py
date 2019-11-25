@@ -31,7 +31,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'DEBUG'
+    exp_name = 'NO HOLD'
 
     use_hold = False
 
