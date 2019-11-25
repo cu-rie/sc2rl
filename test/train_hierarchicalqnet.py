@@ -34,20 +34,21 @@ if __name__ == "__main__":
     exp_name = 'DEBUG'  # "Attention hopefully is all we need"
 
     num_hist_time_steps = 2
-    victory_coeff = 10.0
+    victory_coeff = 1.0
     frame_skip_rate = 2
     gamma = 1.0
 
     use_absolute_pos = True
     soft_assignment = True
-    use_concat_input = True
+    use_concat_input = False
     use_concat_input_gnn = False
     num_neurons = [64, 64]
     rnn_hidden_size = 32
     use_mixer_hidden = True
     batch_size = 256
 
-    use_hypernet = True
+    use_attention = False
+    use_hypernet = False
 
     edge_ally_to_enemy = True
     if edge_ally_to_enemy:
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     else:
         num_relations = 3
 
-    mixer_num_layer = 1
+    mixer_num_layer = 2
     enc_gnn_num_layer = 2
 
     if use_absolute_pos:
@@ -71,14 +72,13 @@ if __name__ == "__main__":
     attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
-    pooling_op = 'softmax'
+    pooling_op = None
     pooling_init = None
 
     map_name = "training_scenario_4"
     spectral_norm = False
     test = False
 
-    use_attention = True
     num_attn_head = 4
     use_hierarchical_actor = True
     use_double_q = True
