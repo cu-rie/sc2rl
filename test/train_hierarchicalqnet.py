@@ -31,7 +31,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'DEBUG'  # "Attention hopefully is all we need"
+    exp_name = 'PSEUDO GOLDEN TICKET'
 
     num_hist_time_steps = 2
     victory_coeff = 1.0
