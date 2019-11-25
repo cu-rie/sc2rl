@@ -33,6 +33,8 @@ if __name__ == "__main__":
     # experiment variables
     exp_name = 'DEBUG'
 
+    use_hold = False
+
     num_hist_time_steps = 2
     victory_coeff = 1.0
     frame_skip_rate = 2
@@ -104,7 +106,8 @@ if __name__ == "__main__":
                          'init_node_dim': node_input_dim,
                          'pooling_init': pooling_init,
                          'num_neurons': num_neurons,
-                         'attack_edge_type_index': attack_edge_type_index},
+                         'attack_edge_type_index': attack_edge_type_index,
+                         'use_hold': use_hold},
         mixer_conf={'rectifier': mixer_rectifier,
                     'use_attention': use_attention}
     )

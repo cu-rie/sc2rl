@@ -33,6 +33,8 @@ class HierarchicalQnetActor(torch.nn.Module):
         pooling_init = self.conf['pooling_init']
         self.pooling_using_initial = True
 
+        use_hold = self.conf['use_hold']
+
         self.move_module = MoveModule(node_dim=node_input_dim,
                                       move_dim=move_dim,
                                       num_neurons=num_neurons,
@@ -44,7 +46,8 @@ class HierarchicalQnetActor(torch.nn.Module):
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
                                       out_activation=out_activation,
-                                      spectral_norm=spectral_norm)
+                                      spectral_norm=spectral_norm,
+                                      use_hold=use_hold)
 
         self.attack_module = AttackModule(node_dim=node_input_dim,
                                           num_neurons=num_neurons,

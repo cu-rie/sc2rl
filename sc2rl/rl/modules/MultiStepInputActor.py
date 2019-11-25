@@ -24,7 +24,8 @@ class MultiStepInputActorConfig(ConfigBase):
             'out_activation': 'relu',
             'hidden_activation': 'mish',
             'num_neurons': [64, 64],
-            'spectral_norm': False
+            'spectral_norm': False,
+            'use_hold': True
 
         }
 
