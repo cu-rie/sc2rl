@@ -26,7 +26,7 @@ from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
-from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 
 if __name__ == "__main__":
 
@@ -44,7 +44,10 @@ if __name__ == "__main__":
     use_concat_input_gnn = False
     num_neurons = [64, 64]
     rnn_hidden_size = 32
-    use_mixer_hidden = False
+    use_mixer_hidden = True
+    batch_size = 256
+
+    use_hypernet = True
 
     edge_ally_to_enemy = True
     if edge_ally_to_enemy:
@@ -53,7 +56,7 @@ if __name__ == "__main__":
         num_relations = 3
 
     mixer_num_layer = 1
-    enc_gnn_num_layer = 3
+    enc_gnn_num_layer = 2
 
     if use_absolute_pos:
         node_input_dim = 19
@@ -65,7 +68,7 @@ if __name__ == "__main__":
     else:
         mixer_input_dim = node_input_dim
 
-    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
+    attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
     pooling_op = 'softmax'
@@ -76,18 +79,18 @@ if __name__ == "__main__":
     test = False
 
     use_attention = True
-    num_attn_head = 3
+    num_attn_head = 4
     use_hierarchical_actor = True
     use_double_q = True
-    clipped_q = True
+    clipped_q = False
 
-    num_runners = 1
-    num_samples = 1
-    eval_episodes = 1
+    # num_runners = 1
+    # num_samples = 4
+    # eval_episodes = 1
 
-    # num_runners = 2
-    # num_samples = 20
-    # eval_episodes = 10
+    num_runners = 2
+    num_samples = 20
+    eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
@@ -106,18 +109,36 @@ if __name__ == "__main__":
                     'use_attention': use_attention}
     )
     if use_attention:
-        gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim,
-                                                              'hidden_size': rnn_hidden_size},
-                                               hist_enc_conf={'num_layers': enc_gnn_num_layer,
-                                                              'model_dim': node_input_dim,
-                                                              'num_neurons': num_neurons,
-                                                              'num_relations': num_relations,
-                                                              'num_head': num_attn_head},
-                                               curr_enc_conf={'num_layers': enc_gnn_num_layer,
-                                                              'model_dim': node_input_dim,
-                                                              'num_neurons': num_neurons,
-                                                              'num_relations': num_relations,
-                                                              'num_head': num_attn_head})
+        if use_hypernet:
+            gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim,
+                                                                  'hidden_size': rnn_hidden_size},
+                                                   hist_enc_conf={'num_layers': enc_gnn_num_layer,
+                                                                  'model_dim': node_input_dim,
+                                                                  'use_hypernet': use_hypernet,
+                                                                  'hypernet_input_dim': num_relations,
+                                                                  'num_relations': None,
+                                                                  'num_neurons': num_neurons,
+                                                                  'num_head': num_attn_head},
+                                                   curr_enc_conf={'num_layers': enc_gnn_num_layer,
+                                                                  'model_dim': node_input_dim,
+                                                                  'use_hypernet': use_hypernet,
+                                                                  'hypernet_input_dim': num_relations,
+                                                                  'num_relations': None,
+                                                                  'num_neurons': num_neurons,
+                                                                  'num_head': num_attn_head})
+        else:
+            gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim,
+                                                                  'hidden_size': rnn_hidden_size},
+                                                   hist_enc_conf={'num_layers': enc_gnn_num_layer,
+                                                                  'model_dim': node_input_dim,
+                                                                  'num_neurons': num_neurons,
+                                                                  'num_relations': num_relations,
+                                                                  'num_head': num_attn_head},
+                                                   curr_enc_conf={'num_layers': enc_gnn_num_layer,
+                                                                  'model_dim': node_input_dim,
+                                                                  'num_neurons': num_neurons,
+                                                                  'num_relations': num_relations,
+                                                                  'num_head': num_attn_head})
     else:
         gnn_conf = MultiStepInputGraphNetworkConfig(hist_rnn_conf={'input_size': node_input_dim},
                                                     hist_enc_conf={'spectral_norm': spectral_norm,
@@ -172,7 +193,8 @@ if __name__ == "__main__":
                                    mixer_conf={'rectifier': mixer_rectifier})
 
     agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
-                                           fit_conf={'hist_num_time_steps': num_hist_time_steps})
+                                           fit_conf={'hist_num_time_steps': num_hist_time_steps,
+                                                     'batch_size': batch_size})
 
     agent = HierarchicalQmixAgent(conf=agent_conf,
                                   qnet_conf=qnet_conf,

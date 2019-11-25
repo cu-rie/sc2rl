@@ -37,7 +37,7 @@ class MultiLayerPerceptron(torch.nn.Module):
     def __init__(self,
                  input_dimension,
                  output_dimension,
-                 num_neurons,
+                 num_neurons=[64, 64],
                  spectral_norm=False,
                  input_normalization=0,
                  hidden_activation='mish',
