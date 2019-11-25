@@ -45,7 +45,7 @@ if __name__ == "__main__":
     num_neurons = [64, 64]
     rnn_hidden_size = 32
     use_mixer_hidden = True
-    batch_size = 256
+    batch_size = 128
 
     use_attention = False
     use_hypernet = False
@@ -281,7 +281,7 @@ if __name__ == "__main__":
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
-            if iters % 20 == 0:
+            if iters % 5 == 0:
                 eval_dicts = runner_manager.evaluate(eval_episodes)
                 wins = []
                 for eval_dict in eval_dicts:
