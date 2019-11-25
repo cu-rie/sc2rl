@@ -25,7 +25,7 @@ class RelationalGraphNetwork(RelationalGraphNetwork):
         update_feat = super().forward(graph=graph,
                                       node_feature=node_feature,
                                       update_node_type_indices=[NODE_ALLY, NODE_ENEMY],
-                                      update_edge_type_indices=[EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY])
+                                      update_edge_type_indices=[EDGE_ALLY, EDGE_ENEMY])
 
         return update_feat
 
