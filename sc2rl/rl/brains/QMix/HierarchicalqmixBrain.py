@@ -26,7 +26,9 @@ class HierarchicalQmixBrainConfig(ConfigBase):
         self.fit_conf = {
             'prefix': 'fit_conf',
             'norm_clip_val': None,
-            'tau': 0.9
+            'tau': 0.9,
+            'auto_norm_clip': False,
+            'auto_norm_clip_base_val': 0.1,
         }
 
 
@@ -249,10 +251,15 @@ class HierarchicalQmixBrain(BrainBase):
 
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
 
+        if self.fit_conf['auto_norm_clip']:
+            norm_clip_val = self.fit_conf['auto_norm_clip_base_val'] * q_tot.shape[0]
+        else:
+            norm_clip_val = self.fit_conf['norm_clip_val']
+
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
                                parameters=list(self.qnet.parameters()) + list(self.mixer.parameters()),
                                loss=loss,
-                               clip_val=self.fit_conf['norm_clip_val'])
+                               clip_val=norm_clip_val)
 
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
         self.update_target_network(self.fit_conf['tau'], self.mixer, self.mixer_target)
@@ -271,7 +278,7 @@ class HierarchicalQmixBrain(BrainBase):
             self.clip_and_optimize(optimizer=self.qnet2_optimizer,
                                    parameters=list(self.qnet2.parameters()) + list(self.mixer2.parameters()),
                                    loss=loss2,
-                                   clip_val=self.fit_conf['norm_clip_val'])
+                                   clip_val=norm_clip_val)
             fit_dict['loss2'] = loss2.detach().cpu().numpy()
         return fit_dict
 

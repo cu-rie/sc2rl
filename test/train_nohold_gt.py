@@ -31,12 +31,17 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = '[TEST] HOPE NEW GT - NO HOLD'
+    exp_name = '[RETRAIN] HOPE NEW GT - NO HOLD'
 
     use_hold = False
 
     num_hist_time_steps = 2
+
     victory_coeff = 1.0
+    reward_bias = 2.0
+
+    auto_grad_norm_clip = True
+
     frame_skip_rate = 2
     gamma = 1.0
 
@@ -87,16 +92,16 @@ if __name__ == "__main__":
 
     num_attn_head = 4
     use_hierarchical_actor = True
-    use_double_q = False
-    clipped_q = True
+    use_double_q = True
+    clipped_q = False
 
-    # num_runners = 1
-    # num_samples = 4
-    # eval_episodes = 1
-
-    num_runners = 2
+    num_runners = 1
     num_samples = 4
-    eval_episodes = 10
+    eval_episodes = 1
+
+    # num_runners = 2
+    # num_samples = 4
+    # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
@@ -170,7 +175,8 @@ if __name__ == "__main__":
                                                          'eps': eps_init,
                                                          'eps_gamma': eps_gamma,
                                                          'use_mixer_hidden': use_mixer_hidden},
-                                             fit_conf={'tau': 0.9})
+                                             fit_conf={'tau': tau,
+                                                       'auto_norm_clip': auto_grad_norm_clip})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -220,7 +226,7 @@ if __name__ == "__main__":
         #     load_path = 'abs_pos.ptb'
         # else:
         #     load_path = 'no_abs_pos.ptb'
-        load_path = '880.ptb'
+        load_path = '1800.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
@@ -230,7 +236,7 @@ if __name__ == "__main__":
     elif reward_name == 'victory':
         reward_func = victory
     elif reward_name == 'victory_if_zero_enemy':
-        reward_func = partial(victory_if_zero_enemy, victory_coeff=victory_coeff)
+        reward_func = partial(victory_if_zero_enemy, victory_coeff=victory_coeff, reward_bias=reward_bias)
     else:
         raise NotImplementedError("Not supported reward function:{}".format(reward_name))
 

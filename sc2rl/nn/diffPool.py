@@ -5,6 +5,7 @@ from sc2rl.utils.graph_utils import get_filtered_node_index_by_type
 from sc2rl.config.graph_configs import NODE_ALLY
 from sc2rl.utils.debug_utils import dn
 
+from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
 
 class DiffPoolLayer(torch.nn.Module):
 
@@ -21,7 +22,7 @@ class DiffPoolLayer(torch.nn.Module):
         assert pooling_op == 'softmax' or pooling_op == 'relu' or pooling_op is None, \
             "Supported pooling ops : ['softmax', 'relu', None]"
         self.pooling_op = pooling_op
-        self.eps = 1e-10
+        self.eps = VERY_SMALL_NUMBER * 1e2
 
         if self.pooling_op is None:
             pooler_out_act = 'softplus'
@@ -57,12 +58,13 @@ class DiffPoolLayer(torch.nn.Module):
     def apply_node_function(self, nodes):
         input_node_feature = nodes.data['node_feature']
         unnormalized_score = self.pooler(input_node_feature)
+        unnormalized_score = unnormalized_score.clamp(min=VERY_SMALL_NUMBER, max=5)
 
         if self.pooling_op == 'softmax':
             normalized_score = torch.nn.functional.softmax(unnormalized_score, dim=-1)
         elif self.pooling_op == 'relu':
             numer = torch.nn.functional.relu(unnormalized_score).pow(2)
-            denom = numer.sum(dim=-1, keepdim=True) + self.eps
+            denom = numer.sum(dim=-1, keepdim=True) #+ self.eps
             normalized_score = numer / denom
         elif self.pooling_op is None:
             normalized_score = unnormalized_score
