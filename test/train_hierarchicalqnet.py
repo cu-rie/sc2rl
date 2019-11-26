@@ -31,7 +31,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'HOPE NEW GT - NO HOLD'
+    exp_name = 'NO HOLD'
 
     use_hold = False
 
@@ -90,13 +90,13 @@ if __name__ == "__main__":
     use_double_q = False
     clipped_q = True
 
-    # num_runners = 1
-    # num_samples = 4
-    # eval_episodes = 1
-
-    num_runners = 2
+    num_runners = 1
     num_samples = 4
-    eval_episodes = 10
+    eval_episodes = 1
+
+    # num_runners = 2
+    # num_samples = 4
+    # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                                                          'eps': eps_init,
                                                          'eps_gamma': eps_gamma,
                                                          'use_mixer_hidden': use_mixer_hidden},
-                                             fit_conf={'tau': 0.9})
+                                             fit_conf={'tau': tau})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
