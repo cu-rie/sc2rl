@@ -111,5 +111,6 @@ class HoldModule(torch.nn.Module):
         if self.use_hold:
             hold_argument = self.hold_argument_calculator(node_features)
         else:
-            hold_argument = torch.ones(size=(node_features.shape[0], 1)) * -VERY_LARGE_NUMBER
+            hold_argument = torch.ones(size=(node_features.shape[0], 1),
+                                       device=node_features.device) * -VERY_LARGE_NUMBER
         return {'hold_argument': hold_argument}

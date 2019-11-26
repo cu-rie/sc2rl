@@ -31,7 +31,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'HOPE NEW GT - NO HOLD'
+    exp_name = '[TEST] HOPE NEW GT - NO HOLD'
 
     use_hold = False
 
@@ -81,22 +81,22 @@ if __name__ == "__main__":
     pooling_op = None
     pooling_init = None
 
-    map_name = "training_scenario_4"
+    map_name = "training_scenario_5_Human"
     spectral_norm = False
-    test = False
+    test = True
 
     num_attn_head = 4
     use_hierarchical_actor = True
     use_double_q = False
     clipped_q = True
 
-    # num_runners = 1
-    # num_samples = 4
-    # eval_episodes = 1
+    num_runners = 1
+    num_samples = 20
+    eval_episodes = 20
 
-    num_runners = 2
-    num_samples = 4
-    eval_episodes = 10
+    # num_runners = 2
+    # num_samples = 4
+    # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
@@ -220,7 +220,7 @@ if __name__ == "__main__":
         #     load_path = 'abs_pos.ptb'
         # else:
         #     load_path = 'no_abs_pos.ptb'
-        load_path = '880.ptb'
+        load_path = '1800.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
@@ -243,7 +243,7 @@ if __name__ == "__main__":
                           state_proc_func=game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps,
-                          realtime=False)
+                          realtime=True)
 
     runner_manager = RunnerManager(config, num_runners)
 
@@ -274,22 +274,18 @@ if __name__ == "__main__":
             runner_manager.sample(num_samples)
             runner_manager.transfer_sample()
 
-            s_time = time()
-            agent.to(fit_device)
-            fit_return_dict = agent.fit(device=fit_device)
-            agent.to(run_device)
-            e_time = time()
+            # s_time = time()
+            # agent.to(fit_device)
+            # fit_return_dict = agent.fit(device=fit_device)
+            # agent.to(run_device)
+            # e_time = time()
 
-            running_wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
-            running_wr = np.mean(running_wrs)
-            wandb.log(fit_return_dict, step=iters)
-            wandb.log({'train_winning_ratio': running_wr, 'epsilon': agent.brain.eps}, step=iters)
+            # running_wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
+            # running_wr = np.mean(running_wrs)
+            # wandb.log(fit_return_dict, step=iters)
+            # wandb.log({'train_winning_ratio': running_wr, 'epsilon': agent.brain.eps}, step=iters)
 
-            if iters % 20 == 0:
-                save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
-                torch.save(agent.state_dict(), save_path)
-
-            if iters % 5 == 0:
+            if iters % 1 == 0:
                 eval_dicts = runner_manager.evaluate(eval_episodes)
                 wins = []
                 for eval_dict in eval_dicts:
