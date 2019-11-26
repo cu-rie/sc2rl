@@ -26,13 +26,12 @@ from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
-from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
-                                        EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY)
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'MULTI NODE TYPE'
+    exp_name = 'No HOLD SEED'
 
     use_hold = False
 
@@ -49,14 +48,6 @@ if __name__ == "__main__":
     eps_init = 0.5
     eps_gamma = 0.997
     tau = 0.1
-
-    gnn_node_update_types = [NODE_ALLY, NODE_ENEMY]
-    gnn_edge_update_types = [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
-
-    mixer_node_update_types = [NODE_ALLY, NODE_ENEMY]
-    mixer_edge_update_types = [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
-
-    use_multi_node_types = True
 
     use_absolute_pos = True
     soft_assignment = True
@@ -97,16 +88,16 @@ if __name__ == "__main__":
 
     map_name = "training_scenario_4"
     spectral_norm = False
-    test = True
+    test = False
 
     num_attn_head = 4
     use_hierarchical_actor = True
     use_double_q = False
     clipped_q = True
 
-    num_runners = 2
-    num_samples = 20
-    eval_episodes = 10
+    num_runners = 1
+    num_samples = 4
+    eval_episodes = 1
 
     # num_runners = 2
     # num_samples = 8
@@ -167,19 +158,13 @@ if __name__ == "__main__":
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons,
-                                                                   'num_relations': num_relations,
-                                                                   'use_multi_node_types': use_multi_node_types,
-                                                                   'node_update_types': gnn_node_update_types,
-                                                                   'edge_update_types': gnn_edge_update_types},
+                                                                   'num_relations': num_relations},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
                                                                    'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons,
-                                                                   'num_relations': num_relations,
-                                                                   'use_multi_node_types': use_multi_node_types,
-                                                                   'node_update_types': gnn_node_update_types,
-                                                                   'edge_update_types': gnn_edge_update_types})
+                                                                   'num_relations': num_relations})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
@@ -204,17 +189,13 @@ if __name__ == "__main__":
                                                            'num_layers': mixer_num_layer,
                                                            'num_neurons': num_neurons,
                                                            'num_relations': num_relations,
-                                                           'num_head': num_attn_head,
-                                                           'use_multi_node_types': False})
+                                                           'num_head': num_attn_head})
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
                                                                 'model_dim': mixer_input_dim,
                                                                 'num_layers': mixer_num_layer,
                                                                 'use_concat': use_concat_input_gnn,
-                                                                'num_neurons': num_neurons,
-                                                                'use_multi_node_types': False,
-                                                                'node_update_types': mixer_node_update_types,
-                                                                'edge_update_types': mixer_edge_update_types})
+                                                                'num_neurons': num_neurons})
 
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
                                                 'input_dimension': mixer_input_dim,
@@ -245,7 +226,7 @@ if __name__ == "__main__":
         #     load_path = 'abs_pos.ptb'
         # else:
         #     load_path = 'no_abs_pos.ptb'
-        load_path = 'MULTI_NODE_TYPE_SEED.ptb'
+        load_path = '1800.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':

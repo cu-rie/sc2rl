@@ -16,6 +16,9 @@ class RelationalGraphNetworkConfig(ConfigBase):
             'num_neurons': [64, 64],
             'spectral_norm': False,
             'use_concat': False,
+            'use_multi_node_types': False,
+            'node_update_types': [NODE_ALLY, NODE_ENEMY],
+            'edge_update_types': [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
         }
 
 
@@ -24,8 +27,8 @@ class RelationalGraphNetwork(RelationalGraphNetwork):
     def forward(self, graph, node_feature):
         update_feat = super().forward(graph=graph,
                                       node_feature=node_feature,
-                                      update_node_type_indices=[NODE_ALLY, NODE_ENEMY],
-                                      update_edge_type_indices=[EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY])
+                                      update_node_type_indices=self.node_update_types,
+                                      update_edge_type_indices=self.edge_update_types)
 
         return update_feat
 

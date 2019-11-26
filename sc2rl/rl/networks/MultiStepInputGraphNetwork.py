@@ -5,6 +5,9 @@ from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetwork
 from sc2rl.rl.networks.rnn_encoder import RNNEncoder
 
+from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
+                                        EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY)
+
 
 class MultiStepInputGraphNetworkConfig(ConfigBase):
 
@@ -31,7 +34,10 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'num_relations': 4,
             'num_neurons': [64, 64],
             'spectral_norm': False,
-            'use_concat': False
+            'use_concat': False,
+            'use_multi_node_types': False,
+            'node_update_types': [NODE_ALLY, NODE_ENEMY],
+            'edge_update_types': [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
         }
 
         self.curr_enc_conf = {
@@ -41,7 +47,10 @@ class MultiStepInputGraphNetworkConfig(ConfigBase):
             'num_relations': 4,
             'num_neurons': [64, 64],
             'spectral_norm': False,
-            'use_concat': False
+            'use_concat': False,
+            'use_multi_node_types': False,
+            'node_update_types': [NODE_ALLY, NODE_ENEMY],
+            'edge_update_types': [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
         }
 
 
