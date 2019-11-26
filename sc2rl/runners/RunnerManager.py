@@ -7,13 +7,14 @@ from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 
 
 class RunnerConfig:
-    def __init__(self, map_name, reward_func, state_proc_func, agent, n_hist_steps, frame_skip_rate=1, realtime=False):
+    def __init__(self, map_name, reward_func, state_proc_func, agent, n_hist_steps, gamma,
+                 frame_skip_rate=1, realtime=False):
         self.env_config = {
             "map_name": map_name,
             "reward_func": reward_func,
             "state_proc_func": state_proc_func,
             "frame_skip_rate": frame_skip_rate,
-            "realtime": realtime
+            "realtime": realtime,
         }
 
         self.agent = agent
@@ -24,6 +25,8 @@ class RunnerConfig:
         # python version < 3.7
         self.sample_spec = namedtuple('exp_args', ["state", "action", "reward", "next_state", "done", "ret"])
         self.sample_spec.__new__.__defaults__ = tuple([list() for _ in range(6)])
+
+        self.gamma = gamma
 
 
 class RunnerManagerBase:
@@ -53,7 +56,7 @@ class RunnerManager:
             env = MicroTestEnvironment(**config.env_config)
 
             self.runners.append(MultiStepActorRunner(
-                env, config.agent, config.sample_spec, config.n_hist_steps))
+                env, config.agent, config.sample_spec, config.n_hist_steps, config.gamma))
 
     def sample(self, total_n):
         self.reset()

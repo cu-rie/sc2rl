@@ -11,14 +11,16 @@ from sc2rl.environments.MicroTestEnvironment import Status
 
 class MultiStepActorRunner(RunnerBase):
 
-    def __init__(self, env, agent, sample_spec, n_steps):
+    def __init__(self, env, agent, sample_spec, n_steps, gamma=1.0):
         super(MultiStepActorRunner, self).__init__(
             env=env, agent=agent, sample_spec=sample_spec)
         self.history_manager = HistoryManager(
             n_hist_steps=n_steps, init_graph=None)
 
+        self.gamma = gamma
+
     def run_1_episode(self):
-        trajectory = Trajectory(gamma=1.0)
+        trajectory = Trajectory(gamma=self.gamma)
         # the first frame of each episode
         curr_state_dict = self.env.observe()
         curr_graph = curr_state_dict['g']

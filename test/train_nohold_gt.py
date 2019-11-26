@@ -31,14 +31,14 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = '[RETRAIN] HOPE NEW GT - NO HOLD'
+    exp_name = 'No HOLD SEED'
 
     use_hold = False
 
     num_hist_time_steps = 2
 
     victory_coeff = 1.0
-    reward_bias = 2.0
+    reward_bias = 0.0
 
     auto_grad_norm_clip = True
 
@@ -92,15 +92,15 @@ if __name__ == "__main__":
 
     num_attn_head = 4
     use_hierarchical_actor = True
-    use_double_q = True
-    clipped_q = False
+    use_double_q = False
+    clipped_q = True
 
     num_runners = 1
     num_samples = 4
     eval_episodes = 1
 
     # num_runners = 2
-    # num_samples = 4
+    # num_samples = 8
     # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
@@ -249,6 +249,7 @@ if __name__ == "__main__":
                           state_proc_func=game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps,
+                          gamma=gamma,
                           realtime=False)
 
     runner_manager = RunnerManager(config, num_runners)
@@ -291,7 +292,7 @@ if __name__ == "__main__":
             wandb.log(fit_return_dict, step=iters)
             wandb.log({'train_winning_ratio': running_wr, 'epsilon': agent.brain.eps}, step=iters)
 
-            if iters % 20 == 0:
+            if iters % 20 == 0 or iters == 0:
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
