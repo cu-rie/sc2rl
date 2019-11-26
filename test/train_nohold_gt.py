@@ -31,7 +31,7 @@ from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'HOPE NEW GT - NO HOLD'
+    exp_name = '[TEST] HOPE NEW GT - NO HOLD'
 
     use_hold = False
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
-    pooling_op = None
+    pooling_op = 'relu'
     pooling_init = None
 
     map_name = "training_scenario_4"

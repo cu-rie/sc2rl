@@ -243,7 +243,7 @@ if __name__ == "__main__":
                           state_proc_func=game_state_to_dgl,
                           agent=agent,
                           n_hist_steps=num_hist_steps,
-                          realtime=True)
+                          realtime=False)
 
     runner_manager = RunnerManager(config, num_runners)
 

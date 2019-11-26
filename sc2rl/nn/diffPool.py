@@ -26,7 +26,7 @@ class DiffPoolLayer(torch.nn.Module):
         if self.pooling_op is None:
             pooler_out_act = 'softplus'
         else:
-            pooler_out_act = None
+            pooler_out_act = 'softplus'
 
         self.pooler = MLP(input_dimension=node_dim,
                           num_neurons=num_neurons,
@@ -56,7 +56,7 @@ class DiffPoolLayer(torch.nn.Module):
 
     def apply_node_function(self, nodes):
         input_node_feature = nodes.data['node_feature']
-        unnormalized_score = self.pooler.forward(input_node_feature)
+        unnormalized_score = self.pooler(input_node_feature)
 
         if self.pooling_op == 'softmax':
             normalized_score = torch.nn.functional.softmax(unnormalized_score, dim=-1)
