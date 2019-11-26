@@ -1,4 +1,6 @@
 from functools import partial
+import math
+
 import torch
 from torch_scatter import scatter_add
 
@@ -91,6 +93,7 @@ class RelationalAttentionLayer(torch.nn.Module):
 
     def message_function(self, edges, update_edge_type_indices):
         src_node_features = edges.src['node_feature']  # [Num. Edges x Model_dim]
+        device = src_node_features.device
 
         if self.use_hypernet:
             src_node_features = src_node_features.unsqueeze(-1)
@@ -111,10 +114,10 @@ class RelationalAttentionLayer(torch.nn.Module):
         else:
             edge_types = edges.data['edge_type']
             keys = torch.zeros(self.model_dim * self.num_head,
-                               src_node_features.shape[0])  # [(Model_dim x #.head) x #.Edges]
+                               src_node_features.shape[0], device=device)  # [(Model_dim x #.head) x #.Edges]
 
             values = torch.zeros(self.model_dim * self.num_head,
-                                 src_node_features.shape[0])  # [(Model_dim x #.head) x #.Edges]
+                                 src_node_features.shape[0], device=device)  # [(Model_dim x #.head) x #.Edges]
             for i in update_edge_type_indices:
                 WK = self.WK['WK{}'.format(i)]
                 WV = self.WV['WV{}'.format(i)]
@@ -132,6 +135,8 @@ class RelationalAttentionLayer(torch.nn.Module):
 
     def reduce_function(self, nodes):
         node_features = nodes.data['node_feature']
+        device = node_features.device
+
         queries = self.WQ(node_features)  # [(Batched) Node x (Model_dim x #.head)]
 
         keys = nodes.mailbox['key']  # [(Batched) Node x (Model_dim x #.head)]
@@ -148,7 +153,7 @@ class RelationalAttentionLayer(torch.nn.Module):
             node_counter += 1
             num_edges.append(_num_edges)
 
-        node_indices = torch.tensor(node_indices).long()
+        node_indices = torch.tensor(node_indices, device=device).long()
         expanded_queries = torch.stack(expanded_queries)  # [#.Edges x (Model_dim x #.head)]
         expanded_keys = keys.view(-1, self.model_dim * self.num_head)  # [#.Edges x (Model_dim x #.head)]
 
@@ -156,7 +161,8 @@ class RelationalAttentionLayer(torch.nn.Module):
 
         scores = scores.view(-1, self.num_head, self.model_dim)  # [#.Edges x Model_dim x #.head]
         scores = scores.sum(2)  # [#.Edges x #.head]
-        scores = scores / torch.sqrt(torch.Tensor((self.model_dim * self.num_head,)))  # [#.Edges x #.head]
+        scores = scores / math.sqrt(self.model_dim * self.num_head)  # [#.Edges x #.head]
+        # scores = scores / torch.sqrt(torch.Tensor((self.model_dim * self.num_head,)))
 
         # Compute Score
         if self.pooling_op == 'softmax':
@@ -168,7 +174,7 @@ class RelationalAttentionLayer(torch.nn.Module):
         else:
             raise RuntimeError("No way! '{}' cannot be true".format(self.pooling_op))
 
-        denom_repeat = torch.repeat_interleave(denom, torch.tensor(num_edges), dim=0)
+        denom_repeat = torch.repeat_interleave(denom, torch.tensor(num_edges, device=device), dim=0)
         normalized_score = numer / denom_repeat
         normalized_score = normalized_score.view(-1, self.num_head, 1)
         values_scatter = values.view(-1, self.num_head, self.model_dim)

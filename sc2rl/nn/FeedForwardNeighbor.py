@@ -9,7 +9,7 @@ class FeedForwardNeighbor(torch.nn.Module):
     def __init__(self,
                  model_dim,
                  neighbor_degree: int = 0,
-                 num_node_types: int = 1,
+                 num_node_types: int = 2,
                  num_neurons: list = [128, 128]):
         super(FeedForwardNeighbor, self).__init__()
 
