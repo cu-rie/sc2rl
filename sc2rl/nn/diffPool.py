@@ -15,7 +15,8 @@ class DiffPoolLayer(torch.nn.Module):
                  num_groups=3,
                  pooling_op='softmax',
                  spectral_norm=False,
-                 pooling_init='xavier'
+                 pooling_init='xavier',
+                 hidden_activation='mish',
                  ):
 
         super(DiffPoolLayer, self).__init__()
@@ -29,10 +30,17 @@ class DiffPoolLayer(torch.nn.Module):
         else:
             pooler_out_act = 'softplus'
 
+        self.use_clip = True
+
+        if hidden_activation == 'tanh':
+            pooler_out_act = 'tanh'
+            self.pooling_op = 'softmax'
+            self.use_clip = False
+
         self.pooler = MLP(input_dimension=node_dim,
                           num_neurons=num_neurons,
                           output_dimension=num_groups,
-                          hidden_activation='mish',
+                          hidden_activation=hidden_activation,
                           out_activation=pooler_out_act,
                           spectral_norm=spectral_norm,
                           init=pooling_init)
@@ -58,7 +66,8 @@ class DiffPoolLayer(torch.nn.Module):
     def apply_node_function(self, nodes):
         input_node_feature = nodes.data['node_feature']
         unnormalized_score = self.pooler(input_node_feature)
-        unnormalized_score = unnormalized_score.clamp(min=VERY_SMALL_NUMBER, max=5)
+        if self.use_clip:
+            unnormalized_score = unnormalized_score.clamp(min=VERY_SMALL_NUMBER, max=5)
 
         if self.pooling_op == 'softmax':
             normalized_score = torch.nn.functional.softmax(unnormalized_score, dim=-1)
