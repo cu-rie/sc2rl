@@ -19,7 +19,8 @@ class HierarchicalActorModuleConfig(ConfigBase):
             'hidden_activation': 'mish',
             'num_neurons': [64, 64],
             'pooling_op': 'softmax',
-            'spectral_norm': False
+            'spectral_norm': False,
+            'use_hold': True
         }
 
 

@@ -41,7 +41,8 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
             'use_concat_input': False,
             'init_node_dim': 17,
             'pooling_init': None,
-            'attack_edge_type_index': EDGE_ENEMY
+            'attack_edge_type_index': EDGE_ENEMY,
+            'use_hold': True
         }
 
         self.mixer_conf = {
@@ -64,7 +65,7 @@ class HierarchicalMultiStepInputQnet(MultiStepInputQnet):
 
         self.mixers = torch.nn.ModuleDict()
         if soft_assignment:
-            #base_mixer = Soft_SubQmixer(mixer_gnn_conf, mixer_ff_conf, 0, mixer_rectifier)
+            # base_mixer = Soft_SubQmixer(mixer_gnn_conf, mixer_ff_conf, 0, mixer_rectifier)
             for i in range(conf.qnet_actor_conf['num_groups']):
                 mixer = Soft_SubQmixer(mixer_gnn_conf, mixer_ff_conf, i, mixer_rectifier, mixer_attn)
                 # mixer = deepcopy(base_mixer)

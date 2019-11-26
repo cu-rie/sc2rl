@@ -19,7 +19,8 @@ class ActorModuleConfig(ConfigBase):
             'out_activation': None,
             'hidden_activation': 'mish',
             'num_neurons': [64, 64],
-            'spectral_norm': False
+            'spectral_norm': False,
+            'use_hold': True
         }
 
 
@@ -27,7 +28,8 @@ class ActorModule(torch.nn.Module):
 
     def __init__(self,
                  hyper_param,
-                 move_dim: int = 4):
+                 move_dim: int = 4,
+                 use_hold=True):
         super(ActorModule, self).__init__()
         self.hyper_param = hyper_param.actor_conf
         node_input_dim = self.hyper_param['node_input_dim']
@@ -48,7 +50,8 @@ class ActorModule(torch.nn.Module):
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
                                       out_activation=out_activation,
-                                      spectral_norm=spectral_norm)
+                                      spectral_norm=spectral_norm,
+                                      use_hold=use_hold)
 
         self.attack_module = AttackModule(node_dim=node_input_dim,
                                           num_neurons=num_neurons,

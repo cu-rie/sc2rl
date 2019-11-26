@@ -186,9 +186,13 @@ class SupQmixer(torch.nn.Module):
         graph.ndata['node_feature'] = node_feature
         device = node_feature.device
 
+        len_groups = []
         q_tot = torch.zeros(graph.batch_size, device=device)
         for i, sub_q_tot in enumerate(sub_q_tots):
             node_indices = get_filtered_node_index_by_assignment(graph, i)
+
+            len_groups.append(len(node_indices))
+
             mask = torch.zeros(size=(node_feature.shape[0], 1), device=device)
             mask[node_indices, :] = 1
 
@@ -206,6 +210,13 @@ class SupQmixer(torch.nn.Module):
         q_tot = q_tot + v
 
         _ = graph.ndata.pop('node_feature')
+        print("Num elements in groups {}".format(len_groups))
+
+        ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
+        target_assignment_weight = graph.ndata['normalized_score'][ally_indices]
+
+        print("Average normalized scores {}".format(target_assignment_weight.mean(0)))
+
         return q_tot
 
 

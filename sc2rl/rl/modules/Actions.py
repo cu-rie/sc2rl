@@ -92,12 +92,14 @@ class HoldModule(torch.nn.Module):
                  num_neurons=[128],
                  hidden_activation: str = 'mish',
                  out_activation: str = None,
-                 spectral_norm=False):
+                 spectral_norm=False,
+                 use_hold=True):
         super(HoldModule, self).__init__()
         self.hold_argument_calculator = MLP(node_dim, 1, num_neurons,
                                             hidden_activation=hidden_activation,
                                             out_activation=out_activation,
                                             spectral_norm=spectral_norm)
+        self.use_hold = use_hold
 
     def forward(self, graph, node_feature):
         graph.ndata['node_feature'] = node_feature
@@ -106,5 +108,9 @@ class HoldModule(torch.nn.Module):
 
     def apply_function(self, nodes):
         node_features = nodes.data['node_feature']
-        hold_argument = self.hold_argument_calculator(node_features)
+        if self.use_hold:
+            hold_argument = self.hold_argument_calculator(node_features)
+        else:
+            hold_argument = torch.ones(size=(node_features.shape[0], 1),
+                                       device=node_features.device) * -VERY_LARGE_NUMBER
         return {'hold_argument': hold_argument}
