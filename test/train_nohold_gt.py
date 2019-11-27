@@ -113,7 +113,7 @@ if __name__ == "__main__":
     clipped_q = False
 
     num_runners = 1
-    num_samples = 8
+    num_samples = 1
     eval_episodes = 10
 
     # num_runners = 1

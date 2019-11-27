@@ -153,7 +153,9 @@ class Soft_SubQmixer(torch.nn.Module):
         device = node_feature.device
 
         _qs = torch.zeros(size=(graph.number_of_nodes(), 1), device=device)
-        w = w[ally_indices, :]  # [# assignments x 1]
+
+        #w = w[ally_indices, :]  # [# assignments x 1]
+
         _qs[ally_indices, :] = qs.view(-1, 1) * target_assignment_weight.view(-1, 1)
         graph.ndata['node_feature'] = _qs
         q_tot = dgl.sum_nodes(graph, 'node_feature')
