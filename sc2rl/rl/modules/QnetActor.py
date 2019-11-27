@@ -101,24 +101,24 @@ class QnetActor(torch.nn.Module):
         return_dict['enemy_tags'] = enemy_tags
         return return_dict
 
-    def get_action(self, graph, node_feature, maximum_num_enemy,
-                   ally_node_type_index=NODE_ALLY,
-                   attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
-
-        info_dict = self.compute_qs(graph=graph,
-                                    node_feature=node_feature,
-                                    maximum_num_enemy=maximum_num_enemy,
-                                    ally_node_type_index=ally_node_type_index,
-                                    attack_edge_type_index=attack_edge_type_index)
-
-        ally_qs = info_dict['qs']
-
-        if 'enemy_tag' in graph.ndata.keys():
-            _ = graph.ndata.pop('enemy_tag')
-
-        if torch.rand(1) <= self.eps:
-            raise NotImplementedError
-            # nn_actions = dist.sample()
-        else:
-            nn_actions = ally_qs.argmax(dim=1)
-        return nn_actions, info_dict
+    # def get_action(self, graph, node_feature, maximum_num_enemy,
+    #                ally_node_type_index=NODE_ALLY,
+    #                attack_edge_type_index=EDGE_IN_ATTACK_RANGE):
+    #
+    #     info_dict = self.compute_qs(graph=graph,
+    #                                 node_feature=node_feature,
+    #                                 maximum_num_enemy=maximum_num_enemy,
+    #                                 ally_node_type_index=ally_node_type_index,
+    #                                 attack_edge_type_index=attack_edge_type_index)
+    #
+    #     ally_qs = info_dict['qs']
+    #
+    #     if 'enemy_tag' in graph.ndata.keys():
+    #         _ = graph.ndata.pop('enemy_tag')
+    #
+    #     if torch.rand(1) <= self.eps:
+    #         raise NotImplementedError
+    #         # nn_actions = dist.sample()
+    #     else:
+    #         nn_actions = ally_qs.argmax(dim=1)
+    #     return nn_actions, info_dict

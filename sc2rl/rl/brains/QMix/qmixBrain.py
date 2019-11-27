@@ -20,6 +20,7 @@ class QmixBrainConfig(ConfigBase):
             'eps_gamma': 0.995,
             'eps_min': 0.01,
             'use_double_q': True,
+            'use_mixer_hidden': False,
             'scheduler_step_size': 30,
             'scheduler_gamma': 0.9
         }
@@ -27,7 +28,9 @@ class QmixBrainConfig(ConfigBase):
         self.fit_conf = {
             'prefix': 'fit_conf',
             'norm_clip_val': None,
-            'tau': 0.1
+            'tau': 0.1,
+            'auto_norm_clip': False,
+            'auto_norm_clip_base_val': 0.1
         }
 
 
@@ -68,6 +71,8 @@ class QMixBrain(BrainBase):
         self.register_buffer('eps_min', torch.ones(1, ) * self.brain_conf['eps_min'])
         self.eps_gamma = self.brain_conf['eps_gamma']
         self.use_double_q = self.brain_conf['use_double_q']
+        self.use_mixer_hidden = self.brain_conf['use_mixer_hidden']
+
         self.scheduler_step_size = self.brain_conf['scheduler_step_size']
         self.scheduler_gamma = self.brain_conf['scheduler_gamma']
 
@@ -84,20 +89,16 @@ class QMixBrain(BrainBase):
         if self.brain_conf['optimizer'] == 'lookahead':
             qnet_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
             self.qnet_optimizer = optimizer(qnet_base_optimizer)
-            self.qnet_scheduler = StepLR(qnet_base_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
         else:
             self.qnet_optimizer = optimizer(params, lr=self.brain_conf['lr'])
-            self.qnet_scheduler = StepLR(self.qnet_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
 
         if self.use_clipped_q:
             params = list(self.qnet2.parameters()) + list(self.mixer2.parameters())
             if self.brain_conf['optimizer'] == 'lookahead':
                 qnet2_base_optimizer = RAdam(params, lr=self.brain_conf['lr'])
                 self.qnet2_optimizer = optimizer(qnet2_base_optimizer)
-                self.qnet2_scheduler = StepLR(qnet2_base_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
             else:
                 self.qnet2_optimizer = optimizer(params, lr=self.brain_conf['lr'])
-                self.qnet2_scheduler = StepLR(self.qnet2_optimizer, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma)
 
         self.fit_conf = conf.fit_conf
 
@@ -150,13 +151,13 @@ class QMixBrain(BrainBase):
             q2s = q2_dict['qs']
 
             q2s = q2s.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
-            q_tot_2 = self.mixer2(c_curr_graph, c_curr_feature, q2s)
 
             if self.use_mixer_hidden:
                 mixer_input = q2_dict['hidden_feat']
             else:
                 mixer_input = c_curr_feature
 
+            q_tot_2 = self.mixer2(c_curr_graph, mixer_input, q2s)
 
         # compute q-target:
         with torch.no_grad():
@@ -174,7 +175,13 @@ class QMixBrain(BrainBase):
 
                 next_qs = next_q_dict['qs']
                 next_qs = next_qs.gather(-1, next_as.unsqueeze(-1).long()).squeeze(dim=-1)
-                next_q_tot = self.mixer_target(n_curr_graph, n_curr_feature, next_qs)
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot = self.mixer_target(n_curr_graph, mixer_input, next_qs)
 
             elif self.use_clipped_q:
                 next_q1_dict = self.qnet.compute_qs(num_time_steps,
@@ -184,7 +191,13 @@ class QMixBrain(BrainBase):
                 next_q1s = next_q1_dict['qs']
 
                 next_q1s, _ = next_q1s.max(dim=1)
-                next_q_tot_1 = self.mixer(n_curr_graph, n_curr_feature, next_q1s)
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q1_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot_1 = self.mixer(n_curr_graph, mixer_input, next_q1s)
 
                 next_q2_dict = self.qnet2.compute_qs(num_time_steps,
                                                      n_hist_graph, n_hist_feature,
@@ -193,7 +206,13 @@ class QMixBrain(BrainBase):
                 next_q2s = next_q2_dict['qs']
 
                 next_q2s, _ = next_q2s.max(dim=1)
-                next_q_tot_2 = self.mixer2(n_curr_graph, n_curr_feature, next_q2s)
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q2_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot_2 = self.mixer2(n_curr_graph, mixer_input, next_q2s)
                 next_q_tot = torch.min(next_q_tot_1, next_q_tot_2)
 
             else:
@@ -211,17 +230,27 @@ class QMixBrain(BrainBase):
                 next_qs = next_q_dict['qs']
 
                 next_qs, _ = next_qs.max(dim=1)
-                next_q_tot = mixer(n_curr_graph, n_curr_feature, next_qs)
+
+                if self.use_mixer_hidden:
+                    mixer_input = next_q_dict['hidden_feat']
+                else:
+                    mixer_input = n_curr_feature
+
+                next_q_tot = mixer(n_curr_graph, mixer_input, next_qs)
 
         q_targets = rewards + self.gamma * next_q_tot * (1 - dones)
 
         loss = torch.nn.functional.mse_loss(input=q_tot, target=q_targets)
 
+        if self.fit_conf['auto_norm_clip']:
+            norm_clip_val = self.fit_conf['auto_norm_clip_base_val'] * q_tot.shape[0]
+        else:
+            norm_clip_val = self.fit_conf['norm_clip_val']
+
         self.clip_and_optimize(optimizer=self.qnet_optimizer,
-                               parameters=list(self.qnet.parameters())+list(self.mixer.parameters()),
+                               parameters=list(self.qnet.parameters()) + list(self.mixer.parameters()),
                                loss=loss,
-                               clip_val=self.fit_conf['norm_clip_val'],
-                               scheduler=self.qnet_scheduler)
+                               clip_val=norm_clip_val)
 
         self.update_target_network(self.fit_conf['tau'], self.qnet, self.qnet_target)
         self.update_target_network(self.fit_conf['tau'], self.mixer, self.mixer_target)
@@ -240,8 +269,7 @@ class QMixBrain(BrainBase):
             self.clip_and_optimize(optimizer=self.qnet2_optimizer,
                                    parameters=list(self.qnet2.parameters()) + list(self.mixer2.parameters()),
                                    loss=loss2,
-                                   clip_val=self.fit_conf['norm_clip_val'],
-                                   scheduler=self.qnet2_scheduler)
+                                   clip_val=norm_clip_val)
             fit_dict['loss2'] = loss2.detach().cpu().numpy()
 
         return fit_dict

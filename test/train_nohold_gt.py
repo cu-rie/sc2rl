@@ -37,9 +37,9 @@ from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'MULTI NODE TYPE'
+    exp_name = '[NOISY NET] SUB-Q'
 
-    use_subq = False
+    use_subq = True
 
     use_hold = False
     use_tanh = False
@@ -107,13 +107,13 @@ if __name__ == "__main__":
     else:
         mixer_input_dim = node_input_dim
 
-    attack_edge_type_index = EDGE_ENEMY
+    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
 
     mixer_rectifier = 'softplus'
     pooling_op = 'softmax'
     pooling_init = None
 
-    map_name = "training_scenario_5"
+    map_name = "training_scenario_5_Human"
     spectral_norm = False
     test = False
 
@@ -122,8 +122,8 @@ if __name__ == "__main__":
     use_double_q = False
     clipped_q = True
 
-    num_runners = 1
-    num_samples = 5
+    num_runners = 2
+    num_samples = 8
     eval_episodes = 10
 
     # num_runners = 1
@@ -337,7 +337,8 @@ if __name__ == "__main__":
                           agent=agent,
                           n_hist_steps=num_hist_steps,
                           gamma=gamma,
-                          realtime=False)
+                          realtime=False,
+                          frame_skip_rate=frame_skip_rate)
 
     runner_manager = RunnerManager(config, num_runners)
 
