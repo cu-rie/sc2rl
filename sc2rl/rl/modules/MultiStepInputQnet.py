@@ -192,6 +192,8 @@ class MultiStepInputQnet(torch.nn.Module):
                     nn_actions = dist.sample()
                 else:
                     nn_actions = ally_qs.argmax(dim=1)
+            elif self.exploration_method == "noisy_net":
+                nn_actions = ally_qs.argmax(dim=1)
             else:
                 raise RuntimeError("Not admissible exploration methods.")
         else:

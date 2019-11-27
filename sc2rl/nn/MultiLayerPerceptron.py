@@ -3,6 +3,9 @@ import torch.nn.functional as F
 from sc2rl.config.nn_configs import VERY_SMALL_NUMBER
 from sc2rl.nn.SpectralNorm import SNLinear
 
+import math
+from torch.autograd import Variable
+from torch.nn import init, Parameter
 
 def swish(x):
     return x * torch.nn.functional.sigmoid(x)
@@ -33,6 +36,39 @@ class Linear(torch.nn.Linear):
         return F.linear(inputs, weight, self.bias)
 
 
+class NoisyLinear(torch.nn.Linear):
+    #https://github.com/Kaixhin/NoisyNet-A3C/blob/master/model.py
+
+    def __init__(self, in_features, out_features, sigma_init=0.017, bias=True):
+        super(NoisyLinear, self).__init__(in_features, out_features, bias=True)  # TODO: Adapt for no bias
+        # µ^w and µ^b reuse self.weight and self.bias
+        self.sigma_init = sigma_init
+        self.sigma_weight = Parameter(torch.Tensor(out_features, in_features))  # σ^w
+        self.sigma_bias = Parameter(torch.Tensor(out_features))  # σ^b
+        self.register_buffer('epsilon_weight', torch.zeros(out_features, in_features))
+        self.register_buffer('epsilon_bias', torch.zeros(out_features))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        if hasattr(self, 'sigma_weight'):  # Only init after all params added (otherwise super().__init__() fails)
+            init.uniform(self.weight, -math.sqrt(3 / self.in_features), math.sqrt(3 / self.in_features))
+            init.uniform(self.bias, -math.sqrt(3 / self.in_features), math.sqrt(3 / self.in_features))
+            init.constant(self.sigma_weight, self.sigma_init)
+            init.constant(self.sigma_bias, self.sigma_init)
+
+    def forward(self, input):
+        return F.linear(input, self.weight + self.sigma_weight * Variable(self.epsilon_weight),
+                        self.bias + self.sigma_bias * Variable(self.epsilon_bias))
+
+    def sample_noise(self):
+        self.epsilon_weight = torch.randn(self.out_features, self.in_features)
+        self.epsilon_bias = torch.randn(self.out_features)
+
+    def remove_noise(self):
+        self.epsilon_weight = torch.zeros(self.out_features, self.in_features)
+        self.epsilon_bias = torch.zeros(self.out_features)
+
+
 class MultiLayerPerceptron(torch.nn.Module):
     def __init__(self,
                  input_dimension,
@@ -44,7 +80,8 @@ class MultiLayerPerceptron(torch.nn.Module):
                  out_activation=None,
                  drop_probability=0.0,
                  init=None,
-                 weight_standardization=False):
+                 weight_standardization=False,
+                 use_noisy=True):
         """
         :param num_neurons: number of neurons for each layer
         :param out_activation: output layer's activation unit
@@ -65,6 +102,8 @@ class MultiLayerPerceptron(torch.nn.Module):
         self.init = init
         self.weight_standardization = weight_standardization
         self.spectral_norm = spectral_norm
+        self.use_noisy = use_noisy
+
         ws = self.weight_standardization
 
         # infer normalization layers
@@ -80,19 +119,27 @@ class MultiLayerPerceptron(torch.nn.Module):
         # input -> hidden 1
         if self.spectral_norm:
             input_layer = SNLinear(in_features=self.input_dimension, out_features=num_neurons[0])
+        elif self.use_noisy:
+            input_layer = NoisyLinear(in_features=self.input_dimension, out_features=num_neurons[0])
         else:
             input_layer = Linear(norm=ws, in_features=self.input_dimension, out_features=num_neurons[0])
         self.apply_weight_init(input_layer, self.init)
         self.layers.append(input_layer)
+
         for i, num_neuron in enumerate(num_neurons[:-1]):
             if self.spectral_norm:
                 hidden_layer = SNLinear(in_features=num_neuron, out_features=num_neurons[i + 1])
+            elif self.use_noisy:
+                hidden_layer = NoisyLinear(in_features=num_neuron, out_features=num_neurons[i + 1])
             else:
                 hidden_layer = Linear(norm=ws, in_features=num_neuron, out_features=num_neurons[i + 1])
             self.apply_weight_init(hidden_layer, self.init)
             self.layers.append(hidden_layer)
+
         if self.spectral_norm:
             last_layer = SNLinear(in_features=num_neurons[-1], out_features=self.output_dimension)
+        elif self.use_noisy:
+            last_layer = NoisyLinear(in_features=num_neurons[-1], out_features=self.output_dimension)
         else:
             last_layer = Linear(norm=ws, in_features=num_neurons[-1], out_features=self.output_dimension)
         self.apply_weight_init(last_layer, self.init)

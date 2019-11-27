@@ -27,7 +27,8 @@ from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
 from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
-                                        EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY)
+                                        EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY,
+                                        EDGE_IN_ATTACK_RANGE)
 
 if __name__ == "__main__":
 
@@ -47,21 +48,27 @@ if __name__ == "__main__":
     frame_skip_rate = 2
     gamma = 0.95
 
-    eps_init = 0.9
-    eps_gamma = 0.995
+    eps_init = 0.5
+    eps_gamma = 0.997
     tau = 0.1
 
     gnn_node_update_types = [NODE_ALLY, NODE_ENEMY]
     gnn_edge_update_types = [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
 
-    mixer_node_update_types = [NODE_ALLY, NODE_ENEMY]
-    mixer_edge_update_types = [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
+    mixer_node_update_types = [NODE_ALLY]
+    mixer_edge_update_types = [EDGE_ALLY]
 
     use_multi_node_types = True
+    exploration_method = 'noisy_net'
+
+    if exploration_method == 'clustered_random':
+        eps = eps_init
+    elif exploration_method == 'noisy_net':
+        eps = 0.0
 
     use_absolute_pos = True
     soft_assignment = True
-    use_concat_input = True
+    use_concat_input = False
     use_concat_input_gnn = False
     num_neurons = [64, 64]
     rnn_hidden_size = 32
@@ -93,10 +100,10 @@ if __name__ == "__main__":
     attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
-    pooling_op = 'relu'
+    pooling_op = 'softmax'
     pooling_init = None
 
-    map_name = "training_scenario_4"
+    map_name = "training_scenario_5"
     spectral_norm = False
     test = False
 
@@ -105,14 +112,19 @@ if __name__ == "__main__":
     use_double_q = True
     clipped_q = False
 
-    num_runners = 2
+    num_runners = 1
     num_samples = 8
     eval_episodes = 10
+
+    # num_runners = 1
+    # num_samples = 2
+    # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
-        multi_step_input_qnet_conf={'exploration_method': 'clustered_random',
+        multi_step_input_qnet_conf={'exploration_method': exploration_method,
+                                    'eps': eps,
                                     'use_attention': use_attention},
         qnet_actor_conf={'spectral_norm': spectral_norm,
                          'node_input_dim': node_input_dim,
@@ -236,6 +248,9 @@ if __name__ == "__main__":
                                   buffer_conf=buffer_conf,
                                   soft_assignment=soft_assignment)
 
+    if exploration_method == 'noisy_net':
+        agent.sample_noise()
+
     agent.to(run_device)
 
     if test:
@@ -324,7 +339,10 @@ if __name__ == "__main__":
                 wr = np.mean(np.array(wins))
                 wandb.log({'eval_winning_ratio': wr}, step=iters)
 
-        runner_manager.close()
+            if iters % 1 == 0 and exploration_method == 'noisy_net':
+                agent.sample_noise()
+
+            runner_manager.close()
     except KeyboardInterrupt:
         runner_manager.close()
     finally:
