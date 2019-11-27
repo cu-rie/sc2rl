@@ -14,6 +14,7 @@ from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 from sc2rl.nn.MultiLayerPerceptron import NoisyLinear
 
 from sc2rl.utils.debug_utils import dn
+from sc2rl.config.graph_configs import EDGE_ENEMY
 
 
 class MultiStepInputQnetConfig(ConfigBase):
@@ -38,6 +39,15 @@ class MultiStepInputQnetConfig(ConfigBase):
             'hidden_activation': 'mish',
             'num_neurons': [64, 64],
             'spectral_norm': False,
+            'num_groups': 3,
+            'pooling_op': 'softmax',
+            'use_concat_input': False,
+            'init_node_dim': 17,
+            'pooling_init': None,
+            'attack_edge_type_index': EDGE_ENEMY,
+            'use_hold': True,
+            'use_tanh': False,
+            'use_noisy': False
         }
 
 

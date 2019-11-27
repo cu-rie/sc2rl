@@ -9,6 +9,7 @@ from sc2rl.memory.n_step_memory import NstepInputMemory
 from sc2rl.utils.sc2_utils import nn_action_to_sc2_action
 from sc2rl.utils.graph_utils import get_largest_number_of_enemy_nodes
 from sc2rl.utils.graph_utils import get_filtered_node_index_by_type, NODE_ALLY
+from sc2rl.nn.MultiLayerPerceptron import NoisyLinear
 
 from sc2rl.config.ConfigBase import ConfigBase
 
@@ -89,6 +90,17 @@ class QmixAgent(torch.nn.Module):
         hist_graph.ndata['node_feature'] = hist_node_feature
         curr_graph.ndata['node_feature'] = curr_node_feature
         return nn_actions, sc2_actions
+
+    def sample_noise(self):
+        for m in self.modules():
+            if isinstance(m, NoisyLinear):
+                m.sample_noise()
+
+    def remove_noise(self):
+        for m in self.modules():
+            if isinstance(m, NoisyLinear):
+                m.remove_noise()
+
 
     def fit(self, device='cpu'):
         # the prefix 'c' indicates #current# time stamp inputs

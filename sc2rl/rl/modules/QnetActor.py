@@ -12,32 +12,60 @@ class QnetActor(torch.nn.Module):
         super(QnetActor, self).__init__()
         self.conf = conf
         self.move_dim = move_dim
+        self.use_concat_input = self.conf['use_concat_input']
         node_input_dim = self.conf['node_input_dim']
+        if self.use_concat_input:
+            node_input_dim = self.conf['node_input_dim'] + self.conf['init_node_dim']
+            # self.ln = torch.nn.LayerNorm(node_input_dim)
+
         out_activation = self.conf['out_activation']
         hidden_activation = self.conf['hidden_activation']
         num_neurons = self.conf['num_neurons']
         spectral_norm = self.conf['spectral_norm']
-        use_hold = self.conf['use_hold']
 
-        self.move_module = MoveModule(node_dim=node_input_dim,
-                                      move_dim=move_dim,
-                                      num_neurons=num_neurons,
-                                      hidden_activation=hidden_activation,
-                                      out_activation=out_activation,
-                                      spectral_norm=spectral_norm)
+        self.attack_edge_type_index = self.conf['attack_edge_type_index']
+
+        # hierarchical pooling
+        num_groups = self.conf['num_groups']
+        pooling_op = self.conf['pooling_op']
+        pooling_init = self.conf['pooling_init']
+        self.pooling_using_initial = True
+
+        use_hold = self.conf['use_hold']
+        use_tanh = self.conf['use_tanh']
+        use_noisy = self.conf['use_noisy']
 
         self.hold_module = HoldModule(node_dim=node_input_dim,
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
                                       out_activation=out_activation,
                                       spectral_norm=spectral_norm,
-                                      use_hold=use_hold)
+                                      use_hold=use_hold,
+                                      use_noisy=use_noisy)
 
         self.attack_module = AttackModule(node_dim=node_input_dim,
                                           num_neurons=num_neurons,
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation,
-                                          spectral_norm=spectral_norm)
+                                          spectral_norm=spectral_norm,
+                                          use_noisy=use_noisy)
+
+        if use_tanh:
+            self.move_module = MoveModule(node_dim=node_input_dim,
+                                          move_dim=move_dim,
+                                          num_neurons=num_neurons,
+                                          hidden_activation='tanh',
+                                          out_activation='tanh',
+                                          spectral_norm=spectral_norm,
+                                          use_noisy=use_noisy)
+        else:
+            self.move_module = MoveModule(node_dim=node_input_dim,
+                                          move_dim=move_dim,
+                                          num_neurons=num_neurons,
+                                          hidden_activation=hidden_activation,
+                                          out_activation=out_activation,
+                                          spectral_norm=spectral_norm,
+                                          use_noisy=use_noisy)
 
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index):
         move_argument = self.move_module(graph, node_feature)

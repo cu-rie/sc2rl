@@ -134,7 +134,13 @@ class QMixBrain(BrainBase):
         qs = q_dict['qs']
 
         qs = qs.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
-        q_tot = self.mixer(c_curr_graph, c_curr_feature, qs)
+
+        if self.use_mixer_hidden:
+            mixer_input = q_dict['hidden_feat']
+        else:
+            mixer_input = c_curr_feature
+
+        q_tot = self.mixer(c_curr_graph, mixer_input, qs)
 
         if self.use_clipped_q:
             q2_dict = self.qnet2.compute_qs(num_time_steps,
@@ -145,6 +151,12 @@ class QMixBrain(BrainBase):
 
             q2s = q2s.gather(-1, actions.unsqueeze(-1).long()).squeeze(dim=-1)
             q_tot_2 = self.mixer2(c_curr_graph, c_curr_feature, q2s)
+
+            if self.use_mixer_hidden:
+                mixer_input = q2_dict['hidden_feat']
+            else:
+                mixer_input = c_curr_feature
+
 
         # compute q-target:
         with torch.no_grad():
