@@ -30,10 +30,16 @@ from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
                                         EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY,
                                         EDGE_IN_ATTACK_RANGE)
 
+from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
+from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
+from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
+
 if __name__ == "__main__":
 
     # experiment variables
     exp_name = 'MULTI NODE TYPE'
+
+    use_subq = False
 
     use_hold = False
     use_tanh = False
@@ -126,24 +132,42 @@ if __name__ == "__main__":
 
     reward_name = 'victory_if_zero_enemy'
 
-    qnet_conf = HierarchicalMultiStepInputQnetConfig(
-        multi_step_input_qnet_conf={'exploration_method': exploration_method,
-                                    'eps': eps,
-                                    'use_attention': use_attention},
-        qnet_actor_conf={'spectral_norm': spectral_norm,
-                         'node_input_dim': node_input_dim,
-                         'pooling_op': pooling_op,
-                         'use_concat_input': use_concat_input,
-                         'init_node_dim': node_input_dim,
-                         'pooling_init': pooling_init,
-                         'num_neurons': num_neurons,
-                         'attack_edge_type_index': attack_edge_type_index,
-                         'use_hold': use_hold,
-                         'use_tanh': use_tanh,
-                         'use_noisy': use_noisy},
-        mixer_conf={'rectifier': mixer_rectifier,
-                    'use_attention': use_attention}
-    )
+    if use_subq:
+        qnet_conf = HierarchicalMultiStepInputQnetConfig(
+            multi_step_input_qnet_conf={'exploration_method': exploration_method,
+                                        'eps': eps,
+                                        'use_attention': use_attention},
+            qnet_actor_conf={'spectral_norm': spectral_norm,
+                             'node_input_dim': node_input_dim,
+                             'pooling_op': pooling_op,
+                             'use_concat_input': use_concat_input,
+                             'init_node_dim': node_input_dim,
+                             'pooling_init': pooling_init,
+                             'num_neurons': num_neurons,
+                             'attack_edge_type_index': attack_edge_type_index,
+                             'use_hold': use_hold,
+                             'use_tanh': use_tanh,
+                             'use_noisy': use_noisy},
+            mixer_conf={'rectifier': mixer_rectifier,
+                        'use_attention': use_attention}
+        )
+    else:
+        qnet_conf = MultiStepInputQnetConfig(
+            multi_step_input_qnet_conf={'exploration_method': exploration_method,
+                                        'eps': eps,
+                                        'use_attention': use_attention},
+            qnet_actor_conf={'spectral_norm': spectral_norm,
+                             'node_input_dim': node_input_dim,
+                             'pooling_op': pooling_op,
+                             'use_concat_input': use_concat_input,
+                             'init_node_dim': node_input_dim,
+                             'pooling_init': pooling_init,
+                             'num_neurons': num_neurons,
+                             'attack_edge_type_index': attack_edge_type_index,
+                             'use_hold': use_hold,
+                             'use_tanh': use_tanh,
+                             'use_noisy': use_noisy}
+        )
     if use_attention:
         if use_hypernet:
             gnn_conf = MultiStepInputNetworkConfig(hist_rnn_conf={'input_size': node_input_dim,
@@ -200,13 +224,23 @@ if __name__ == "__main__":
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
                                                       'N': num_hist_time_steps,
                                                       'gamma': gamma})
-    brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q,
-                                                         'gamma': gamma,
-                                                         'eps': eps_init,
-                                                         'eps_gamma': eps_gamma,
-                                                         'use_mixer_hidden': use_mixer_hidden},
-                                             fit_conf={'tau': tau,
-                                                       'auto_norm_clip': auto_grad_norm_clip})
+
+    if use_subq:
+        brain_conf = HierarchicalQmixBrainConfig(brain_conf={'use_double_q': use_double_q,
+                                                             'gamma': gamma,
+                                                             'eps': eps_init,
+                                                             'eps_gamma': eps_gamma,
+                                                             'use_mixer_hidden': use_mixer_hidden},
+                                                 fit_conf={'tau': tau,
+                                                           'auto_norm_clip': auto_grad_norm_clip})
+    else:
+        brain_conf = QmixBrainConfig(brain_conf={'use_double_q': use_double_q,
+                                                 'gamma': gamma,
+                                                 'eps': eps_init,
+                                                 'eps_gamma': eps_gamma,
+                                                 'use_mixer_hidden': use_mixer_hidden},
+                                     fit_conf={'tau': tau,
+                                               'auto_norm_clip': auto_grad_norm_clip})
 
     sample_spec = buffer_conf.memory_conf['spec']
     num_hist_steps = buffer_conf.memory_conf['N']
@@ -242,19 +276,32 @@ if __name__ == "__main__":
                                             'num_neurons': num_neurons,
                                             'use_noisy': use_noisy},
                                    mixer_conf={'rectifier': mixer_rectifier})
+    if use_subq:
 
-    agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
-                                           fit_conf={'hist_num_time_steps': num_hist_time_steps,
-                                                     'batch_size': batch_size})
+        agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
+                                               fit_conf={'hist_num_time_steps': num_hist_time_steps,
+                                                         'batch_size': batch_size})
 
-    agent = HierarchicalQmixAgent(conf=agent_conf,
-                                  qnet_conf=qnet_conf,
-                                  mixer_gnn_conf=mixer_gnn_conf,
-                                  mixer_ff_conf=mixer_ff_conf,
-                                  sup_mixer_conf=sup_mixer_conf,
-                                  brain_conf=brain_conf,
-                                  buffer_conf=buffer_conf,
-                                  soft_assignment=soft_assignment)
+        agent = HierarchicalQmixAgent(conf=agent_conf,
+                                      qnet_conf=qnet_conf,
+                                      mixer_gnn_conf=mixer_gnn_conf,
+                                      mixer_ff_conf=mixer_ff_conf,
+                                      sup_mixer_conf=sup_mixer_conf,
+                                      brain_conf=brain_conf,
+                                      buffer_conf=buffer_conf,
+                                      soft_assignment=soft_assignment)
+    else:
+        agent_conf = QmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
+                                   fit_conf={'hist_num_time_steps': num_hist_time_steps,
+                                             'batch_size': batch_size})
+
+        mixer_gnn_conf.gnn_conf['model_dim'] = mixer_input_dim
+        agent = QmixAgent(conf=agent_conf,
+                          qnet_conf=qnet_conf,
+                          mixer_gnn_conf=mixer_gnn_conf,
+                          mixer_ff_conf=mixer_ff_conf,
+                          brain_conf=brain_conf,
+                          buffer_conf=buffer_conf)
 
     if exploration_method == 'noisy_net':
         agent.sample_noise()

@@ -71,7 +71,6 @@ class HierarchicalQnetActor(torch.nn.Module):
                                                  use_noisy=use_noisy)
 
         else:
-
             self.move_module = MoveModule(node_dim=node_input_dim,
                                           move_dim=move_dim,
                                           num_neurons=num_neurons,

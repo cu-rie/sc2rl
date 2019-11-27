@@ -51,10 +51,10 @@ class NoisyLinear(torch.nn.Linear):
 
     def reset_parameters(self):
         if hasattr(self, 'sigma_weight'):  # Only init after all params added (otherwise super().__init__() fails)
-            init.uniform(self.weight, -math.sqrt(3 / self.in_features), math.sqrt(3 / self.in_features))
-            init.uniform(self.bias, -math.sqrt(3 / self.in_features), math.sqrt(3 / self.in_features))
-            init.constant(self.sigma_weight, self.sigma_init)
-            init.constant(self.sigma_bias, self.sigma_init)
+            init.uniform_(self.weight, -math.sqrt(3 / self.in_features), math.sqrt(3 / self.in_features))
+            init.uniform_(self.bias, -math.sqrt(3 / self.in_features), math.sqrt(3 / self.in_features))
+            init.constant_(self.sigma_weight, self.sigma_init)
+            init.constant_(self.sigma_bias, self.sigma_init)
 
     def forward(self, input):
         return F.linear(input, self.weight + self.sigma_weight * Variable(self.epsilon_weight),

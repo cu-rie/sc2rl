@@ -64,7 +64,6 @@ class HierarchicalMultiStepInputQnet(MultiStepInputQnet):
 
         mixer_rectifier = conf.mixer_conf['rectifier']
         mixer_attn = conf.mixer_conf['use_attention']
-        use_noisy = qnet_actor_conf['use_noisy']
 
         self.mixers = torch.nn.ModuleDict()
         if soft_assignment:
