@@ -107,13 +107,13 @@ if __name__ == "__main__":
     else:
         mixer_input_dim = node_input_dim
 
-    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
+    attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
     pooling_op = 'softmax'
     pooling_init = None
 
-    map_name = "training_scenario_5_Human"
+    map_name = "training_scenario_5"
     spectral_norm = False
     test = False
 
