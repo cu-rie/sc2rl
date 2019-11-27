@@ -43,7 +43,8 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
             'pooling_init': None,
             'attack_edge_type_index': EDGE_ENEMY,
             'use_hold': True,
-            'use_tanh': False
+            'use_tanh': False,
+            'use_noisy': False
         }
 
         self.mixer_conf = {
@@ -63,6 +64,7 @@ class HierarchicalMultiStepInputQnet(MultiStepInputQnet):
 
         mixer_rectifier = conf.mixer_conf['rectifier']
         mixer_attn = conf.mixer_conf['use_attention']
+        use_noisy = qnet_actor_conf['use_noisy']
 
         self.mixers = torch.nn.ModuleDict()
         if soft_assignment:

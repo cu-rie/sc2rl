@@ -11,6 +11,8 @@ from sc2rl.rl.modules.QnetActor import QnetActor
 from sc2rl.config.ConfigBase import ConfigBase
 from sc2rl.config.nn_configs import VERY_LARGE_NUMBER
 
+from sc2rl.nn.MultiLayerPerceptron import NoisyLinear
+
 from sc2rl.utils.debug_utils import dn
 
 

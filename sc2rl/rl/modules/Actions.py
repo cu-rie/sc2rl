@@ -16,12 +16,14 @@ class MoveModule(torch.nn.Module):
                  num_neurons: list = [128],
                  hidden_activation: str = 'mish',
                  out_activation: str = None,
-                 spectral_norm=False):
+                 spectral_norm=False,
+                 use_noisy=False):
         super(MoveModule, self).__init__()
         self.move_argument_calculator = MLP(node_dim, move_dim, num_neurons,
                                             hidden_activation=hidden_activation,
                                             out_activation=out_activation,
-                                            spectral_norm=spectral_norm)
+                                            spectral_norm=spectral_norm,
+                                            use_noisy=use_noisy)
 
     def forward(self, graph, node_feature):
         graph.ndata['node_feature'] = node_feature
@@ -42,13 +44,15 @@ class AttackModule(torch.nn.Module):
                  num_neurons: list = [128],
                  hidden_activation: str = 'mish',
                  out_activation: str = None,
-                 spectral_norm=False):
+                 spectral_norm=False,
+                 use_noisy=False):
         super(AttackModule, self).__init__()
         input_dim = node_dim * 2
         self.attack_argument_calculator = MLP(input_dim, 1, num_neurons,
                                               hidden_activation=hidden_activation,
                                               out_activation=out_activation,
-                                              spectral_norm=spectral_norm)
+                                              spectral_norm=spectral_norm,
+                                              use_noisy=use_noisy)
 
     def message_function(self, edges):
         enemy_node_features = edges.src['node_feature']  # Enemy units' feature
@@ -93,12 +97,14 @@ class HoldModule(torch.nn.Module):
                  hidden_activation: str = 'mish',
                  out_activation: str = None,
                  spectral_norm=False,
-                 use_hold=True):
+                 use_hold=True,
+                 use_noisy=False):
         super(HoldModule, self).__init__()
         self.hold_argument_calculator = MLP(node_dim, 1, num_neurons,
                                             hidden_activation=hidden_activation,
                                             out_activation=out_activation,
-                                            spectral_norm=spectral_norm)
+                                            spectral_norm=spectral_norm,
+                                            use_noisy=use_noisy)
         self.use_hold = use_hold
 
     def forward(self, graph, node_feature):

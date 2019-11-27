@@ -35,19 +35,22 @@ class HierarchicalQnetActor(torch.nn.Module):
 
         use_hold = self.conf['use_hold']
         use_tanh = self.conf['use_tanh']
+        use_noisy = self.conf['use_noisy']
 
         self.hold_module = HoldModule(node_dim=node_input_dim,
                                       num_neurons=num_neurons,
                                       hidden_activation=hidden_activation,
                                       out_activation=out_activation,
                                       spectral_norm=spectral_norm,
-                                      use_hold=use_hold)
+                                      use_hold=use_hold,
+                                      use_noisy=use_noisy)
 
         self.attack_module = AttackModule(node_dim=node_input_dim,
                                           num_neurons=num_neurons,
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation,
-                                          spectral_norm=spectral_norm)
+                                          spectral_norm=spectral_norm,
+                                          use_noisy=use_noisy)
 
         if use_tanh:
             self.move_module = MoveModule(node_dim=node_input_dim,
@@ -55,7 +58,8 @@ class HierarchicalQnetActor(torch.nn.Module):
                                           num_neurons=num_neurons,
                                           hidden_activation='tanh',
                                           out_activation='tanh',
-                                          spectral_norm=spectral_norm)
+                                          spectral_norm=spectral_norm,
+                                          use_noisy=use_noisy)
 
             self.grouping_module = DiffPoolLayer(node_dim=node_input_dim,
                                                  num_neurons=num_neurons,
@@ -63,7 +67,8 @@ class HierarchicalQnetActor(torch.nn.Module):
                                                  hidden_activation='tanh',
                                                  num_groups=num_groups,
                                                  spectral_norm=spectral_norm,
-                                                 pooling_init=pooling_init)
+                                                 pooling_init=pooling_init,
+                                                 use_noisy=use_noisy)
 
         else:
 
@@ -72,14 +77,16 @@ class HierarchicalQnetActor(torch.nn.Module):
                                           num_neurons=num_neurons,
                                           hidden_activation=hidden_activation,
                                           out_activation=out_activation,
-                                          spectral_norm=spectral_norm)
+                                          spectral_norm=spectral_norm,
+                                          use_noisy=use_noisy)
 
             self.grouping_module = DiffPoolLayer(node_dim=node_input_dim,
                                                  num_neurons=num_neurons,
                                                  pooling_op=pooling_op,
                                                  num_groups=num_groups,
                                                  spectral_norm=spectral_norm,
-                                                 pooling_init=pooling_init)
+                                                 pooling_init=pooling_init,
+                                                 use_noisy=use_noisy)
 
     def forward(self, graph, node_feature, maximum_num_enemy, attack_edge_type_index):
         if self.use_concat_input:

@@ -12,7 +12,8 @@ class FeedForwardConfig(ConfigBase):
             'input_dimension': 17,
             'output_dimension': 1,
             'num_neurons': [64, 64],
-            'spectral_norm': False
+            'spectral_norm': False,
+            'use_noisy': False
         }
 
 

@@ -41,7 +41,7 @@ if __name__ == "__main__":
     num_hist_time_steps = 2
 
     victory_coeff = 1.0
-    reward_bias = 2.0
+    reward_bias = 0.0
 
     auto_grad_norm_clip = True
 
@@ -63,8 +63,12 @@ if __name__ == "__main__":
 
     if exploration_method == 'clustered_random':
         eps = eps_init
+        use_noisy = False
     elif exploration_method == 'noisy_net':
         eps = 0.0
+        use_noisy = True
+    else:
+        use_noisy = False
 
     use_absolute_pos = True
     soft_assignment = True
@@ -97,7 +101,7 @@ if __name__ == "__main__":
     else:
         mixer_input_dim = node_input_dim
 
-    attack_edge_type_index = EDGE_ENEMY
+    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
 
     mixer_rectifier = 'softplus'
     pooling_op = 'softmax'
@@ -109,11 +113,11 @@ if __name__ == "__main__":
 
     num_attn_head = 4
     use_hierarchical_actor = True
-    use_double_q = True
-    clipped_q = False
+    use_double_q = False
+    clipped_q = True
 
     num_runners = 1
-    num_samples = 1
+    num_samples = 5
     eval_episodes = 10
 
     # num_runners = 1
@@ -135,7 +139,8 @@ if __name__ == "__main__":
                          'num_neurons': num_neurons,
                          'attack_edge_type_index': attack_edge_type_index,
                          'use_hold': use_hold,
-                         'use_tanh': use_tanh},
+                         'use_tanh': use_tanh,
+                         'use_noisy': use_noisy},
         mixer_conf={'rectifier': mixer_rectifier,
                     'use_attention': use_attention}
     )
@@ -224,15 +229,18 @@ if __name__ == "__main__":
                                                                 'num_neurons': num_neurons,
                                                                 'use_multi_node_types': False,
                                                                 'node_update_types': mixer_node_update_types,
-                                                                'edge_update_types': mixer_edge_update_types})
+                                                                'edge_update_types': mixer_edge_update_types,
+                                                                'use_noisy': use_noisy})
 
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
                                                 'input_dimension': mixer_input_dim,
-                                                'num_neurons': num_neurons})
+                                                'num_neurons': num_neurons,
+                                                'use_noisy': use_noisy})
 
     sup_mixer_conf = SupQmixerConf(nn_conf={'spectral_norm': spectral_norm,
                                             'input_dimension': mixer_input_dim,
-                                            'num_neurons': num_neurons},
+                                            'num_neurons': num_neurons,
+                                            'use_noisy': use_noisy},
                                    mixer_conf={'rectifier': mixer_rectifier})
 
     agent_conf = HierarchicalQmixAgentConf(agent_conf={'use_clipped_q': clipped_q},
@@ -342,7 +350,7 @@ if __name__ == "__main__":
             if iters % 1 == 0 and exploration_method == 'noisy_net':
                 agent.sample_noise()
 
-            runner_manager.close()
+        runner_manager.close()
     except KeyboardInterrupt:
         runner_manager.close()
     finally:

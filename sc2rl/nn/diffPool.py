@@ -17,7 +17,7 @@ class DiffPoolLayer(torch.nn.Module):
                  spectral_norm=False,
                  pooling_init='xavier',
                  hidden_activation='mish',
-                 ):
+                 use_noisy=False):
 
         super(DiffPoolLayer, self).__init__()
         assert pooling_op == 'softmax' or pooling_op == 'relu' or pooling_op is None, \
@@ -43,7 +43,8 @@ class DiffPoolLayer(torch.nn.Module):
                           hidden_activation=hidden_activation,
                           out_activation=pooler_out_act,
                           spectral_norm=spectral_norm,
-                          init=pooling_init)
+                          init=pooling_init,
+                          use_noisy=use_noisy)
 
     def forward(self, graph, node_feature):
         device = node_feature.device

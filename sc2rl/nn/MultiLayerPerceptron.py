@@ -81,7 +81,7 @@ class MultiLayerPerceptron(torch.nn.Module):
                  drop_probability=0.0,
                  init=None,
                  weight_standardization=False,
-                 use_noisy=True):
+                 use_noisy=False):
         """
         :param num_neurons: number of neurons for each layer
         :param out_activation: output layer's activation unit

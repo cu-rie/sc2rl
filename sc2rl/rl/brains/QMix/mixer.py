@@ -19,7 +19,8 @@ class SupQmixerConf(ConfigBase):
         self.nn_conf = {'input_dimension': 17,
                         'output_dimension': 1,
                         'num_neurons': [64, 64],
-                        'spectral_norm': False
+                        'spectral_norm': False,
+                        'use_noisy': False
                         }
 
         self.mixer_conf = {'rectifier': 'abs'}
@@ -154,7 +155,7 @@ class Soft_SubQmixer(torch.nn.Module):
 
         _qs = torch.zeros(size=(graph.number_of_nodes(), 1), device=device)
 
-        #w = w[ally_indices, :]  # [# assignments x 1]
+        # w = w[ally_indices, :]  # [# assignments x 1]
 
         _qs[ally_indices, :] = qs.view(-1, 1) * target_assignment_weight.view(-1, 1)
         graph.ndata['node_feature'] = _qs

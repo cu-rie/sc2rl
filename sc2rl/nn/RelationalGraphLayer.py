@@ -13,7 +13,8 @@ class RelationalGraphLayer(torch.nn.Module):
                  spectral_norm: bool = False,
                  use_concat: bool = False,
                  use_multi_node_types: bool = False,
-                 num_node_types: int = 2):
+                 num_node_types: int = 2,
+                 use_noisy=False):
         super(RelationalGraphLayer, self).__init__()
         self.model_dim = model_dim
         self.num_relations = num_relations
@@ -29,19 +30,19 @@ class RelationalGraphLayer(torch.nn.Module):
             node_updater_input_dim = model_dim * (num_relations + 1)
 
         for i in range(num_relations):
-            relational_updater = MLP(relational_encoder_input_dim, model_dim, num_neurons, spectral_norm)
+            relational_updater = MLP(relational_encoder_input_dim, model_dim, num_neurons, spectral_norm, use_noisy=use_noisy)
             self.relational_updater['updater{}'.format(i)] = relational_updater
         self.relational_updater = torch.nn.ModuleDict(self.relational_updater)
 
         self.node_updater_input_dim = node_updater_input_dim
         self.use_multi_node_types = use_multi_node_types
         if not use_multi_node_types:
-            self.node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons, spectral_norm)
+            self.node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons, spectral_norm, use_noisy=use_noisy)
         else:
             self.node_updater = torch.nn.ModuleDict()
             self.node_updater_input_dim = node_updater_input_dim
             for i in range(num_node_types):
-                node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons, spectral_norm)
+                node_updater = MLP(self.node_updater_input_dim, model_dim, num_neurons, spectral_norm, use_noisy=use_noisy)
                 self.node_updater['updater{}'.format(i)] = node_updater
 
     def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):

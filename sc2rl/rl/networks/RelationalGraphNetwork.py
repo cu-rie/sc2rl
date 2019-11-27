@@ -18,7 +18,8 @@ class RelationalGraphNetworkConfig(ConfigBase):
             'use_concat': False,
             'use_multi_node_types': False,
             'node_update_types': [NODE_ALLY, NODE_ENEMY],
-            'edge_update_types': [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
+            'edge_update_types': [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY],
+            'use_noisy': False
         }
 
 

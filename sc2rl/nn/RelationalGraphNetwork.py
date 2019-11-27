@@ -14,7 +14,8 @@ class RelationalGraphNetwork(torch.nn.Module):
                  use_concat,
                  use_multi_node_types,
                  node_update_types,
-                 edge_update_types):
+                 edge_update_types,
+                 use_noisy=False):
         super(RelationalGraphNetwork, self).__init__()
 
         layers = []
@@ -24,7 +25,8 @@ class RelationalGraphNetwork(torch.nn.Module):
                                          num_neurons=num_neurons,
                                          spectral_norm=spectral_norm,
                                          use_concat=use_concat,
-                                         use_multi_node_types=use_multi_node_types)
+                                         use_multi_node_types=use_multi_node_types,
+                                         use_noisy=use_noisy)
             layers.append(layer)
 
         self.layers = torch.nn.ModuleList(layers)
