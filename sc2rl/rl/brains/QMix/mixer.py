@@ -10,6 +10,8 @@ from sc2rl.utils.graph_utils import (get_filtered_node_index_by_type,
                                      get_filtered_node_index_by_assignment)
 from sc2rl.config.ConfigBase import ConfigBase
 
+import numpy as np
+
 
 class SupQmixerConf(ConfigBase):
     def __init__(self, nn_conf=None, mixer_conf=None):
@@ -138,21 +140,21 @@ class Soft_SubQmixer(torch.nn.Module):
                 ally_node_type_index=NODE_ALLY):
         assert isinstance(graph, dgl.BatchedDGLGraph)
 
-        w_emb = self.w_gn(graph, node_feature)  # [# nodes x # node_dim]
-        if self.rectifier == 'abs':
-            w = torch.abs(self.w_ff(graph, w_emb))  # [# nodes x # 1]
-        elif self.rectifier == 'softplus':
-            w = F.softplus(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        # w_emb = self.w_gn(graph, node_feature)  # [# nodes x # node_dim]
+        # if self.rectifier == 'abs':
+        #     w = torch.abs(self.w_ff(graph, w_emb))  # [# nodes x # 1]
+        # elif self.rectifier == 'softplus':
+        #     w = F.softplus(self.w_ff(graph, w_emb))  # [# nodes x # 1]
 
         # Curee's trick
         ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
         target_assignment_weight = graph.ndata['normalized_score'][ally_indices][:, self.target_assignment]
 
-        device = w_emb.device
+        device = node_feature.device
 
         _qs = torch.zeros(size=(graph.number_of_nodes(), 1), device=device)
         w = w[ally_indices, :]  # [# assignments x 1]
-        _qs[ally_indices, :] = w * qs.view(-1, 1) * target_assignment_weight.view(-1, 1)
+        _qs[ally_indices, :] = qs.view(-1, 1) * target_assignment_weight.view(-1, 1)
         graph.ndata['node_feature'] = _qs
         q_tot = dgl.sum_nodes(graph, 'node_feature')
         _ = graph.ndata.pop('node_feature')
@@ -175,7 +177,7 @@ class SupQmixer(torch.nn.Module):
     def __init__(self, input_dim, conf):
         super(SupQmixer, self).__init__()
         nn_conf = conf.nn_conf
-        #nn_conf['input_dimension'] = input_dim
+        # nn_conf['input_dimension'] = input_dim
 
         self.w = MLP(**nn_conf)
         self.v = MLP(**nn_conf)
@@ -206,11 +208,24 @@ class SupQmixer(torch.nn.Module):
                 raise RuntimeError("Not implemented rectifier")
             _ = graph.ndata.pop('masked_node_feature')
 
+        # testing
+        _ = graph.ndata.pop('node_feature')
+        ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
+        _v = torch.zeros(size=(graph.number_of_nodes(), node_feature.shape[1]), device=device)
+        _v[ally_indices, :] = node_feature[ally_indices, :]
+        graph.ndata['node_feature'] = _v
+        # testing
+
         v = self.v(dgl.sum_nodes(graph, 'node_feature')).view(-1)
         q_tot = q_tot + v
 
         _ = graph.ndata.pop('node_feature')
+
+        len_groups = np.array(len_groups)
+        ratio_groups = len_groups / np.sum(len_groups)
+
         print("Num elements in groups {}".format(len_groups))
+        print("Num elements ratio {}".format(ratio_groups))
 
         ally_indices = get_filtered_node_index_by_type(graph, NODE_ALLY)
         target_assignment_weight = graph.ndata['normalized_score'][ally_indices]

@@ -26,49 +26,32 @@ from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
-from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
-                                        EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY,
-                                        EDGE_IN_ATTACK_RANGE)
+from sc2rl.config.graph_configs import EDGE_IN_ATTACK_RANGE, EDGE_ENEMY
 
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = 'MULTI NODE TYPE'
+    exp_name = 'No HOLD SEED'
 
     use_hold = False
-    use_tanh = False
 
     num_hist_time_steps = 2
 
     victory_coeff = 1.0
-    reward_bias = 2.0
+    reward_bias = 0.0
 
     auto_grad_norm_clip = True
 
     frame_skip_rate = 2
-    gamma = 0.95
+    gamma = 0.9
 
     eps_init = 0.5
     eps_gamma = 0.997
     tau = 0.1
 
-    gnn_node_update_types = [NODE_ALLY, NODE_ENEMY]
-    gnn_edge_update_types = [EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY]
-
-    mixer_node_update_types = [NODE_ALLY]
-    mixer_edge_update_types = [EDGE_ALLY]
-
-    use_multi_node_types = True
-    exploration_method = 'noisy_net'
-
-    if exploration_method == 'clustered_random':
-        eps = eps_init
-    elif exploration_method == 'noisy_net':
-        eps = 0.0
-
     use_absolute_pos = True
     soft_assignment = True
-    use_concat_input = False
+    use_concat_input = True
     use_concat_input_gnn = False
     num_neurons = [64, 64]
     rnn_hidden_size = 32
@@ -100,31 +83,30 @@ if __name__ == "__main__":
     attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
-    pooling_op = 'softmax'
+    pooling_op = 'relu'
     pooling_init = None
 
-    map_name = "training_scenario_5"
+    map_name = "training_scenario_4"
     spectral_norm = False
     test = False
 
     num_attn_head = 4
     use_hierarchical_actor = True
-    use_double_q = True
-    clipped_q = False
+    use_double_q = False
+    clipped_q = True
 
     num_runners = 1
-    num_samples = 8
-    eval_episodes = 10
+    num_samples = 4
+    eval_episodes = 1
 
-    # num_runners = 1
-    # num_samples = 2
+    # num_runners = 2
+    # num_samples = 8
     # eval_episodes = 10
 
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
-        multi_step_input_qnet_conf={'exploration_method': exploration_method,
-                                    'eps': eps,
+        multi_step_input_qnet_conf={'exploration_method': 'clustered_random',
                                     'use_attention': use_attention},
         qnet_actor_conf={'spectral_norm': spectral_norm,
                          'node_input_dim': node_input_dim,
@@ -134,8 +116,7 @@ if __name__ == "__main__":
                          'pooling_init': pooling_init,
                          'num_neurons': num_neurons,
                          'attack_edge_type_index': attack_edge_type_index,
-                         'use_hold': use_hold,
-                         'use_tanh': use_tanh},
+                         'use_hold': use_hold},
         mixer_conf={'rectifier': mixer_rectifier,
                     'use_attention': use_attention}
     )
@@ -177,19 +158,13 @@ if __name__ == "__main__":
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons,
-                                                                   'num_relations': num_relations,
-                                                                   'use_multi_node_types': use_multi_node_types,
-                                                                   'node_update_types': gnn_node_update_types,
-                                                                   'edge_update_types': gnn_edge_update_types},
+                                                                   'num_relations': num_relations},
                                                     curr_enc_conf={'spectral_norm': spectral_norm,
                                                                    'num_layers': enc_gnn_num_layer,
                                                                    'model_dim': node_input_dim,
                                                                    'use_concat': use_concat_input_gnn,
                                                                    'num_neurons': num_neurons,
-                                                                   'num_relations': num_relations,
-                                                                   'use_multi_node_types': use_multi_node_types,
-                                                                   'node_update_types': gnn_node_update_types,
-                                                                   'edge_update_types': gnn_edge_update_types})
+                                                                   'num_relations': num_relations})
     qnet_conf.gnn_conf = gnn_conf
 
     buffer_conf = NstepInputMemoryConfig(memory_conf={'use_return': True,
@@ -214,17 +189,13 @@ if __name__ == "__main__":
                                                            'num_layers': mixer_num_layer,
                                                            'num_neurons': num_neurons,
                                                            'num_relations': num_relations,
-                                                           'num_head': num_attn_head,
-                                                           'use_multi_node_types': False})
+                                                           'num_head': num_attn_head})
     else:
         mixer_gnn_conf = RelationalGraphNetworkConfig(gnn_conf={'spectral_norm': spectral_norm,
                                                                 'model_dim': mixer_input_dim,
                                                                 'num_layers': mixer_num_layer,
                                                                 'use_concat': use_concat_input_gnn,
-                                                                'num_neurons': num_neurons,
-                                                                'use_multi_node_types': False,
-                                                                'node_update_types': mixer_node_update_types,
-                                                                'edge_update_types': mixer_edge_update_types})
+                                                                'num_neurons': num_neurons})
 
     mixer_ff_conf = FeedForwardConfig(mlp_conf={'spectral_norm': spectral_norm,
                                                 'input_dimension': mixer_input_dim,
@@ -248,9 +219,6 @@ if __name__ == "__main__":
                                   buffer_conf=buffer_conf,
                                   soft_assignment=soft_assignment)
 
-    if exploration_method == 'noisy_net':
-        agent.sample_noise()
-
     agent.to(run_device)
 
     if test:
@@ -258,7 +226,7 @@ if __name__ == "__main__":
         #     load_path = 'abs_pos.ptb'
         # else:
         #     load_path = 'no_abs_pos.ptb'
-        load_path = 'MULTI_NODE_TYPE_SEED.ptb'
+        load_path = '1800.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
@@ -296,8 +264,7 @@ if __name__ == "__main__":
                          'reward': reward_name,
                          'frame_skip_rate': frame_skip_rate,
                          'use_absolute_pos': use_absolute_pos,
-                         'victory_coeff': victory_coeff,
-                         'reward_bias': reward_bias})
+                         'victory_coeff': victory_coeff})
 
     wandb.config.update(agent_conf())
     wandb.config.update(gnn_conf())
@@ -339,10 +306,7 @@ if __name__ == "__main__":
                 wr = np.mean(np.array(wins))
                 wandb.log({'eval_winning_ratio': wr}, step=iters)
 
-            if iters % 1 == 0 and exploration_method == 'noisy_net':
-                agent.sample_noise()
-
-            runner_manager.close()
+        runner_manager.close()
     except KeyboardInterrupt:
         runner_manager.close()
     finally:

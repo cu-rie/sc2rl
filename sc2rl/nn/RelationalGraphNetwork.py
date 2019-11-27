@@ -3,6 +3,7 @@ from sc2rl.nn.RelationalGraphLayer import RelationalGraphLayer
 
 from sc2rl.utils.debug_utils import dn
 
+
 class RelationalGraphNetwork(torch.nn.Module):
     def __init__(self,
                  num_layers,
@@ -10,7 +11,10 @@ class RelationalGraphNetwork(torch.nn.Module):
                  num_relations,
                  num_neurons,
                  spectral_norm,
-                 use_concat):
+                 use_concat,
+                 use_multi_node_types,
+                 node_update_types,
+                 edge_update_types):
         super(RelationalGraphNetwork, self).__init__()
 
         layers = []
@@ -19,10 +23,13 @@ class RelationalGraphNetwork(torch.nn.Module):
                                          num_relations=num_relations,
                                          num_neurons=num_neurons,
                                          spectral_norm=spectral_norm,
-                                         use_concat=use_concat)
+                                         use_concat=use_concat,
+                                         use_multi_node_types=use_multi_node_types)
             layers.append(layer)
 
         self.layers = torch.nn.ModuleList(layers)
+        self.node_update_types = node_update_types
+        self.edge_update_types = edge_update_types
 
     def forward(self, graph, node_feature, update_node_type_indices, update_edge_type_indices):
         for layer in self.layers:

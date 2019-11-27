@@ -42,7 +42,8 @@ class HierarchicalMultiStepInputQnetConfig(ConfigBase):
             'init_node_dim': 17,
             'pooling_init': None,
             'attack_edge_type_index': EDGE_ENEMY,
-            'use_hold': True
+            'use_hold': True,
+            'use_tanh': False
         }
 
         self.mixer_conf = {
