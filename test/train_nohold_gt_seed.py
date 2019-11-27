@@ -43,7 +43,7 @@ if __name__ == "__main__":
     auto_grad_norm_clip = True
 
     frame_skip_rate = 2
-    gamma = 0.95
+    gamma = 0.9
 
     eps_init = 0.5
     eps_gamma = 0.997

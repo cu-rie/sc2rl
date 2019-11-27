@@ -39,15 +39,15 @@ if __name__ == "__main__":
     num_hist_time_steps = 2
 
     victory_coeff = 1.0
-    reward_bias = 0.0
+    reward_bias = 2.0
 
     auto_grad_norm_clip = True
 
     frame_skip_rate = 2
     gamma = 0.95
 
-    eps_init = 0.5
-    eps_gamma = 0.997
+    eps_init = 0.9
+    eps_gamma = 0.995
     tau = 0.1
 
     gnn_node_update_types = [NODE_ALLY, NODE_ENEMY]
@@ -97,15 +97,15 @@ if __name__ == "__main__":
 
     map_name = "training_scenario_4"
     spectral_norm = False
-    test = True
+    test = False
 
     num_attn_head = 4
     use_hierarchical_actor = True
-    use_double_q = False
-    clipped_q = True
+    use_double_q = True
+    clipped_q = False
 
     num_runners = 2
-    num_samples = 20
+    num_samples = 8
     eval_episodes = 10
 
     # num_runners = 2
@@ -283,7 +283,8 @@ if __name__ == "__main__":
                          'reward': reward_name,
                          'frame_skip_rate': frame_skip_rate,
                          'use_absolute_pos': use_absolute_pos,
-                         'victory_coeff': victory_coeff})
+                         'victory_coeff': victory_coeff,
+                         'reward_bias': reward_bias})
 
     wandb.config.update(agent_conf())
     wandb.config.update(gnn_conf())
