@@ -101,7 +101,7 @@ if __name__ == "__main__":
     else:
         mixer_input_dim = node_input_dim
 
-    attack_edge_type_index = EDGE_IN_ATTACK_RANGE
+    attack_edge_type_index = EDGE_ENEMY
 
     mixer_rectifier = 'softplus'
     pooling_op = 'softmax'
@@ -337,15 +337,16 @@ if __name__ == "__main__":
                 save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
                 torch.save(agent.state_dict(), save_path)
 
-            if iters % 5 == 0:
-                eval_dicts = runner_manager.evaluate(eval_episodes)
-                wins = []
-                for eval_dict in eval_dicts:
-                    win = eval_dict['win']
-                    wins.append(win)
+            if exploration_method != 'noisy_net':
+                if iters % 5 == 0:
+                    eval_dicts = runner_manager.evaluate(eval_episodes)
+                    wins = []
+                    for eval_dict in eval_dicts:
+                        win = eval_dict['win']
+                        wins.append(win)
 
-                wr = np.mean(np.array(wins))
-                wandb.log({'eval_winning_ratio': wr}, step=iters)
+                    wr = np.mean(np.array(wins))
+                    wandb.log({'eval_winning_ratio': wr}, step=iters)
 
             if iters % 1 == 0 and exploration_method == 'noisy_net':
                 agent.sample_noise()
