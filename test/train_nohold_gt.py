@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
     runner_manager = RunnerManager(config, num_runners)
 
-    wandb.init(project="qmix2", name=exp_name)
+    wandb.init(project="qmix3", name=exp_name)
     wandb.watch(agent)
     wandb.config.update({'use_attention': use_attention,
                          'num_runners': num_runners,
