@@ -35,6 +35,7 @@ if __name__ == "__main__":
     exp_name = 'MULTI NODE TYPE'
 
     use_hold = False
+    use_tanh = False
 
     num_hist_time_steps = 2
 
@@ -108,10 +109,6 @@ if __name__ == "__main__":
     num_samples = 8
     eval_episodes = 10
 
-    # num_runners = 2
-    # num_samples = 8
-    # eval_episodes = 10
-
     reward_name = 'victory_if_zero_enemy'
 
     qnet_conf = HierarchicalMultiStepInputQnetConfig(
@@ -125,7 +122,8 @@ if __name__ == "__main__":
                          'pooling_init': pooling_init,
                          'num_neurons': num_neurons,
                          'attack_edge_type_index': attack_edge_type_index,
-                         'use_hold': use_hold},
+                         'use_hold': use_hold,
+                         'use_tanh': use_tanh},
         mixer_conf={'rectifier': mixer_rectifier,
                     'use_attention': use_attention}
     )
