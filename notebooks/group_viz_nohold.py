@@ -7,10 +7,6 @@ import numpy as np
 
 from time import time
 
-import sys
-
-sys.path.append("..")
-
 from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory, victory_if_zero_enemy
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
 
@@ -25,10 +21,6 @@ from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetworkConfi
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetworkConfig
 from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 
-from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
-from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
-from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
-
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
@@ -36,70 +28,13 @@ from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
                                         EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY,
                                         EDGE_IN_ATTACK_RANGE)
 
+from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
+from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
+from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
 from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.HistoryManagers import HistoryManager
 from sc2rl.memory.Trajectory import Trajectory
-
-import matplotlib.pyplot as plt
-
-# plt.axis("off")
-
-move_delta = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]]) * 0.5
-
-
-def plot_curr_state(ally_loc, enemy_loc, nn_action, assignment, ax, x_min=20, x_max=45, y_min=20, y_max=36):
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
-
-    ally_colors = ['forestgreen', 'dodgerblue', 'tomato']  # ally colors per group
-    enemy_color = 'black'
-
-    # plot enemy loc
-    ax.scatter(enemy_loc[:, 0], enemy_loc[:, 1], color=enemy_color, marker='x', s=70)
-    for ally in range(len(nn_action)):
-        assign = assignment[ally]
-        color = ally_colors[assign]
-        action = nn_action[ally]
-        ally_location = ally_loc[ally]
-        ax.scatter(ally_location[0], ally_location[1], color=color)
-        if action <= 3:
-            move_dir = move_delta[action, :]
-            action_location = ally_location + move_dir
-            loc = np.stack([ally_location, action_location], axis=0)
-        else:
-            enemy_location = enemy_loc[action - 5]
-            loc = np.stack([ally_location, enemy_location], axis=0)
-
-        ax.plot(loc[:, 0], loc[:, 1], color=color)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-    # return ax
-
-
-def plot_curr_state_action(curr_graph, info_dict, nn_action, counter, sample_idx):
-    ally_tags = info_dict['ally_tags']
-    enemy_tags = info_dict['enemy_tags'][0]
-    assignment = info_dict['assignment']
-
-    num_allies = len(ally_tags)
-    num_enemies = len(enemy_tags)
-
-    allies = range(num_allies)
-    enemies = range(num_allies, num_enemies + num_allies)
-
-    init_node_feature = curr_graph.ndata['init_node_feature']
-    agent_loc = init_node_feature[:, 11:13]
-
-    ally_loc = agent_loc[allies, :].numpy()
-    enemy_loc = agent_loc[enemies, :].numpy()
-
-    fig, ax = plt.subplots()
-    plot_curr_state(ally_loc, enemy_loc, nn_action, assignment, ax)
-    fig.savefig("../notebooks/fig/fig{}_{}.png".format(sample_idx, counter))
-    plt.close()
-
-    # return ax
-
+from notebooks.group_viz import plot_curr_state_action
 
 if __name__ == "__main__":
 
@@ -180,18 +115,18 @@ if __name__ == "__main__":
     pooling_op = 'softmax'
     pooling_init = None
 
-    map_name = "training_scenario_5"
+    map_name = "training_scenario_4"
     spectral_norm = False
-    test = True
+    test = False
 
     num_attn_head = 4
     use_hierarchical_actor = True
-    use_double_q = False
-    clipped_q = True
+    use_double_q = True
+    clipped_q = False
 
     num_runners = 1
-    num_samples = 1
-    eval_episodes = 11
+    num_samples = 100
+    eval_episodes = 10
 
     # num_runners = 1
     # num_samples = 2
@@ -374,8 +309,13 @@ if __name__ == "__main__":
         agent.sample_noise()
 
     agent.to(run_device)
+
     if test:
-        load_path = 'gt_3480.ptb'
+        # if use_absolute_pos:
+        #     load_path = 'abs_pos.ptb'
+        # else:
+        #     load_path = 'no_abs_pos.ptb'
+        load_path = 'noisynet_subq_3820.ptb'
         agent.load_state_dict(torch.load(load_path))
 
     if reward_name == 'great_victory':
@@ -408,6 +348,7 @@ if __name__ == "__main__":
                                frame_skip_rate=frame_skip_rate)
 
     history_manager = HistoryManager(n_hist_steps=num_hist_steps, init_graph=None)
+    counter = 0
 
     for i in range(num_samples):
 
@@ -418,6 +359,7 @@ if __name__ == "__main__":
         history_manager.reset(curr_graph)
 
         while True:
+
             curr_state_dict = env.observe()
             curr_graph = curr_state_dict['g']
 
@@ -431,10 +373,13 @@ if __name__ == "__main__":
             next_graph = next_state_dict['g']
             experience = sample_spec(curr_graph, nn_action, reward, next_graph, done)
 
-            plot_curr_state_action(curr_graph, info_dict, nn_action)
+            plot_curr_state_action(curr_graph, info_dict, nn_action, counter, i)
+            # ax = plot_curr_state_action(curr_graph, info_dict, nn_action)
+            agent.sample_noise()
 
             trajectory.push(experience)
             history_manager.append(next_graph)
+            counter += 1
 
             if done:
                 break
