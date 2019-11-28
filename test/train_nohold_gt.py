@@ -37,7 +37,7 @@ from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
 if __name__ == "__main__":
 
     # experiment variables
-    exp_name = '[NOISY NET] SUB-Q 2Layer ENC'
+    exp_name = 'GT'
 
     use_subq = True
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         num_relations = 3
 
     mixer_num_layer = 1
-    enc_gnn_num_layer = 2
+    enc_gnn_num_layer = 1
 
     if use_absolute_pos:
         node_input_dim = 19
