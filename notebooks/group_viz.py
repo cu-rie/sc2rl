@@ -40,6 +40,62 @@ from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
 from sc2rl.utils.HistoryManagers import HistoryManager
 from sc2rl.memory.Trajectory import Trajectory
 
+import matplotlib.pyplot as plt
+
+# plt.axis("off")
+
+move_delta = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]]) * 0.5
+
+
+def plot_curr_state(ally_loc, enemy_loc, nn_action, assignment, ax, x_min=20, x_max=45, y_min=20, y_max=36):
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+
+    ally_colors = ['forestgreen', 'dodgerblue', 'tomato'] # ally colors per group
+    enemy_color = 'black'
+
+    # plot enemy loc
+    ax.scatter(enemy_loc[:, 0], enemy_loc[:, 1], color=enemy_color, marker='x', s=70)
+    for ally in range(len(nn_action)):
+        assign = assignment[ally]
+        color = ally_colors[assign]
+        action = nn_action[ally]
+        ally_location = ally_loc[ally]
+        ax.scatter(ally_location[0], ally_location[1], color=color)
+        if action <= 3:
+            move_dir = move_delta[action, :]
+            action_location = ally_location + move_dir
+            loc = np.stack([ally_location, action_location], axis=0)
+        else:
+            enemy_location = enemy_loc[action - 5]
+            loc = np.stack([ally_location, enemy_location], axis=0)
+
+        ax.plot(loc[:, 0], loc[:, 1], color=color)
+        ax.axes.get_xaxis().set_visible(False)
+        ax.axes.get_yaxis().set_visible(False)
+    return ax
+
+def plot_curr_state_action(curr_graph, info_dict, nn_action):
+    ally_tags = info_dict['ally_tags']
+    enemy_tags = info_dict['enemy_tags'][0]
+    assignment = info_dict['assignment']
+
+    num_allies = len(ally_tags)
+    num_enemies = len(enemy_tags)
+
+    allies = range(num_allies)
+    enemies = range(num_allies, num_enemies + num_allies)
+
+    init_node_feature = curr_graph.ndata['init_node_feature']
+    agent_loc = init_node_feature[:, 11:13]
+
+    ally_loc = agent_loc[allies, :].numpy()
+    enemy_loc = agent_loc[enemies, :].numpy()
+
+    fig, ax = plt.subplots()
+    ax = plot_curr_state(ally_loc, enemy_loc, nn_action, assignment, ax)
+
+
 if __name__ == "__main__":
 
     # experiment variables
@@ -128,9 +184,9 @@ if __name__ == "__main__":
     use_double_q = False
     clipped_q = True
 
-    num_runners = 2
-    num_samples = 8
-    eval_episodes = 10
+    num_runners = 1
+    num_samples = 1
+    eval_episodes = 11
 
     # num_runners = 1
     # num_samples = 2
@@ -366,6 +422,8 @@ if __name__ == "__main__":
             next_state_dict, reward, done = env.step(sc2_action)
             next_graph = next_state_dict['g']
             experience = sample_spec(curr_graph, nn_action, reward, next_graph, done)
+
+            plot_curr_state_action(curr_graph, info_dict, nn_action)
 
             trajectory.push(experience)
             history_manager.append(next_graph)
