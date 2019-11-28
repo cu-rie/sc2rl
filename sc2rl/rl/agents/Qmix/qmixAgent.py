@@ -89,7 +89,7 @@ class QmixAgent(torch.nn.Module):
 
         hist_graph.ndata['node_feature'] = hist_node_feature
         curr_graph.ndata['node_feature'] = curr_node_feature
-        return nn_actions, sc2_actions
+        return nn_actions, sc2_actions, info_dict
 
     def sample_noise(self):
         for m in self.modules():

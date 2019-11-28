@@ -33,8 +33,8 @@ class MultiStepActorRunner(RunnerBase):
             tag2unit_dict = curr_state_dict['tag2unit_dict']
             hist_graph = self.history_manager.get_hist()
 
-            nn_action, sc2_action = self.agent.get_action(hist_graph=hist_graph, curr_graph=curr_graph,
-                                                          tag2unit_dict=tag2unit_dict)
+            nn_action, sc2_action, _ = self.agent.get_action(hist_graph=hist_graph, curr_graph=curr_graph,
+                                                             tag2unit_dict=tag2unit_dict)
 
             next_state_dict, reward, done = self.env.step(sc2_action)
             next_graph = next_state_dict['g']

@@ -5,9 +5,11 @@ import torch
 import wandb
 import numpy as np
 
-import context
-
 from time import time
+
+import sys
+
+sys.path.append("..")
 
 from sc2rl.utils.reward_funcs import great_victor, great_victor_with_kill_bonus, victory, victory_if_zero_enemy
 from sc2rl.utils.state_process_funcs import process_game_state_to_dgl
@@ -23,6 +25,10 @@ from sc2rl.rl.networks.RelationalGraphNetwork import RelationalGraphNetworkConfi
 from sc2rl.rl.networks.RelationalNetwork import RelationalNetworkConfig
 from sc2rl.rl.brains.QMix.mixer import SupQmixerConf
 
+from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
+from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
+from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
+
 from sc2rl.memory.n_step_memory import NstepInputMemoryConfig
 from sc2rl.runners.RunnerManager import RunnerConfig, RunnerManager
 
@@ -30,9 +36,9 @@ from sc2rl.config.graph_configs import (NODE_ALLY, NODE_ENEMY,
                                         EDGE_ALLY, EDGE_ENEMY, EDGE_ALLY_TO_ENEMY,
                                         EDGE_IN_ATTACK_RANGE)
 
-from sc2rl.rl.modules.MultiStepInputQnet import MultiStepInputQnetConfig
-from sc2rl.rl.brains.QMix.qmixBrain import QmixBrainConfig
-from sc2rl.rl.agents.Qmix.qmixAgent import QmixAgent, QmixAgentConf
+from sc2rl.environments.MicroTestEnvironment import MicroTestEnvironment
+from sc2rl.utils.HistoryManagers import HistoryManager
+from sc2rl.memory.Trajectory import Trajectory
 
 if __name__ == "__main__":
 
@@ -308,14 +314,6 @@ if __name__ == "__main__":
 
     agent.to(run_device)
 
-    if test:
-        # if use_absolute_pos:
-        #     load_path = 'abs_pos.ptb'
-        # else:
-        #     load_path = 'no_abs_pos.ptb'
-        load_path = 'MULTI_NODE_TYPE_SEED.ptb'
-        agent.load_state_dict(torch.load(load_path))
-
     if reward_name == 'great_victory':
         reward_func = great_victor
     elif reward_name == 'great_victor_with_kill_bonus':
@@ -340,67 +338,37 @@ if __name__ == "__main__":
                           realtime=False,
                           frame_skip_rate=frame_skip_rate)
 
-    runner_manager = RunnerManager(config, num_runners)
+    env = MicroTestEnvironment(map_name=map_name,
+                               reward_func=reward_func,
+                               state_proc_func=game_state_to_dgl,
+                               frame_skip_rate=frame_skip_rate)
 
-    wandb.init(project="qmix2", name=exp_name)
-    wandb.watch(agent)
-    wandb.config.update({'use_attention': use_attention,
-                         'num_runners': num_runners,
-                         'num_samples': num_samples,
-                         'use_hierarchical_actor': use_hierarchical_actor,
-                         'map_name': map_name,
-                         'reward': reward_name,
-                         'frame_skip_rate': frame_skip_rate,
-                         'use_absolute_pos': use_absolute_pos,
-                         'victory_coeff': victory_coeff,
-                         'reward_bias': reward_bias})
+    history_manager = HistoryManager(n_hist_steps=num_hist_steps, init_graph=None)
 
-    wandb.config.update(agent_conf())
-    wandb.config.update(gnn_conf())
-    wandb.config.update(brain_conf())
-    wandb.config.update(buffer_conf())
-    wandb.config.update(qnet_conf())
-    wandb.config.update(mixer_gnn_conf())
-    wandb.config.update(mixer_ff_conf())
+    for i in range(num_samples):
 
-    try:
-        iters = 0
-        while iters < 1000000:
-            iters += 1
-            runner_manager.sample(num_samples)
-            runner_manager.transfer_sample()
+        trajectory = Trajectory(gamma=gamma)
+        # the first frame of each episode
+        curr_state_dict = env.observe()
+        curr_graph = curr_state_dict['g']
+        history_manager.reset(curr_graph)
 
-            s_time = time()
-            agent.to(fit_device)
-            fit_return_dict = agent.fit(device=fit_device)
-            agent.to(run_device)
-            e_time = time()
+        while True:
+            curr_state_dict = env.observe()
+            curr_graph = curr_state_dict['g']
 
-            running_wrs = [runner.env.winning_ratio for runner in runner_manager.runners]
-            running_wr = np.mean(running_wrs)
-            wandb.log(fit_return_dict, step=iters)
-            wandb.log({'train_winning_ratio': running_wr, 'epsilon': agent.brain.eps}, step=iters)
+            tag2unit_dict = curr_state_dict['tag2unit_dict']
+            hist_graph = history_manager.get_hist()
 
-            if iters % 20 == 0 or iters == 0:
-                save_path = os.path.join(wandb.run.dir, '{}.ptb'.format(iters))
-                torch.save(agent.state_dict(), save_path)
+            nn_action, sc2_action, info_dict = agent.get_action(hist_graph=hist_graph, curr_graph=curr_graph,
+                                                                tag2unit_dict=tag2unit_dict)
 
-            if exploration_method != 'noisy_net':
-                if iters % 5 == 0:
-                    eval_dicts = runner_manager.evaluate(eval_episodes)
-                    wins = []
-                    for eval_dict in eval_dicts:
-                        win = eval_dict['win']
-                        wins.append(win)
+            next_state_dict, reward, done = env.step(sc2_action)
+            next_graph = next_state_dict['g']
+            experience = sample_spec(curr_graph, nn_action, reward, next_graph, done)
 
-                    wr = np.mean(np.array(wins))
-                    wandb.log({'eval_winning_ratio': wr}, step=iters)
+            trajectory.push(experience)
+            history_manager.append(next_graph)
 
-            if iters % 1 == 0 and exploration_method == 'noisy_net':
-                agent.sample_noise()
-
-        runner_manager.close()
-    except KeyboardInterrupt:
-        runner_manager.close()
-    finally:
-        runner_manager.close()
+            if done:
+                break
